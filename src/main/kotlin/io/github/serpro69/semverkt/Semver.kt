@@ -10,7 +10,7 @@ data class Semver(private val version: String) {
     constructor(major: Int, minor: Int, patch: Int) : this("$major.$minor.$patch")
 
     private fun isValid(): Boolean {
-        return version.split(".")
+        val elements = version.split(".")
             .map {
                 when {
                     it.length > 1 && it.startsWith("0") -> {
@@ -19,6 +19,6 @@ data class Semver(private val version: String) {
                     else -> it.toInt()
                 }
             }
-            .none { it.sign == -1 }
+        return elements.none { it.sign == -1 } && elements.size == 3
     }
 }

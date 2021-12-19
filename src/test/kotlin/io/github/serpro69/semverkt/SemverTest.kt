@@ -16,11 +16,14 @@ class SemverTest : DescribeSpec({
             }
         }
         context("invalid version") {
-            it("contains leading zeroes") {
+            it("contains leading zeroes in version elements") {
                 shouldThrow<IllegalVersionException> { Semver("1.09.0") }
             }
-            it("contains negative integers") {
+            it("contains negative integers in version elements") {
                 shouldThrow<IllegalVersionException> { Semver("-1.09.0") }
+            }
+            it("is missing version elements") {
+                shouldThrow<IllegalVersionException> { Semver("1.0") }
             }
         }
         // TODO
@@ -31,7 +34,7 @@ class SemverTest : DescribeSpec({
 
     describe("4. Major version zero (0.y.z) is for initial development.") {
         context("valid version") {
-            it("can start with '0' for major version number") {
+            it("should be '0' for major version number") {
                 shouldNotThrow<IllegalVersionException> { Semver("0.1.0") }
                 shouldNotThrow<IllegalVersionException> { Semver(0, 1, 0) }
             }
