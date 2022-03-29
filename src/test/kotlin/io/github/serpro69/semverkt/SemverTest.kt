@@ -201,4 +201,14 @@ class SemverTest : DescribeSpec({
         }
     }
 
+    describe("secondary constructor") {
+        it("should construct an instance of Semver") {
+            assertSoftly {
+                Semver(1, 2, 3) shouldBe Semver("1.2.3")
+                Semver(1, 2, 3, PreRelease("rc.1")) shouldBe Semver("1.2.3-rc.1")
+                Semver(1, 2, 3, BuildMetadata("build.123")) shouldBe Semver("1.2.3+build.123")
+                Semver(1, 2, 3, PreRelease("rc.1"), BuildMetadata("build.123")) shouldBe Semver("1.2.3-rc.1+build.123")
+            }
+        }
+    }
 })
