@@ -128,7 +128,26 @@ class PreRelease internal constructor(val value: String) : Comparable<PreRelease
     override fun toString(): String = value
 
     override operator fun compareTo(other: PreRelease): Int {
-        return value.compareTo(other.value)
+        var r = 0
+        val list = value.split(".")
+        val otherList = other.value.split(".")
+        for (p in list.zip(otherList)) {
+            val (a, b) = p
+            val aIsNum = a.all { it.isDigit() }
+            val bIsNum = b.all { it.isDigit() }
+            when {
+                a == b -> continue
+                aIsNum && bIsNum -> {
+                    r = a.toInt().compareTo(b.toInt())
+                    break
+                }
+                else -> {
+                    r = a.compareTo(b)
+                    break
+                }
+            }
+        }
+        return if (r != 0) r else if (list.size == otherList.size) 0 else if (list.size > otherList.size) 1 else -1
     }
 
     override fun equals(other: Any?): Boolean {

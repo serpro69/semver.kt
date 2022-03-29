@@ -177,7 +177,7 @@ class SemverTest : DescribeSpec({
                     Semver("1.0.0-alpha.1") shouldBe beLessThan(Semver("1.0.0-alpha.beta"))
                 }
                 it("A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.") {
-                    Semver("1.0.0-beta") shouldBe beLessThan(Semver("1.0.0-beta.2"))
+                    Semver("1.0.0-beta") shouldBe beLessThan(Semver("1.0.0-beta.and.more"))
                 }
             }
         }
