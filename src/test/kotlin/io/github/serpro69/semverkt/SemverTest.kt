@@ -21,9 +21,9 @@ class SemverTest : DescribeSpec({
             }
             it("should return normal part of the semver if it contains pre-release or build metadata") {
                 assertSoftly {
-                    Semver("1.2.3-rc.1").normalVersion shouldBe Semver("1.2.3")
-                    Semver("1.2.3+build.369").normalVersion shouldBe Semver("1.2.3")
-                    Semver("1.2.3-rc.1+build.369").normalVersion shouldBe Semver("1.2.3")
+                    Semver("1.2.3-rc.1").normalVersion.toSemver() shouldBe Semver("1.2.3")
+                    Semver("1.2.3+build.369").normalVersion.toSemver() shouldBe Semver("1.2.3")
+                    Semver("1.2.3-rc.1+build.369").normalVersion.toSemver() shouldBe Semver("1.2.3")
                 }
             }
             it("should return pre-release") {

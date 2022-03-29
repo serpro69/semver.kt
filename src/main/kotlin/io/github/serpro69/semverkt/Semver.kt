@@ -5,10 +5,12 @@ package io.github.serpro69.semverkt
 import java.util.regex.Pattern
 import kotlin.math.sign
 
+fun String.toSemver(): Semver = Semver(this)
+
 class Semver(private val version: String) : Comparable<Semver> {
     private val versionPattern: Pattern =
         Pattern.compile("""^((?:\d+\.?){3})(-(?:[0-9A-Za-z-]*.?)*)?(\+(?:[0-9A-Za-z-]*.?)*)?${'$'}""")
-    val normalVersion: String = version.substringBefore("-").substringBefore("+")
+    val normalVersion: String = version.substringBefore("+").substringBefore("-")
     val preRelease: PreRelease?
     val buildMetadata: BuildMetadata?
     val major: Int
@@ -101,6 +103,9 @@ class Semver(private val version: String) : Comparable<Semver> {
     }
 
     private fun isValid(): Boolean {
+        if (version.startsWith("-")) {
+            throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
+        }
         normalVersion.split(".").map {
             when {
                 it.length > 1 && it.startsWith("0") -> {
