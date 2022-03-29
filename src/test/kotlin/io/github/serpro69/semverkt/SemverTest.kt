@@ -41,13 +41,27 @@ class SemverTest : DescribeSpec({
         }
         context("invalid version") {
             it("contains leading zeroes in version elements") {
-                shouldThrow<IllegalVersionException> { Semver("1.09.0") }
+                assertSoftly {
+                    shouldThrow<IllegalVersionException> { Semver("1.09.0") }
+                    shouldThrow<IllegalVersionException> { Semver("01.9.0") }
+                    shouldThrow<IllegalVersionException> { Semver("1.9.00") }
+                }
             }
             it("contains negative integers in version elements") {
-                shouldThrow<IllegalVersionException> { Semver("-1.09.0") }
+                assertSoftly {
+                    shouldThrow<IllegalVersionException> { Semver("-1.09.0") }
+                    shouldThrow<IllegalVersionException> { Semver("1.-9.0") }
+                    shouldThrow<IllegalVersionException> { Semver("1.9.-10") }
+                }
             }
             it("is missing version elements") {
+                shouldThrow<IllegalVersionException> { Semver("1.0.") }
                 shouldThrow<IllegalVersionException> { Semver("1.0") }
+                shouldThrow<IllegalVersionException> { Semver("1") }
+            }
+            it("has more elements than expected") {
+                shouldThrow<IllegalVersionException> { Semver("1.0.0.0") }
+                shouldThrow<IllegalVersionException> { Semver("1.0.0.") }
             }
         }
         context("Each element MUST increase numerically") {

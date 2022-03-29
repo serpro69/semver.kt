@@ -9,7 +9,7 @@ fun String.toSemver(): Semver = Semver(this)
 
 class Semver(private val version: String) : Comparable<Semver> {
     private val versionPattern: Pattern =
-        Pattern.compile("""^((?:\d+\.?){3})(-(?:[0-9A-Za-z-]*.?)*)?(\+(?:[0-9A-Za-z-]*.?)*)?${'$'}""")
+        Pattern.compile("""^((?:\d+\.){2}\d+)(-(?:[0-9A-Za-z-]*.?)*)?(\+(?:[0-9A-Za-z-]*.?)*)?${'$'}""")
     val normalVersion: String = version.substringBefore("+").substringBefore("-")
     val preRelease: PreRelease?
     val buildMetadata: BuildMetadata?
@@ -20,6 +20,7 @@ class Semver(private val version: String) : Comparable<Semver> {
     init {
         normalVersion.split(".").also {
             if (it.size != 3) throw IllegalVersionException("$version version number MUST take the form X.Y.Z")
+            if (it.contains("")) throw IllegalVersionException("$version version number MUST not contain empty elements")
             major = it[0].toInt()
             minor = it[1].toInt()
             patch = it[2].toInt()
