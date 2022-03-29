@@ -1,5 +1,3 @@
-@file:Suppress("unused")
-
 package io.github.serpro69.semverkt
 
 import java.util.regex.Pattern
@@ -174,9 +172,12 @@ class Semver(private val version: String) : Comparable<Semver> {
     }
 }
 
-class PreRelease internal constructor(val value: String) : Comparable<PreRelease> {
+/**
+ * Represents an optional "pre-release identifier" of a semantic version.
+ */
+class PreRelease(internal val value: String) : Comparable<PreRelease> {
 
-    fun validate() {
+    internal fun validate() {
         // Check for empty identifiers in pre-release. #9
         if (value.contains("..")) throw IllegalVersionException("'$value' pre-release MUST NOT not contain empty identifiers.")
         // Check for leading zeroes in pre-release identifiers
@@ -192,6 +193,9 @@ class PreRelease internal constructor(val value: String) : Comparable<PreRelease
         }
     }
 
+    /**
+     * Returns a string representation of this [PreRelease]
+     */
     override fun toString(): String = value
 
     override operator fun compareTo(other: PreRelease): Int {
@@ -229,15 +233,21 @@ class PreRelease internal constructor(val value: String) : Comparable<PreRelease
     }
 }
 
-class BuildMetadata internal constructor(val value: String) : Comparable<BuildMetadata> {
+/**
+ * Represents an optional "build metadata identifier" of a semantic version.
+ */
+class BuildMetadata(internal val value: String) : Comparable<BuildMetadata> {
 
-    fun validate() {
+    internal fun validate() {
         // Check for empty identifiers in build metadata. #10
         if (value.contains("..")) {
             throw IllegalVersionException("'$value' build metadata MUST NOT not contain empty identifiers.")
         }
     }
 
+    /**
+     * Returns a string representation of this [BuildMetadata]
+     */
     override fun toString(): String = value
 
     override operator fun compareTo(other: BuildMetadata): Int {
