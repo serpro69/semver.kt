@@ -1,13 +1,18 @@
 package io.github.serpro69.semverkt
 
+import io.github.serpro69.kfaker.faker
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.comparables.beEqualComparingTo
+import io.kotest.matchers.comparables.beGreaterThan
 import io.kotest.matchers.comparables.beLessThan
 import io.kotest.matchers.shouldBe
 
 // Semantic Versioning Specification 2.0.0
 class SemverTest : DescribeSpec({
+    val faker = faker { }
     describe("2. A normal version number MUST take the form X.Y.Z where X, Y, and Z are non-negative integers") {
         context("valid version") {
             it("contains non-negative integers w/o leading zeroes") {
@@ -48,19 +53,44 @@ class SemverTest : DescribeSpec({
         }
     }
 
-    describe("7. Patch version MUST be reset to 0 when minor version is incremented.") {
+    it("should increment patch version") {
+        val semver = Semver("1.2.3").incrementPatch()
+        assertSoftly {
+            semver.major shouldBe 1
+            semver.minor shouldBe 2
+            semver.patch shouldBe 4
+        }
+    }
 
+    describe("7. Patch version MUST be reset to 0 when minor version is incremented.") {
+        val semver = Semver("1.2.3").incrementMinor()
+        assertSoftly {
+            semver.major shouldBe 1
+            semver.minor shouldBe 3
+            semver.patch shouldBe 0
+        }
     }
 
     describe("8. Patch and minor versions MUST be reset to 0 when major version is incremented.") {
-
+        val semver = Semver("1.2.3").incrementMajor()
+        assertSoftly {
+            semver.major shouldBe 2
+            semver.minor shouldBe 0
+            semver.patch shouldBe 0
+        }
     }
 
     describe("9. A pre-release version MAY be denoted by appending a hyphen and a series of dot separated identifiers immediately following the patch version.") {
         //Examples: 1.0.0-alpha, 1.0.0-alpha.1, 1.0.0-0.3.7, 1.0.0-x.7.z.92, 1.0.0-x-y-z.–
 
         it("Identifiers MUST comprise only ASCII alphanumerics and hyphens [0-9A-Za-z-]") {
-
+            assertSoftly {
+                shouldNotThrow<IllegalVersionException> { Semver("1.0.0-alpha") }
+                shouldNotThrow<IllegalVersionException> { Semver("1.0.0-alpha.1") }
+                shouldNotThrow<IllegalVersionException> { Semver("1.0.0-0.3.7") }
+                shouldNotThrow<IllegalVersionException> { Semver("1.0.0-x.7.z.92") }
+                shouldNotThrow<IllegalVersionException> { Semver("1.0.0-x-y-z.–") }
+            }
         }
         it("Identifiers MUST NOT be empty") {
 
@@ -77,16 +107,19 @@ class SemverTest : DescribeSpec({
         //Examples: 1.0.0-alpha+001, 1.0.0+20130313144700, 1.0.0-beta+exp.sha.5114f85, 1.0.0+21AF26D3—-117B344092BD
 
         it("Identifiers MUST comprise only ASCII alphanumerics and hyphens [0-9A-Za-z-]") {
-
+            assertSoftly {
+                shouldNotThrow<IllegalVersionException> { Semver("1.2.3+${faker.random.nextInt()}") }
+                shouldNotThrow<IllegalVersionException> { Semver("1.2.3+${faker.random.randomString()}-") }
+                shouldNotThrow<IllegalVersionException> { Semver("1.2.3+${faker.random.nextInt()}.${faker.random.randomString()}") }
+            }
         }
         it("Identifiers MUST NOT be empty") {
-
+            shouldThrow<IllegalVersionException> { Semver("1.2.3+build..something") }
         }
-        it("Build metadata MUST be ignored when determining version precedence") {
-
-        }
-        it("Thus two versions that differ only in the build metadata, have the same precedence") {
-
+        context("Build metadata MUST be ignored when determining version precedence") {
+            it("Thus two versions that differ only in the build metadata, have the same precedence") {
+                Semver("1.0.0+${faker.random.nextInt()}") shouldBe beEqualComparingTo(Semver("1.0.0+${faker.random.randomString()}"))
+            }
         }
     }
 
@@ -113,23 +146,25 @@ class SemverTest : DescribeSpec({
             context("Precedence for two pre-release versions with the same major, minor, and patch version MUST be determined by comparing each dot separated identifier from left to right until a difference is found as follows") {
                 //Example: 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0
                 it("Identifiers consisting of only digits are compared numerically.") {
-
+                    Semver("1.0.0-1") shouldBe beGreaterThan(Semver("1.0.0-0"))
                 }
                 it("Identifiers with letters or hyphens are compared lexically in ASCII sort order.") {
-
+                    Semver("1.0.0-alpha") shouldBe beLessThan(Semver("1.0.0-alpha.1"))
+                    Semver("1.0.0-alpha.beta") shouldBe beLessThan(Semver("1.0.0-beta"))
+                    Semver("1.0.0-beta.2") shouldBe beLessThan(Semver("1.0.0-beta.11"))
+                    Semver("1.0.0-beta.11") shouldBe beLessThan(Semver("1.0.0-rc.1"))
                 }
                 it("Numeric identifiers always have lower precedence than non-numeric identifiers.") {
-
+                    Semver("1.0.0-alpha.1") shouldBe beLessThan(Semver("1.0.0-alpha.beta"))
                 }
                 it("A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.") {
-
+                    Semver("1.0.0-beta") shouldBe beLessThan(Semver("1.0.0-beta.2"))
                 }
             }
         }
 
         it("Build metadata does not figure into precedence") {
-
-
+            Semver("1.0.0+123") shouldBe beEqualComparingTo(Semver("1.0.0+456"))
         }
     }
 

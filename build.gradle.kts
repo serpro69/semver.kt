@@ -16,6 +16,7 @@ dependencies {
     testImplementation("io.kotest:kotest-runner-junit5-jvm:5.0.2")
     testImplementation("io.kotest:kotest-assertions-core-jvm:5.0.2")
     testImplementation("io.kotest:kotest-property-jvm:5.0.2")
+    testImplementation("io.github.serpro69:kotlin-faker:1.10.0")
 }
 
 configure<JavaPluginExtension> {
