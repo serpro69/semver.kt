@@ -5,8 +5,23 @@ package io.github.serpro69.semverkt
 import java.util.regex.Pattern
 import kotlin.math.sign
 
+/**
+ * Returns an instance of [Semver] from this receiver string.
+ */
 fun String.toSemver(): Semver = Semver(this)
 
+/**
+ * Represents a semantic [version] as per [Semantic Versioning 2.0.0](https://semver.org/#semantic-versioning-200) specification.
+ *
+ * @property major          MAJOR version number identifier
+ * @property minor          MINOR version number identifier
+ * @property patch          PATCH version number identifier
+ * @property normalVersion  the "normal version number" of this semantic [version] in the form of `X.Y.Z`
+ * @property preRelease     the optional "pre-release identifier" of this semantic [version]
+ * @property buildMetadata  the optional "build metadata identifier" of this semantic [version]
+ *
+ * @constructor             creates an instance of [Semver] where semantic version is constructed from the [version] string
+ */
 class Semver(private val version: String) : Comparable<Semver> {
     private val versionPattern: Pattern =
         Pattern.compile("""^((?:\d+\.){2}\d+)(-(?:[0-9A-Za-z-]*.?)*)?(\+(?:[0-9A-Za-z-]*.?)*)?${'$'}""")
@@ -34,12 +49,19 @@ class Semver(private val version: String) : Comparable<Semver> {
         if (!isValid()) throw IllegalVersionException("'$version' is not a valid semver version.")
     }
 
+    /**
+     * @constructor creates an instance of [Semver] where semantic version is constructed from the [major], [minor], and [patch] version numbers.
+     */
     constructor(
         major: Int,
         minor: Int,
         patch: Int
     ) : this("$major.$minor.$patch")
 
+    /**
+     * @constructor creates an instance of [Semver] where semantic version is constructed from the [major], [minor], and [patch] version numbers,
+     * as well as [preRelease] version identifier.
+     */
     constructor(
         major: Int,
         minor: Int,
@@ -47,6 +69,10 @@ class Semver(private val version: String) : Comparable<Semver> {
         preRelease: PreRelease
     ) : this("$major.$minor.$patch-$preRelease")
 
+    /**
+     * @constructor creates an instance of [Semver] where semantic version is constructed from the [major], [minor], and [patch] version numbers,
+     * as well as [buildMetadata] version identifier.
+     */
     constructor(
         major: Int,
         minor: Int,
@@ -54,6 +80,10 @@ class Semver(private val version: String) : Comparable<Semver> {
         buildMetadata: BuildMetadata
     ) : this("$major.$minor.$patch+$buildMetadata")
 
+    /**
+     * @constructor creates an instance of [Semver] where semantic version is constructed from the [major], [minor], and [patch] version numbers,
+     * as well as [preRelease] and [buildMetadata] version identifiers.
+     */
     constructor(
         major: Int,
         minor: Int,
@@ -62,12 +92,27 @@ class Semver(private val version: String) : Comparable<Semver> {
         buildMetadata: BuildMetadata
     ) : this("$major.$minor.$patch-$preRelease+$buildMetadata")
 
+    /**
+     * Increment this version to next [major] version.
+     */
     fun incrementMajor() = Semver(major + 1, 0, 0)
 
+    /**
+     * Increment this version to next [minor] version.
+     */
     fun incrementMinor() = Semver(major, minor + 1, 0)
 
+    /**
+     * Increment this version to next [patch] version.
+     */
     fun incrementPatch() = Semver(major, minor, patch + 1)
 
+    /**
+     * Compares this semantic version with the [other] one.
+     * Returns `0` if this version is equal to the specified [other] version,
+     * a negative number if it's less than [other] version,
+     * or a positive number if it's greater than the [other] version.
+     */
     override operator fun compareTo(other: Semver): Int {
         val compareNormal = if (major > other.major) 1 else if (major < other.major) -1 else {
             if (minor > other.minor) 1 else if (minor < other.minor) -1 else {
@@ -93,6 +138,9 @@ class Semver(private val version: String) : Comparable<Semver> {
         }
     }
 
+    /**
+     * Returns a string representation of this semantic version.
+     */
     override fun toString(): String = version
 
     override fun hashCode(): Int {
