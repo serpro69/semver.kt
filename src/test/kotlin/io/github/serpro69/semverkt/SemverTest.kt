@@ -112,13 +112,13 @@ class SemverTest : DescribeSpec({
             }
         }
         it("Identifiers MUST NOT be empty") {
-
+            shouldThrow<IllegalVersionException> { Semver("1.0.0-alpha..1") }
         }
         it("Numeric identifiers MUST NOT include leading zeroes") {
-
+            shouldThrow<IllegalVersionException> { Semver("1.0.0-alpha.01") }
         }
         it("Pre-release versions have a lower precedence than the associated normal version") {
-
+            Semver("1.0.0-alpha.1") shouldBe beLessThan(Semver("1.0.0"))
         }
     }
 

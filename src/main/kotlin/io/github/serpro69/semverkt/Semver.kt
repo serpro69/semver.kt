@@ -104,21 +104,37 @@ class Semver(private val version: String) : Comparable<Semver> {
     }
 
     private fun isValid(): Boolean {
-        // Check if version starts with negative number identifiers in build metadata. #2
+        // Check if normal version starts with negative number. #2
         if (version.startsWith("-")) throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
-        // Check for empty identifiers in build metadata. #10
-        buildMetadata?.let {
-            if (it.value.contains("..")) throw IllegalVersionException("'$version' build metadata MUST NOT not contain empty identifiers.")
-        }
-        normalVersion.split(".").map {
+        // Other checks for normal version
+        normalVersion.split(".").forEach {
             when {
                 // Check if version numbers start with leading 0. #2
                 it.length > 1 && it.startsWith("0") -> throw IllegalVersionException("'$version' numbers MUST NOT contain leading zeroes.")
-                // Check if any of version numbers are negative. #2
+                // Check if any of normal version numbers are negative. #2
                 it.toInt().sign == -1 -> throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
                 else -> { /*NOOP*/
                 }
             }
+        }
+        // Checks for pre-release
+        preRelease?.value?.let {
+            // Check for empty identifiers in pre-release. #9
+            if (it.contains("..")) throw IllegalVersionException("'$version' pre-release MUST NOT not contain empty identifiers.")
+            // Check for leading zeroes in pre-release identifiers
+            it.split(".").forEach { s ->
+                when {
+                    // Check if numeric identifiers start with leading 0
+                    s.all { c -> c.isDigit() } && s.length > 1 && s.startsWith("0") -> throw IllegalVersionException("'$version' pre-release identifiers MUST NOT contain leading zeroes.")
+                    else -> { /*NOOP*/
+                    }
+                }
+            }
+        }
+        // Checks for build metadata
+        buildMetadata?.value?.let {
+            // Check for empty identifiers in build metadata. #10
+            if (it.contains("..")) throw IllegalVersionException("'$version' build metadata MUST NOT not contain empty identifiers.")
         }
         return version.matches(versionPattern.toRegex())
     }
