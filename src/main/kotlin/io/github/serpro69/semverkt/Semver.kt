@@ -2,7 +2,7 @@ package io.github.serpro69.semverkt
 
 import kotlin.math.sign
 
-data class Semver(private val version: String) {
+data class Semver(private val version: String) : Comparable<Semver> {
     init {
         if (!isValid()) throw IllegalVersionException("'$version' is not a valid semver version.")
     }
@@ -20,5 +20,9 @@ data class Semver(private val version: String) {
                 }
             }
         return elements.none { it.sign == -1 } && elements.size == 3
+    }
+
+    override operator fun compareTo(other: Semver): Int {
+        TODO("Not yet implemented")
     }
 }
