@@ -52,13 +52,13 @@ class SemverTest : DescribeSpec({
         }
         context("Each element MUST increase numerically") {
             it("patch increase: 1.9.1 -> 1.9.2") {
-
+                Semver("1.9.1").incrementPatch() shouldBe Semver("1.9.2")
             }
             it("minor increase: 1.9.0 -> 1.10.0") {
-
+                Semver("1.9.0").incrementMinor() shouldBe Semver("1.10.0")
             }
             it("major increase: 1.9.0 -> 2.0.0") {
-
+                Semver("1.9.0").incrementMajor() shouldBe Semver("2.0.0")
             }
         }
     }
