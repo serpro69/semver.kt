@@ -6,21 +6,26 @@ import kotlin.math.sign
 
 class Semver(private val version: String) : Comparable<Semver> {
     val normalVersion: Semver
-    val preReleaseVersion: PreRelease
-    val buildMetadata: BuildMetadata
+    val preRelease: PreRelease?
+    val buildMetadata: BuildMetadata?
     val major: Int
     val minor: Int
     val patch: Int
 
     init {
         if (!isValid()) throw IllegalVersionException("'$version' is not a valid semver version.")
-        normalVersion = Semver(version.substringBefore("-").substringBefore("+"))
-        preReleaseVersion = PreRelease(version.substringAfter("-").takeWhile { it != '+' })
-        buildMetadata = BuildMetadata(version.substringAfter("+"))
-        val versions = normalVersion.version.split(".")
-        major = versions[0].toInt()
-        minor = versions[1].toInt()
-        patch = versions[2].toInt()
+        normalVersion = Semver(version.substringBefore("-").substringBefore("+")).also {
+            val v = it.version.split(".")
+            major = v[0].toInt()
+            minor = v[1].toInt()
+            patch = v[2].toInt()
+        }
+        PreRelease(version.substringAfter("-", "").takeWhile { it != '+' }).also {
+            preRelease = if (it.value == "") null else it
+        }
+        BuildMetadata(version.substringAfter("+", "")).also {
+            buildMetadata = if (it.value == "") null else it
+        }
     }
 
     constructor(
@@ -85,7 +90,7 @@ class PreRelease internal constructor(val value: String) : Comparable<PreRelease
     }
 }
 
-class BuildMetadata internal constructor(val value: String): Comparable<PreRelease> {
+class BuildMetadata internal constructor(val value: String) : Comparable<PreRelease> {
     override fun toString(): String = value
 
     override fun compareTo(other: PreRelease): Int {

@@ -19,6 +19,25 @@ class SemverTest : DescribeSpec({
                 shouldNotThrow<IllegalVersionException> { Semver("1.9.0") }
                 shouldNotThrow<IllegalVersionException> { Semver(1, 9, 0) }
             }
+            it("should return normal part of the semver if it contains pre-release or build metadata") {
+                assertSoftly {
+                    Semver("1.2.3-rc.1").normalVersion shouldBe Semver("1.2.3")
+                    Semver("1.2.3+build.369").normalVersion shouldBe Semver("1.2.3")
+                    Semver("1.2.3-rc.1+build.369").normalVersion shouldBe Semver("1.2.3")
+                }
+            }
+            it("should return pre-release") {
+                Semver("1.2.3-rc.1").preRelease shouldBe PreRelease("rc.1")
+            }
+            it("pre-release should be null if absent") {
+                Semver("1.2.3").preRelease shouldBe null
+            }
+            it("should return build metadata") {
+                Semver("1.2.3+build.369").buildMetadata shouldBe BuildMetadata("build.369")
+            }
+            it("build metadata should be null if absent") {
+                Semver("1.2.3").buildMetadata shouldBe null
+            }
         }
         context("invalid version") {
             it("contains leading zeroes in version elements") {
