@@ -118,29 +118,31 @@ class Semver(private val version: String) : Comparable<Semver> {
             }
         }
         // Checks for pre-release
-        preRelease?.value?.let {
-            // Check for empty identifiers in pre-release. #9
-            if (it.contains("..")) throw IllegalVersionException("'$version' pre-release MUST NOT not contain empty identifiers.")
-            // Check for leading zeroes in pre-release identifiers
-            it.split(".").forEach { s ->
-                when {
-                    // Check if numeric identifiers start with leading 0
-                    s.all { c -> c.isDigit() } && s.length > 1 && s.startsWith("0") -> throw IllegalVersionException("'$version' pre-release identifiers MUST NOT contain leading zeroes.")
-                    else -> { /*NOOP*/
-                    }
-                }
-            }
-        }
+        preRelease?.validate()
         // Checks for build metadata
-        buildMetadata?.value?.let {
-            // Check for empty identifiers in build metadata. #10
-            if (it.contains("..")) throw IllegalVersionException("'$version' build metadata MUST NOT not contain empty identifiers.")
-        }
+        buildMetadata?.validate()
         return version.matches(versionPattern.toRegex())
     }
 }
 
 class PreRelease internal constructor(val value: String) : Comparable<PreRelease> {
+
+    fun validate() {
+        // Check for empty identifiers in pre-release. #9
+        if (value.contains("..")) throw IllegalVersionException("'$value' pre-release MUST NOT not contain empty identifiers.")
+        // Check for leading zeroes in pre-release identifiers
+        value.split(".").forEach { s ->
+            when {
+                // Check if numeric identifiers start with leading 0
+                s.all { c -> c.isDigit() } && s.length > 1 && s.startsWith("0") -> {
+                    throw IllegalVersionException("'$value' pre-release identifiers MUST NOT contain leading zeroes.")
+                }
+                else -> { /*NOOP*/
+                }
+            }
+        }
+    }
+
     override fun toString(): String = value
 
     override operator fun compareTo(other: PreRelease): Int {
@@ -179,6 +181,14 @@ class PreRelease internal constructor(val value: String) : Comparable<PreRelease
 }
 
 class BuildMetadata internal constructor(val value: String) : Comparable<BuildMetadata> {
+
+    fun validate() {
+        // Check for empty identifiers in build metadata. #10
+        if (value.contains("..")) {
+            throw IllegalVersionException("'$value' build metadata MUST NOT not contain empty identifiers.")
+        }
+    }
+
     override fun toString(): String = value
 
     override operator fun compareTo(other: BuildMetadata): Int {
