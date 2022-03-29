@@ -18,18 +18,19 @@ class Semver(private val version: String) : Comparable<Semver> {
     val patch: Int
 
     init {
-        if (!isValid()) throw IllegalVersionException("'$version' is not a valid semver version.")
         normalVersion.split(".").also {
+            if (it.size != 3) throw IllegalVersionException("$version version number MUST take the form X.Y.Z")
             major = it[0].toInt()
             minor = it[1].toInt()
             patch = it[2].toInt()
         }
-        PreRelease(version.substringAfter("-", "").takeWhile { it != '+' }).also {
+        PreRelease(version.substringBefore("+").substringAfter("-", "").takeWhile { it != '+' }).also {
             preRelease = if (it.value == "") null else it
         }
         BuildMetadata(version.substringAfter("+", "")).also {
             buildMetadata = if (it.value == "") null else it
         }
+        if (!isValid()) throw IllegalVersionException("'$version' is not a valid semver version.")
     }
 
     constructor(
@@ -103,22 +104,22 @@ class Semver(private val version: String) : Comparable<Semver> {
     }
 
     private fun isValid(): Boolean {
-        if (version.startsWith("-")) {
-            throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
+        // Check if version starts with negative number identifiers in build metadata. #2
+        if (version.startsWith("-")) throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
+        // Check for empty identifiers in build metadata. #10
+        buildMetadata?.let {
+            if (it.value.contains("..")) throw IllegalVersionException("'$version' build metadata MUST NOT not contain empty identifiers.")
         }
         normalVersion.split(".").map {
             when {
-                it.length > 1 && it.startsWith("0") -> {
-                    throw IllegalVersionException("'$version' numbers MUST NOT contain leading zeroes.")
-                }
-                it.toInt().sign == -1 -> {
-                    throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
-                }
+                // Check if version numbers start with leading 0. #2
+                it.length > 1 && it.startsWith("0") -> throw IllegalVersionException("'$version' numbers MUST NOT contain leading zeroes.")
+                // Check if any of version numbers are negative. #2
+                it.toInt().sign == -1 -> throw IllegalVersionException("'$version' numbers MUST NOT not be negative.")
                 else -> { /*NOOP*/
                 }
             }
         }
-
         return version.matches(versionPattern.toRegex())
     }
 }
