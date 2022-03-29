@@ -102,7 +102,7 @@ publishing {
             artifactId = artifactName
             version = artifactVersion
             from(components["java"])
-            artifact(jar)
+//            artifact(jar)
             artifact(sourcesJar)
             artifact(dokkaJavadocJar)
 
