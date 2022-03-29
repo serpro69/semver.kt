@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.dokka") version "1.5.31"
     `maven-publish`
     signing
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
 repositories {
@@ -142,5 +143,13 @@ signing {
 tasks {
     assemble {
         dependsOn(jar)
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            stagingProfileId.set(properties["stagingProfileId"]?.toString())
+        }
     }
 }
