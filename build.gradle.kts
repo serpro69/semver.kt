@@ -1,7 +1,8 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.10"
+    java
+    kotlin("jvm") version "1.6.20" apply false
     id("org.jetbrains.dokka") version "1.5.31"
     `maven-publish`
     signing
@@ -14,136 +15,160 @@ repositories {
 
 group = "io.github.serpro69"
 
-dependencies {
-    implementation(kotlin("stdlib-jdk8"))
-    testImplementation("io.kotest:kotest-runner-junit5-jvm:5.0.2")
-    testImplementation("io.kotest:kotest-assertions-core-jvm:5.0.2")
-    testImplementation("io.github.serpro69:kotlin-faker:1.10.0")
-}
+subprojects {
+    group = parent?.group?.toString() ?: "io.github.serpro69"
+    version = rootProject.version
+    val subProject = this@subprojects
+    val projectArtifactId = "${rootProject.name}-${subProject.name}"
 
-configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-}
-
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "1.8"
+    repositories {
+        mavenCentral()
     }
-}
 
-tasks.withType<Test> {
-    useJUnitPlatform {}
-}
+    apply {
+        plugin("java")
+        plugin("org.jetbrains.kotlin.jvm")
+        plugin("org.jetbrains.dokka")
+        plugin("signing")
+        plugin("maven-publish")
+    }
 
-val jar by tasks.getting(Jar::class) {
-    archiveBaseName.set(rootProject.name)
+    dependencies {
+        implementation(kotlin("stdlib-jdk8"))
+        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.0.2")
+        testImplementation("io.kotest:kotest-assertions-core-jvm:5.0.2")
+        testImplementation("io.github.serpro69:kotlin-faker:1.10.0")
+    }
 
-    manifest {
-        attributes(
-            mapOf(
-                "Implementation-Title" to project.name,
-                "Implementation-Version" to project.version,
-                "Class-Path" to configurations.compileClasspath.get().joinToString(" ") { it.name }
+    configure<JavaPluginExtension> {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    tasks.withType<JavaCompile> {
+        options.encoding = "UTF-8"
+        sourceCompatibility = "1.8"
+        targetCompatibility = "1.8"
+    }
+
+    tasks.withType<KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = "1.8"
+        }
+    }
+
+    tasks.withType<Test> {
+        useJUnitPlatform {}
+    }
+
+    val jar by tasks.getting(Jar::class) {
+        archiveBaseName.set(projectArtifactId)
+
+        manifest {
+            attributes(
+                mapOf(
+                    "Implementation-Title" to projectArtifactId,
+                    "Implementation-Version" to subProject.version,
+                    "Class-Path" to configurations.compileClasspath.get().joinToString(" ") { it.name }
+                )
             )
-        )
+        }
     }
-}
 
-val sourcesJar by tasks.creating(Jar::class) {
-    archiveClassifier.set("sources")
-    from(sourceSets.getByName("main").allSource)
-    from("LICENCE.md") {
-        into("META-INF")
+    val sourcesJar by tasks.creating(Jar::class) {
+        archiveBaseName.set(projectArtifactId)
+        archiveClassifier.set("sources")
+        from(sourceSets.getByName("main").allSource)
+        from("LICENCE.md") {
+            into("META-INF")
+        }
     }
-}
 
-val dokkaJavadocJar by tasks.creating(Jar::class) {
-    archiveClassifier.set("javadoc")
-    dependsOn(tasks.dokkaJavadoc)
-    from(tasks.dokkaJavadoc.get().outputDirectory.orNull)
-}
+    val dokkaJavadocJar by tasks.creating(Jar::class) {
+        archiveBaseName.set(projectArtifactId)
+        archiveClassifier.set("javadoc")
+        dependsOn(tasks.dokkaJavadoc)
+        from(tasks.dokkaJavadoc.get().outputDirectory.orNull)
+    }
 
-artifacts {
-    archives(sourcesJar)
-    archives(dokkaJavadocJar)
-}
+    artifacts {
+        archives(sourcesJar)
+        archives(dokkaJavadocJar)
+    }
 
-val artifactName = rootProject.name
-val artifactGroup = project.group.toString()
-val artifactVersion = project.version.toString()
-val releaseTagName = "v$artifactVersion"
+    val artifactGroup = subProject.group.toString()
+    val artifactVersion = subProject.version.toString()
+    val releaseTagName = "v$artifactVersion"
 
-val pomUrl = "https://github.com/serpro69/Semver.kt"
-val pomScmUrl = "https://github.com/serpro69/Semver.kt"
-val pomIssueUrl = "https://github.com/serpro69/Semver.kt/issues"
-val pomDesc = "https://github.com/serpro69/Semver.kt"
+    val pomUrl = "https://github.com/serpro69/${rootProject.name}"
+    val pomScmUrl = "https://github.com/serpro69/${rootProject.name}"
+    val pomIssueUrl = "https://github.com/serpro69/${rootProject.name}/issues"
+    val pomDesc = "https://github.com/serpro69/${rootProject.name}"
 
-val ghRepo = "serpro69/Semver.kt"
-val ghReadme = "README.md"
+    val ghRepo = "serpro69/${rootProject.name}"
+    val ghReadme = "README.md"
 
-val pomLicenseName = "MIT"
-val pomLicenseUrl = "https://opensource.org/licenses/mit-license.php"
-val pomLicenseDist = "repo"
+    val pomLicenseName = "MIT"
+    val pomLicenseUrl = "https://opensource.org/licenses/mit-license.php"
+    val pomLicenseDist = "repo"
 
-val pomDeveloperId = "serpro69"
-val pomDeveloperName = "Serhii Prodan"
+    val pomDeveloperId = "serpro69"
+    val pomDeveloperName = "Serhii Prodan"
 
-publishing {
-    publications {
-        create<MavenPublication>("semver") {
-            groupId = artifactGroup
-            artifactId = artifactName
-            version = artifactVersion
-            from(components["java"])
-//            artifact(jar)
-            artifact(sourcesJar)
-            artifact(dokkaJavadocJar)
+    val publicationName = projectArtifactId.split(Regex("""[\.-]""")).joinToString("") { it.capitalize() }
+    publishing {
+        publications {
+            create<MavenPublication>(publicationName) {
+                groupId = artifactGroup
+                artifactId = projectArtifactId
+                version = artifactVersion
+                from(components["java"])
+                artifact(sourcesJar)
+                artifact(dokkaJavadocJar)
 
-            pom {
-                packaging = "jar"
-                name.set(rootProject.name)
-                description.set(pomDesc)
-                url.set(pomUrl)
-                scm {
-                    url.set(pomScmUrl)
-                }
-                issueManagement {
-                    url.set(pomIssueUrl)
-                }
-                licenses {
-                    license {
-                        name.set(pomLicenseName)
-                        url.set(pomLicenseUrl)
+                pom {
+                    packaging = "jar"
+                    name.set(projectArtifactId)
+                    description.set(pomDesc)
+                    url.set(pomUrl)
+                    scm {
+                        url.set(pomScmUrl)
                     }
-                }
-                developers {
-                    developer {
-                        id.set(pomDeveloperId)
-                        name.set(pomDeveloperName)
+                    issueManagement {
+                        url.set(pomIssueUrl)
+                    }
+                    licenses {
+                        license {
+                            name.set(pomLicenseName)
+                            url.set(pomLicenseUrl)
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set(pomDeveloperId)
+                            name.set(pomDeveloperName)
+                        }
                     }
                 }
             }
         }
     }
-}
 
-signing {
-    if (!version.toString().endsWith("SNAPSHOT")) {
-        sign(publishing.publications["semver"])
+    signing {
+        if (!version.toString().endsWith("SNAPSHOT")) {
+            sign(publishing.publications[publicationName])
+        }
+    }
+
+    tasks {
+        assemble {
+            dependsOn(jar)
+        }
     }
 }
 
-tasks {
-    assemble {
-        dependsOn(jar)
-    }
+val jar by tasks.getting(Jar::class) {
+    enabled = false // nothing to build in root project
 }
 
 nexusPublishing {

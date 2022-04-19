@@ -1,4 +1,4 @@
-package io.github.serpro69.semverkt
+package io.github.serpro69.semverkt.spec
 
 import java.util.regex.Pattern
 import kotlin.math.sign

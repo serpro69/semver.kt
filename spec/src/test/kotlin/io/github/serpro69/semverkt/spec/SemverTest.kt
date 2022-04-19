@@ -1,4 +1,4 @@
-package io.github.serpro69.semverkt
+package io.github.serpro69.semverkt.spec
 
 import io.github.serpro69.kfaker.faker
 import io.kotest.assertions.assertSoftly
