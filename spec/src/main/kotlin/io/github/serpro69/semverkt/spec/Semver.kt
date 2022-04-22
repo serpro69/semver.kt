@@ -105,6 +105,30 @@ class Semver(private val version: String) : Comparable<Semver> {
      */
     fun incrementPatch() = Semver(major, minor, patch + 1)
 
+    fun incrementPreRelease(): Semver = preRelease?.let { copy(preRelease = it.increment()) } ?: this
+
+    /**
+     * Returns a copy of [Semver] as a new instance
+     * with optionally modified [major], [minor], [patch], [preRelease], and [buildMetadata] properties.
+     */
+    fun copy(
+        major: Int = this.major,
+        minor: Int = this.minor,
+        patch: Int = this.patch,
+        preRelease: PreRelease? = this.preRelease,
+        buildMetadata: BuildMetadata? = this.buildMetadata
+    ): Semver {
+        return if (preRelease != null && buildMetadata != null) {
+            Semver(major, minor, patch, preRelease, buildMetadata)
+        } else if (preRelease != null) {
+            Semver(major, minor, patch, preRelease)
+        } else if (buildMetadata != null) {
+            Semver(major, minor, patch, buildMetadata)
+        } else {
+            Semver(major, minor, patch)
+        }
+    }
+
     /**
      * Compares this semantic version with the [other] one.
      * Returns `0` if this version is equal to the specified [other] version,
@@ -176,6 +200,12 @@ class Semver(private val version: String) : Comparable<Semver> {
  * Represents an optional "pre-release identifier" of a semantic version.
  */
 class PreRelease(internal val value: String) : Comparable<PreRelease> {
+
+    internal fun increment(): PreRelease {
+        val first = value.substringBeforeLast(".")
+        val last = value.substringAfterLast(".")
+        return if (last.all { c -> c.isDigit() }) PreRelease("$first.${last.toInt() + 1}") else this
+    }
 
     internal fun validate() {
         // Check for empty identifiers in pre-release. #9

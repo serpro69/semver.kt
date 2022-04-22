@@ -134,6 +134,25 @@ class SemverTest : DescribeSpec({
         it("Pre-release versions have a lower precedence than the associated normal version") {
             Semver("1.0.0-alpha.1") shouldBe beLessThan(Semver("1.0.0"))
         }
+
+        context("Non-semver spec - incrementing pre-release") {
+            it("should increment the last pre-release identifier if it's a number") {
+                Semver("1.0.0-foo.bar.1").incrementPreRelease() shouldBe Semver("1.0.0-foo.bar.2")
+                Semver("1.0.0-foo.bar.1.2").incrementPreRelease() shouldBe Semver("1.0.0-foo.bar.1.3")
+            }
+            it("should return the same version of pre-release can't be incremented") {
+                assertSoftly {
+                    Semver("1.0.0-foo.bar").incrementPreRelease() shouldBe Semver("1.0.0-foo.bar")
+                    Semver("1.0.0-foo.bar.1.-").incrementPreRelease() shouldBe Semver("1.0.0-foo.bar.1.-")
+                }
+            }
+            it("should return the same version if pre-release is absent") {
+                assertSoftly {
+                    Semver("1.0.0").incrementPreRelease() shouldBe Semver("1.0.0")
+                    Semver("1.0.0+123").incrementPreRelease() shouldBe Semver("1.0.0+123")
+                }
+            }
+        }
     }
 
     describe("10. Build metadata MAY be denoted by appending a plus sign and a series of dot separated identifiers immediately following the patch or pre-release version.") {
