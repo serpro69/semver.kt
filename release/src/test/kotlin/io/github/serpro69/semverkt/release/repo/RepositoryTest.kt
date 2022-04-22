@@ -3,6 +3,7 @@ package io.github.serpro69.semverkt.release.repo
 import io.github.serpro69.semverkt.release.testConfiguration
 import io.github.serpro69.semverkt.release.testRepo
 import io.github.serpro69.semverkt.spec.Semver
+import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
@@ -23,6 +24,10 @@ class RepositoryTest : DescribeSpec() {
                 }
             }
         }
+    }
+
+    override fun beforeSpec(spec: Spec) {
+        testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 
     override fun beforeEach(testCase: TestCase) {

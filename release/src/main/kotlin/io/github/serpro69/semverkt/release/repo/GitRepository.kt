@@ -7,7 +7,7 @@ import org.eclipse.jgit.revwalk.RevCommit
 import java.time.ZoneId
 
 class GitRepository(private val config: ConfigurationProvider) : Repository {
-    private val git: Git = Git.open(config.git.repo.directory.toFile())
+    private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
 
     override fun log(
         start: ObjectId?,
@@ -17,8 +17,7 @@ class GitRepository(private val config: ConfigurationProvider) : Repository {
         val versionedCommits = git.tagList().call().map { ref ->
             val configuredVer = semver(config.git.tag)
             val ver = configuredVer(ref)
-            git.repository.refDatabase.peel(ref).peeledObjectId?.let { it to ver }
-                ?: (ref.objectId to ver)
+            git.repository.refDatabase.peel(ref).peeledObjectId?.let { it to ver } ?: (ref.objectId to ver)
         }
 
         val commits: List<Commit> = log(start = start, end = end).fold(mutableListOf()) { acc, commit ->
