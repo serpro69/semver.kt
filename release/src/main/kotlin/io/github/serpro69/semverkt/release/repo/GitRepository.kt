@@ -3,11 +3,18 @@ package io.github.serpro69.semverkt.release.repo
 import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
-import java.time.ZoneId
 
 class GitRepository(private val config: ConfigurationProvider) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
+    private val tags: List<Ref> by lazy { git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") } }
+    override val lastVersion: Ref? by lazy { if (tags.isNotEmpty()) tags.last() else null }
+
+    override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): Log {
+        val objectId = untilTag?.let { git.repository.refDatabase.peel(it)?.peeledObjectId ?: it.objectId }
+        return log(end = objectId, predicate = predicate)
+    }
 
     override fun log(
         start: ObjectId?,
@@ -24,11 +31,8 @@ class GitRepository(private val config: ConfigurationProvider) : Repository {
             if (predicate(commit)) {
                 val c = Commit(
                     objectId = commit.id,
-                    message = Message(
-                        title = commit.title,
-                        description = commit.description
-                    ),
-                    dateTime = commit.authorIdent.`when`.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime(),
+                    message = commit.message,
+                    dateTime = commit.dateTime,
                     version = versionedCommits.firstOrNull { it.first == commit.id }?.second
                 )
                 acc.add(c)

@@ -6,10 +6,8 @@ import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.core.test.TestCase
-import io.kotest.core.test.TestResult
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 
 class RepositoryTest : DescribeSpec() {
     private val repo = GitRepository(testConfiguration)
@@ -22,16 +20,29 @@ class RepositoryTest : DescribeSpec() {
                         Semver("0.4.0"),
                         Semver("0.3.0"),
                         Semver("0.2.0"),
+                        Semver("0.1.0")
                     )
                 }
-                it("should return latest released version by tag") {
+                it("should return last version by tag") {
+                    repo.lastVersion?.simpleTagName shouldBe "v0.4.0"
+                }
+                it("should return a log of commits after the last version") {
+                    val commits = repo.log(repo.lastVersion).commits
                     assertSoftly {
-                        with(repo.latestVersionedCommit()) {
-                            this?.objectId shouldNotBe null
-                            this?.version shouldBe Semver("0.4.0")
-                            this?.message?.title shouldBe "Next release commit"
-                            this?.message?.description shouldBe listOf("Release version 0.4.0")
-                        }
+                        commits.size shouldBe 2
+                        commits.first().message.title shouldBe "Commit #6"
+                        commits.last().message.title shouldBe "Commit #5"
+                        commits.mapNotNull { it.version } shouldBe emptyList()
+                    }
+                }
+                it("should return full log of commits if untilTag is null") {
+                    repo.log(untilTag = null).commits shouldContainExactly repo.log().commits
+                }
+                it("should filter commits by predicate") {
+                    val commits = repo.log { it.title == "Commit #6" }.commits
+                    assertSoftly {
+                        commits.size shouldBe 1
+                        commits.first().message.title shouldBe "Commit #6"
                     }
                 }
             }
@@ -40,13 +51,10 @@ class RepositoryTest : DescribeSpec() {
 
     override fun beforeSpec(spec: Spec) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
-    }
-
-    override fun beforeEach(testCase: TestCase) {
         testRepo()
     }
 
-    override fun afterEach(testCase: TestCase, result: TestResult) {
+    override fun afterSpec(spec: Spec) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 }

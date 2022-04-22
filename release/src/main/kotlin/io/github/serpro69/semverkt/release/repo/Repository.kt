@@ -1,7 +1,7 @@
 package io.github.serpro69.semverkt.release.repo
 
-import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 
 /**
@@ -9,8 +9,16 @@ import org.eclipse.jgit.revwalk.RevCommit
  */
 interface Repository {
 
+    val lastVersion: Ref?
+
     /**
-     * Returns a [Log] of commits from this repository.
+     * Returns a [Log] of commits in this repository,
+     * with an optional [predicate] to filter the commits.
+     *
+     * If both [start] and [end] are provided, uses the range `since..until` for the git log.
+     *
+     * @param start the commit to start git log graph traversal from
+     * @param end same as `--not start` or `start^`
      */
     fun log(
         start: ObjectId? = null,
@@ -19,8 +27,11 @@ interface Repository {
     ): Log
 
     /**
-     * Returns the latest [Commit] that has a tagged version release,
-     * or `null` if no releases exist.
+     * Returns a [Log] of commits from the HEAD and [untilTag],
+     * with an optional [predicate] to filter the commits.
      */
-    fun latestVersionedCommit(): Commit? = log().commits.firstOrNull { it.version != null }
+    fun log(
+        untilTag: Ref?,
+        predicate: (RevCommit) -> Boolean = { true }
+    ): Log
 }

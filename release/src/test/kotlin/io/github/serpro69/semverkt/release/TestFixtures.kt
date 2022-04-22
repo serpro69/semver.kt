@@ -24,6 +24,7 @@ val testRepo: () -> Git = {
         setDirectory(path.toFile())
         call().also {
             it.addCommit(path, "Initial Commit")
+            it.addRelease(path, 3, Semver("0.1.0"), true)
             it.addRelease(path, 0, Semver("0.2.0"), true)
             it.addRelease(path, 3, Semver("0.3.0"), false)
             it.addRelease(path, 3, Semver("0.4.0"), true)

@@ -5,10 +5,21 @@ import io.github.serpro69.semverkt.release.ext.tail
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 internal val semver: (GitTagConfig) -> (Ref) -> Semver = { config ->
-    { ref -> Semver(ref.name.replace("refs/tags/${config.prefix}", "")) }
+    { ref -> Semver(ref.simpleTagName.replace(config.prefix, "")) }
 }
+
+internal val Ref.simpleTagName: String
+    get() = name.replace(Regex("""^refs/tags/"""), "")
+
+internal val RevCommit.dateTime: LocalDateTime
+    get() = authorIdent.`when`.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+internal val RevCommit.message: Message
+    get() = Message(title, description)
 
 /**
  * @property title the title of this git commit
