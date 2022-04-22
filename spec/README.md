@@ -31,6 +31,7 @@ val semver = Semver("1.2.3")
 semver.incrementMajor() // 2.0.0
 semver.incrementMinor() // 2.1.0
 semver.incrementPatch() // 2.1.1
+Semver("1.2.3-rc.4").incrementPreRelease() // 1.2.3-rc.5
 
 // Comparing versions
 println(semver > "0.0.1".toSemver()) // true

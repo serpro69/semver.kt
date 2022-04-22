@@ -10,36 +10,39 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 
 class RepositoryTest : DescribeSpec() {
-    private val repo = GitRepository(testConfiguration)
+    private val repo: Repository = GitRepository(testConfiguration)
 
     init {
         describe("A git repository") {
             context("log") {
                 it("should contain a list of versions") {
-                    repo.log().commits.mapNotNull { it.version } shouldBe listOf(
+                    val expected = listOf(
                         Semver("0.4.0"),
                         Semver("0.3.0"),
                         Semver("0.2.0"),
                         Semver("0.1.0")
                     )
+                    repo.log()
+                        .mapNotNull { it.tag }
+                        .map { semver(testConfiguration.git.tag)(it) } shouldBe expected
                 }
                 it("should return last version by tag") {
                     repo.lastVersion?.simpleTagName shouldBe "v0.4.0"
                 }
                 it("should return a log of commits after the last version") {
-                    val commits = repo.log(repo.lastVersion).commits
+                    val commits = repo.log(repo.lastVersion)
                     assertSoftly {
                         commits.size shouldBe 2
                         commits.first().message.title shouldBe "Commit #6"
                         commits.last().message.title shouldBe "Commit #5"
-                        commits.mapNotNull { it.version } shouldBe emptyList()
+                        commits.mapNotNull { it.tag } shouldBe emptyList()
                     }
                 }
                 it("should return full log of commits if untilTag is null") {
-                    repo.log(untilTag = null).commits shouldContainExactly repo.log().commits
+                    repo.log(untilTag = null) shouldContainExactly repo.log()
                 }
                 it("should filter commits by predicate") {
-                    val commits = repo.log { it.title == "Commit #6" }.commits
+                    val commits = repo.log { it.title == "Commit #6" }
                     assertSoftly {
                         commits.size shouldBe 1
                         commits.first().message.title shouldBe "Commit #6"

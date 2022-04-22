@@ -8,10 +8,12 @@ import org.eclipse.jgit.revwalk.RevCommit
 
 class GitRepository(private val config: ConfigurationProvider) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
-    private val tags: List<Ref> by lazy { git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") } }
+    private val tags: List<Ref> by lazy {
+        git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
+    }
     override val lastVersion: Ref? by lazy { if (tags.isNotEmpty()) tags.last() else null }
 
-    override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): Log {
+    override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {
         val objectId = untilTag?.let { git.repository.refDatabase.peel(it)?.peeledObjectId ?: it.objectId }
         return log(end = objectId, predicate = predicate)
     }
@@ -20,20 +22,18 @@ class GitRepository(private val config: ConfigurationProvider) : Repository {
         start: ObjectId?,
         end: ObjectId?,
         predicate: (RevCommit) -> Boolean,
-    ): Log {
-        val versionedCommits = git.tagList().call().map { ref ->
-            val configuredVer = semver(config.git.tag)
-            val ver = configuredVer(ref)
-            git.repository.refDatabase.peel(ref).peeledObjectId?.let { it to ver } ?: (ref.objectId to ver)
-        }
-
+    ): List<Commit> {
         val commits: List<Commit> = log(start = start, end = end).fold(mutableListOf()) { acc, commit ->
             if (predicate(commit)) {
+                val tag = tags.lastOrNull { ref ->
+                    val tagId: ObjectId = git.repository.refDatabase.peel(ref)?.peeledObjectId ?: ref.objectId
+                    commit.id == tagId
+                }
                 val c = Commit(
                     objectId = commit.id,
                     message = commit.message,
                     dateTime = commit.dateTime,
-                    version = versionedCommits.firstOrNull { it.first == commit.id }?.second
+                    tag = tag
                 )
                 acc.add(c)
             }
@@ -41,7 +41,7 @@ class GitRepository(private val config: ConfigurationProvider) : Repository {
             acc
         }
 
-        return Log(commits)
+        return commits
     }
 
     private fun log(start: ObjectId? = null, end: ObjectId? = null): Sequence<RevCommit> {

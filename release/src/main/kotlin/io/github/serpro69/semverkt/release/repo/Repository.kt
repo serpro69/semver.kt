@@ -12,7 +12,7 @@ interface Repository {
     val lastVersion: Ref?
 
     /**
-     * Returns a [Log] of commits in this repository,
+     * Returns a list of [Commit]s in this repository,
      * with an optional [predicate] to filter the commits.
      *
      * If both [start] and [end] are provided, uses the range `since..until` for the git log.
@@ -24,14 +24,14 @@ interface Repository {
         start: ObjectId? = null,
         end: ObjectId? = null,
         predicate: (RevCommit) -> Boolean = { true }
-    ): Log
+    ): List<Commit>
 
     /**
-     * Returns a [Log] of commits from the HEAD and [untilTag],
+     * Returns a list of [Commit]s in this repository,
      * with an optional [predicate] to filter the commits.
      */
     fun log(
         untilTag: Ref?,
         predicate: (RevCommit) -> Boolean = { true }
-    ): Log
+    ): List<Commit>
 }
