@@ -64,14 +64,16 @@ subprojects {
     val jar by tasks.getting(Jar::class) {
         archiveBaseName.set(projectArtifactId)
 
-        manifest {
-            attributes(
-                mapOf(
-                    "Implementation-Title" to projectArtifactId,
-                    "Implementation-Version" to subProject.version,
-                    "Class-Path" to configurations.compileClasspath.get().joinToString(" ") { it.name }
+        afterEvaluate { // allow declaring additional dependencies in subproject's build.gradle file
+            manifest {
+                attributes(
+                    mapOf(
+                        "Implementation-Title" to projectArtifactId,
+                        "Implementation-Version" to subProject.version,
+                        "Class-Path" to configurations.compileClasspath.get().joinToString(" ") { it.name }
+                    )
                 )
-            )
+            }
         }
     }
 
