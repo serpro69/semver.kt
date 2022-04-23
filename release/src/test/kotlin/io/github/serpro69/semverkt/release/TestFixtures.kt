@@ -19,30 +19,37 @@ private val testProperties = Properties().also {
 val testConfiguration = PropertiesConfiguration(testProperties)
 
 val testRepo: () -> Git = {
-    val path = testConfiguration.git.repo.directory.createDirectories()
     with(Git.init()) {
-        setDirectory(path.toFile())
+        setDirectory(testConfiguration.git.repo.directory.createDirectories().toFile())
         call().also {
-            it.addCommit(path, "Initial Commit")
-            it.addRelease(path, 3, Semver("0.1.0"), true)
-            it.addRelease(path, 0, Semver("0.2.0"), true)
-            it.addRelease(path, 3, Semver("0.3.0"), false)
-            it.addRelease(path, 3, Semver("0.4.0"), true)
-            it.addCommit(path, "Commit #5")
-            it.addCommit(path, "Commit #6")
+            it.addCommit("Initial Commit")
+            it.addRelease(3, Semver("0.1.0"), true)
+            it.addRelease(0, Semver("0.2.0"), true)
+            it.addRelease(3, Semver("0.3.0"), false)
+            it.addRelease(3, Semver("0.4.0"), true)
+            it.addCommit("Commit #5")
+            it.addCommit("Commit #6")
         }
     }
 }
 
-fun Git.addRelease(path: Path, noOfCommits: Int, version: Semver, annotated: Boolean) {
+fun Git.addRelease(
+    noOfCommits: Int,
+    version: Semver,
+    annotated: Boolean = true,
+    path: Path = testConfiguration.git.repo.directory
+) {
     for (i in 0 until noOfCommits) {
-        addCommit(path, "Commit ${faker.random.randomString(10)}")
+        addCommit("Commit ${faker.random.randomString(10)}", path)
     }
-    addCommit(path, "Next release commit\n\nRelease version $version")
+    addCommit("Next release commit\n\nRelease version $version", path)
     tag().setAnnotated(annotated).setName("v$version").setForceUpdate(true).call()
 }
 
-fun Git.addCommit(repoPath: Path, message: String): RevCommit {
+fun Git.addCommit(
+    message: String,
+    repoPath: Path = testConfiguration.git.repo.directory
+): RevCommit {
     repoPath.resolve("${faker.random.randomString(10)}.txt").toFile().createNewFile()
     add().addFilepattern(".").call()
     return commit().setMessage(message).call()
