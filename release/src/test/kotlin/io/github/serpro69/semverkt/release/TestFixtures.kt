@@ -34,7 +34,7 @@ val testRepo: () -> Git = {
     }
 }
 
-private fun Git.addRelease(path: Path, noOfCommits: Int, version: Semver, annotated: Boolean) {
+fun Git.addRelease(path: Path, noOfCommits: Int, version: Semver, annotated: Boolean) {
     for (i in 0 until noOfCommits) {
         addCommit(path, "Commit ${faker.random.randomString(10)}")
     }
@@ -42,7 +42,7 @@ private fun Git.addRelease(path: Path, noOfCommits: Int, version: Semver, annota
     tag().setAnnotated(annotated).setName("v$version").setForceUpdate(true).call()
 }
 
-private fun Git.addCommit(repoPath: Path, message: String): RevCommit {
+fun Git.addCommit(repoPath: Path, message: String): RevCommit {
     repoPath.resolve("${faker.random.randomString(10)}.txt").toFile().createNewFile()
     add().addFilepattern(".").call()
     return commit().setMessage(message).call()

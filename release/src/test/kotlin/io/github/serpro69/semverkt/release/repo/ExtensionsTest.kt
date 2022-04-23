@@ -15,7 +15,7 @@ class ExtensionsTest : DescribeSpec() {
     init {
         describe("repo extension functions") {
             it("semver() fun") {
-                semver(testConfiguration.git.tag)(repo.lastVersion!!) shouldBe Semver("0.4.0")
+                semver(testConfiguration.git.tag)(repo.lastVersion()!!) shouldBe Semver("0.4.0")
             }
         }
     }

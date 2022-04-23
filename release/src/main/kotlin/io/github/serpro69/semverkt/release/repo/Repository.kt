@@ -9,7 +9,7 @@ import org.eclipse.jgit.revwalk.RevCommit
  */
 interface Repository {
 
-    val lastVersion: Ref?
+    val lastVersion: () -> Ref?
 
     /**
      * Returns a list of [Commit]s in this repository,

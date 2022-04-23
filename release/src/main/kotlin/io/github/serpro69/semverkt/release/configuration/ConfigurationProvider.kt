@@ -15,6 +15,7 @@ import kotlin.io.path.Path
  */
 interface ConfigurationProvider {
     val git: GitConfig
+    val version: VersionConfig
 }
 
 /**

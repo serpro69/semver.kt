@@ -6,6 +6,8 @@ import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.core.test.TestCase
+import io.kotest.core.test.TestResult
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 
@@ -27,10 +29,10 @@ class RepositoryTest : DescribeSpec() {
                         .map { semver(testConfiguration.git.tag)(it) } shouldBe expected
                 }
                 it("should return last version by tag") {
-                    repo.lastVersion?.simpleTagName shouldBe "v0.4.0"
+                    repo.lastVersion()?.simpleTagName shouldBe "v0.4.0"
                 }
                 it("should return a log of commits after the last version") {
-                    val commits = repo.log(repo.lastVersion)
+                    val commits = repo.log(repo.lastVersion())
                     assertSoftly {
                         commits.size shouldBe 2
                         commits.first().message.title shouldBe "Commit #6"
@@ -54,10 +56,13 @@ class RepositoryTest : DescribeSpec() {
 
     override fun beforeSpec(spec: Spec) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
+    }
+
+    override fun beforeTest(testCase: TestCase) {
         testRepo()
     }
 
-    override fun afterSpec(spec: Spec) {
+    override fun afterTest(testCase: TestCase, result: TestResult) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 }

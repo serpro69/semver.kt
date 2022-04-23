@@ -8,10 +8,13 @@ import org.eclipse.jgit.revwalk.RevCommit
 
 class GitRepository(private val config: ConfigurationProvider) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
-    private val tags: List<Ref> by lazy {
+    private val tags: () -> List<Ref> = {
         git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
     }
-    override val lastVersion: Ref? by lazy { if (tags.isNotEmpty()) tags.last() else null }
+    override val lastVersion: () -> Ref? = {
+        val tags = tags()
+        if (tags.isNotEmpty()) tags.last() else null
+    }
 
     override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {
         val objectId = untilTag?.let { git.repository.refDatabase.peel(it)?.peeledObjectId ?: it.objectId }
@@ -25,7 +28,7 @@ class GitRepository(private val config: ConfigurationProvider) : Repository {
     ): List<Commit> {
         val commits: List<Commit> = log(start = start, end = end).fold(mutableListOf()) { acc, commit ->
             if (predicate(commit)) {
-                val tag = tags.lastOrNull { ref ->
+                val tag = tags().lastOrNull { ref ->
                     val tagId: ObjectId = git.repository.refDatabase.peel(ref)?.peeledObjectId ?: ref.objectId
                     commit.id == tagId
                 }
