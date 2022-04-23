@@ -5,6 +5,7 @@ import dev.nohus.autokonfig.AutoKonfigException
 import dev.nohus.autokonfig.types.getBoolean
 import dev.nohus.autokonfig.types.getInt
 import dev.nohus.autokonfig.types.getString
+import io.github.serpro69.semverkt.spec.Semver
 import java.nio.file.Path
 import kotlin.io.path.Path
 
@@ -29,6 +30,7 @@ internal inline fun <reified T : Any> AutoKonfig.property(name: String): T {
             Int::class -> getInt(name) as T
             Boolean::class -> getBoolean(name) as T
             Path::class -> Path(getString(name)) as T
+            Semver::class -> Semver(getString(name)) as T
             else -> throw IllegalArgumentException("Unsupported property type ${T::class}")
         }
     } catch (e: AutoKonfigException) {
