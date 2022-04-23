@@ -6,14 +6,19 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 
-class GitRepository(private val config: ConfigurationProvider) : Repository {
+class GitRepository(override val config: ConfigurationProvider) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
     private val tags: () -> List<Ref> = {
         git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
     }
     override val lastVersion: () -> Ref? = {
         val tags = tags()
-        if (tags.isNotEmpty()) tags.last() else null
+        if (tags.isNotEmpty()) {
+            val comparator = { o1: Ref, o2: Ref ->
+                semver(config.git.tag)(o1).compareTo(semver(config.git.tag)(o2))
+            }
+            tags.maxOfWith(comparator) { it }
+        } else null
     }
 
     override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {

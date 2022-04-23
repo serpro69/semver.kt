@@ -1,5 +1,6 @@
 package io.github.serpro69.semverkt.release.repo
 
+import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
@@ -8,6 +9,8 @@ import org.eclipse.jgit.revwalk.RevCommit
  * An interface representation of a repository
  */
 interface Repository {
+
+    val config: ConfigurationProvider
 
     val lastVersion: () -> Ref?
 
