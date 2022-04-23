@@ -5,6 +5,7 @@ import dev.nohus.autokonfig.AutoKonfigException
 import dev.nohus.autokonfig.types.getBoolean
 import dev.nohus.autokonfig.types.getInt
 import dev.nohus.autokonfig.types.getString
+import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.spec.Semver
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -31,6 +32,12 @@ internal inline fun <reified T : Any> AutoKonfig.property(name: String): T {
             Boolean::class -> getBoolean(name) as T
             Path::class -> Path(getString(name)) as T
             Semver::class -> Semver(getString(name)) as T
+            Increment::class -> {
+                when (val inc = Increment.getByName(getString(name))) {
+                    Increment.MAJOR, Increment.MINOR, Increment.PATCH -> inc as T
+                    else -> throw IllegalArgumentException("Illegal Increment configuration value: '$name'")
+                }
+            }
             else -> throw IllegalArgumentException("Unsupported property type ${T::class}")
         }
     } catch (e: AutoKonfigException) {

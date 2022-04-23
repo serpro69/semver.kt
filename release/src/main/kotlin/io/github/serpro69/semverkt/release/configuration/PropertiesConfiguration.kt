@@ -2,6 +2,7 @@ package io.github.serpro69.semverkt.release.configuration
 
 import dev.nohus.autokonfig.AutoKonfig
 import dev.nohus.autokonfig.withProperties
+import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.spec.Semver
 import java.nio.file.Path
 import java.util.*
@@ -36,6 +37,8 @@ class PropertiesConfiguration(properties: Properties = Properties()) : Configura
 
     override val version: VersionConfig = object : VersionConfig {
         override val initialVersion: Semver = autoConfig.propertyOrNull("version.initialVersion") ?: super.initialVersion
+        override val defaultIncrement: Increment = autoConfig.propertyOrNull("version.defaultIncrement") ?: super.defaultIncrement
         override val preReleaseId: String = autoConfig.propertyOrNull("version.preReleaseId") ?: super.preReleaseId
+        override val snapshotSuffix: String = autoConfig.propertyOrNull("version.snapshotSuffix") ?: super.snapshotSuffix
     }
 }
