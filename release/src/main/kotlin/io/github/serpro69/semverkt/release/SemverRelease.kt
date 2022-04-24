@@ -18,7 +18,8 @@ import io.github.serpro69.semverkt.spec.Semver
 class SemverRelease {
     private val repo: Repository
     private val config: ConfigurationProvider
-    private val currentVersion: () -> Semver?
+
+    val currentVersion: () -> Semver?
 
     /**
      * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.
