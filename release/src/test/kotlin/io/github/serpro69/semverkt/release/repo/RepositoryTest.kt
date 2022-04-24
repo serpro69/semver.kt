@@ -1,7 +1,5 @@
 package io.github.serpro69.semverkt.release.repo
 
-import io.github.serpro69.semverkt.release.SemverRelease
-import io.github.serpro69.semverkt.release.addCommit
 import io.github.serpro69.semverkt.release.addRelease
 import io.github.serpro69.semverkt.release.testConfiguration
 import io.github.serpro69.semverkt.release.testRepo
@@ -34,10 +32,10 @@ class RepositoryTest : DescribeSpec() {
                         .map { semver(testConfiguration.git.tag)(it) } shouldBe expected
                 }
                 it("should return last version by tag") {
-                    repo.lastVersion()?.simpleTagName shouldBe "v0.4.0"
+                    repo.latestVersionTag()?.simpleTagName shouldBe "v0.4.0"
                 }
                 it("should return a log of commits after the last version") {
-                    val commits = repo.log(repo.lastVersion())
+                    val commits = repo.log(repo.latestVersionTag())
                     assertSoftly {
                         commits.size shouldBe 2
                         commits.first().message.title shouldBe "Commit #6"
@@ -58,13 +56,13 @@ class RepositoryTest : DescribeSpec() {
             }
             context("last version") {
                 it("should return last version - ordered") {
-                    repo.lastVersion()?.simpleTagName shouldBe "v0.4.0"
+                    repo.latestVersionTag()?.simpleTagName shouldBe "v0.4.0"
                 }
                 it("should return last version - unordered") {
                     git().addRelease(3, Semver("3.0.0"))
                     git().addRelease(3, Semver("2.0.0"))
                     git().addRelease(3, Semver("1.0.0"))
-                    repo.lastVersion()?.simpleTagName shouldBe "v3.0.0"
+                    repo.latestVersionTag()?.simpleTagName shouldBe "v3.0.0"
                 }
             }
         }

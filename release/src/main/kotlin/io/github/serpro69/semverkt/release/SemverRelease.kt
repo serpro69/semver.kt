@@ -1,6 +1,7 @@
 package io.github.serpro69.semverkt.release
 
 import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
+import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.release.repo.Commit
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.release.repo.Message
@@ -9,50 +10,88 @@ import io.github.serpro69.semverkt.release.repo.semver
 import io.github.serpro69.semverkt.spec.PreRelease
 import io.github.serpro69.semverkt.spec.Semver
 
+/**
+ * Provides functions for semantic releases of a project [Repository].
+ *
+ * @property currentVersion the current (last) version in a given repository
+ */
 class SemverRelease {
     private val repo: Repository
     private val config: ConfigurationProvider
     private val currentVersion: () -> Semver?
 
+    /**
+     * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.
+     */
     constructor(configuration: ConfigurationProvider) {
         repo = GitRepository(configuration)
         config = configuration
-        currentVersion = { repo.lastVersion()?.let { semver(configuration.git.tag)(it) } }
+        currentVersion = { repo.latestVersionTag()?.let { semver(configuration.git.tag)(it) } }
     }
 
+    /**
+     * @constructor Creates an instance of [SemverRelease] for a given [repository].
+     */
     constructor(repository: Repository) {
         repo = repository
         config = repo.config
-        currentVersion = { repo.lastVersion()?.let { semver(config.git.tag)(it) } }
+        currentVersion = { repo.latestVersionTag()?.let { semver(config.git.tag)(it) } }
     }
 
-    fun increment(increment: Increment, release: Boolean = true): Semver {
+    /**
+     * Returns the next release version after the [currentVersion] based on the [increment].
+     */
+    fun release(increment: Increment): Semver = increment(increment, true)
+
+    /**
+     * Returns the next snapshot version after the [currentVersion] based on the [increment].
+     */
+    fun snapshot(increment: Increment): Semver = increment(increment, false)
+
+    /**
+     * Increment the [currentVersion] to the next [Semver] using the [increment].
+     *
+     * @param release if `false` appends [VersionConfig.snapshotSuffix] to the final version
+     */
+    fun increment(increment: Increment, release: Boolean): Semver {
         val nextVersion = currentVersion()?.let {
             when (increment) {
                 Increment.MAJOR -> it.incrementMajor()
                 Increment.MINOR -> it.incrementMinor()
                 Increment.PATCH -> it.incrementPatch()
-                Increment.PRE_RELEASE -> it.incrementPreRelease()
+                Increment.PRE_RELEASE -> {
+                    with(it.incrementPreRelease()) {
+                        preRelease?.let { _ -> if (release) this else withSnapshot() } ?: this
+                    }
+                }
                 Increment.DEFAULT -> {
-                    it.preRelease?.let { _ -> it.incrementPreRelease() }
+                    it.preRelease?.let { _ -> increment(Increment.PRE_RELEASE, release) }
                         ?: increment(config.version.defaultIncrement, release)
                 }
             }
         } ?: config.version.initialVersion
         // TODO check if nextVersion != currentVersion
-        return if (release) nextVersion else nextVersion.withSnapshot()
+        return if (release || increment == Increment.PRE_RELEASE) nextVersion else nextVersion.withSnapshot()
     }
 
+    /**
+     * Creates a pre-release version with an [increment] increment, and returns as [Semver] instance.
+     *
+     * IF [currentVersion] is already a pre-release version, returns the [currentVersion],
+     * ELSE [release]s the [currentVersion] to the next [increment]
+     * and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number.
+     */
     fun createPreRelease(increment: Increment): Semver {
-        println(repo.lastVersion())
-        println(currentVersion())
         return currentVersion()?.preRelease?.let { currentVersion() } ?: run {
-            val preRelease = PreRelease("${config.version.preReleaseId}.1")
-            increment(increment, true).copy(preRelease = preRelease)
+            val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
+            release(increment).copy(preRelease = preRelease)
         }
     }
 
-    fun nextIncrement(): Increment = repo.log(repo.lastVersion()).nextIncrement()
+    /**
+     * Returns the next [Increment] based on the [Repository.latestVersionTag].
+     */
+    fun nextIncrement(): Increment = repo.log(repo.latestVersionTag()).nextIncrement()
 
     private fun List<Commit>.nextIncrement(): Increment {
         var inc = Increment.DEFAULT

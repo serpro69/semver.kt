@@ -146,7 +146,7 @@ class Semver(private val version: String) : Comparable<Semver> {
                 when {
                     preRelease != null -> if (other.preRelease != null) preRelease.compareTo(other.preRelease) else -1
                     other.preRelease != null -> 1
-                    else -> compareNormal
+                    else -> 0
                 }
             }
             else -> compareNormal

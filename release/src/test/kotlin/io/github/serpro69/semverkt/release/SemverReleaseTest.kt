@@ -46,120 +46,104 @@ class SemverReleaseTest : DescribeSpec() {
         }
 
         describe("Semver") {
-            it("increment major release") {
-                git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MAJOR) shouldBe Semver("2.0.0")
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MAJOR) shouldBe Semver("2.0.0")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MAJOR) shouldBe Semver("2.0.0")
-            }
-            it("increment major snapshot") {
-                git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MAJOR, false) shouldBe Semver("2.0.0-SNAPSHOT")
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MAJOR, false) shouldBe Semver("2.0.0-SNAPSHOT")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MAJOR, false) shouldBe Semver("2.0.0-SNAPSHOT")
-            }
-            it("increment minor release") {
-                git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MINOR) shouldBe Semver("1.1.0")
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MINOR) shouldBe Semver("1.1.0")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MINOR) shouldBe Semver("1.1.0")
-            }
-            it("increment minor snapshot") {
-                git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MINOR, false) shouldBe Semver("1.1.0-SNAPSHOT")
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MINOR, false) shouldBe Semver("1.1.0-SNAPSHOT")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.MINOR, false) shouldBe Semver("1.1.0-SNAPSHOT")
-            }
-            it("increment patch release") {
-                git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.PATCH) shouldBe Semver("1.0.1")
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.PATCH) shouldBe Semver("1.0.1")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.PATCH) shouldBe Semver("1.0.1")
-            }
-            it("increment patch snapshot") {
-                git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.PATCH, false) shouldBe Semver("1.0.1-SNAPSHOT")
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.PATCH, false) shouldBe Semver("1.0.1-SNAPSHOT")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().increment(Increment.PATCH, false) shouldBe Semver("1.0.1-SNAPSHOT")
+            listOf(
+                Semver("1.0.0-SNAPSHOT"),
+                Semver("1.0.0-rc.1"),
+                Semver("1.0.0")
+            ).forEach { v ->
+                it("increment major release after $v") {
+                    git().addRelease(0, v)
+                    git().addCommit("Test commit")
+                    semverRelease().release(Increment.MAJOR) shouldBe Semver("2.0.0")
+                }
+                it("increment major snapshot after $v") {
+                    git().addRelease(0, v)
+                    git().addCommit("Test commit")
+                    semverRelease().snapshot(Increment.MAJOR) shouldBe Semver("2.0.0-SNAPSHOT")
+                }
+                it("increment minor release after $v") {
+                    git().addRelease(0, v)
+                    git().addCommit("Test commit")
+                    semverRelease().release(Increment.MINOR) shouldBe Semver("1.1.0")
+                }
+                it("increment minor snapshot after $v") {
+                    git().addRelease(0, v)
+                    git().addCommit("Test commit")
+                    semverRelease().snapshot(Increment.MINOR) shouldBe Semver("1.1.0-SNAPSHOT")
+                }
+                it("increment patch release after $v") {
+                    git().addRelease(0, v)
+                    git().addCommit("Test commit")
+                    semverRelease().release(Increment.PATCH) shouldBe Semver("1.0.1")
+                }
+                it("increment patch snapshot after $v") {
+                    git().addRelease(0, v)
+                    git().addCommit("Test commit")
+                    semverRelease().snapshot(Increment.PATCH) shouldBe Semver("1.0.1-SNAPSHOT")
+                }
             }
             it("increment pre_release") {
                 git().addRelease(0, Semver("1.0.0-rc.1"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.2")
+                semverRelease().release(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.2")
                 git().addRelease(0, Semver("1.0.0-rc.123"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.124")
+                semverRelease().release(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.124")
                 git().addRelease(0, Semver("1.0.0"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE) shouldBe Semver("1.0.0")
+                semverRelease().release(Increment.PRE_RELEASE) shouldBe Semver("1.0.0")
             }
             it("increment pre_release snapshot") {
                 git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-SNAPSHOT")
+                semverRelease().snapshot(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-SNAPSHOT")
                 git().addRelease(0, Semver("1.0.0-rc.1"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE, false) shouldBe Semver("1.0.0-rc.2-SNAPSHOT")
+                semverRelease().snapshot(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.2-SNAPSHOT")
                 git().addRelease(0, Semver("1.0.0-rc.123"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE, false) shouldBe Semver("1.0.0-rc.124-SNAPSHOT")
+                semverRelease().snapshot(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.124-SNAPSHOT")
                 git().addRelease(0, Semver("1.0.0"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.PRE_RELEASE) shouldBe Semver("1.0.0")
+                semverRelease().snapshot(Increment.PRE_RELEASE) shouldBe Semver("1.0.0")
             }
             it("increment default release") {
                 git().addRelease(0, Semver("1.0.0-rc.1"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.DEFAULT) shouldBe Semver("1.0.0-rc.2")
+                semverRelease().release(Increment.DEFAULT) shouldBe Semver("1.0.0-rc.2")
                 git().addRelease(0, Semver("1.0.0"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.DEFAULT) shouldBe Semver("1.1.0")
+                semverRelease().release(Increment.DEFAULT) shouldBe Semver("1.1.0")
             }
             it("increment default snapshot") {
                 git().addRelease(0, Semver("1.0.0-rc.1"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.DEFAULT, false) shouldBe Semver("1.0.0-rc.2-SNAPSHOT")
+                semverRelease().snapshot(Increment.DEFAULT) shouldBe Semver("1.0.0-rc.2-SNAPSHOT")
                 git().addRelease(0, Semver("1.0.0"))
                 git().addCommit("Test commit")
-                semverRelease().increment(Increment.DEFAULT, false) shouldBe Semver("1.1.0-SNAPSHOT")
+                semverRelease().snapshot(Increment.DEFAULT) shouldBe Semver("1.1.0-SNAPSHOT")
             }
-            it("create new pre release") {
-                git().addRelease(0, Semver("1.0.0-rc.1"))
-                git().addCommit("Test commit")
-                semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.0.0-rc.1")
-                git().addRelease(0, Semver("1.0.0"))
-                git().addCommit("Test commit")
-                semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.1.0-rc.1")
+            context("create new pre release") {
+                it("snapshot version should not change") {
+                    git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
+                    git().addCommit("Test commit")
+                    semverRelease().createPreRelease(Increment.MAJOR) shouldBe Semver("1.0.0-SNAPSHOT")
+                }
+                it("pre-release version should not change") {
+                    val noChangeVer = Semver("1.0.0-rc.1")
+                    git().addRelease(0, noChangeVer)
+                    git().addCommit("Test commit")
+                    semverRelease().createPreRelease(Increment.MAJOR) shouldBe noChangeVer
+                    semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe noChangeVer
+                }
+                it("first pre-release version should be created") {
+                    git().addRelease(0, Semver("1.0.0"))
+                    git().addCommit("Test commit")
+                    semverRelease().createPreRelease(Increment.MAJOR) shouldBe Semver("2.0.0-rc.1")
+                    semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.1.0-rc.1")
+                    semverRelease().createPreRelease(Increment.PATCH) shouldBe Semver("1.0.1-rc.1")
+                    semverRelease().createPreRelease(Increment.DEFAULT) shouldBe Semver("1.1.0-rc.1")
+                }
             }
         }
     }

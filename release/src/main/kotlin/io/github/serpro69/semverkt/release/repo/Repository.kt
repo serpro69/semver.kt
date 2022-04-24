@@ -7,12 +7,19 @@ import org.eclipse.jgit.revwalk.RevCommit
 
 /**
  * An interface representation of a repository
+ *
+ * @property config [ConfigurationProvider] for this repository.
  */
 interface Repository {
 
     val config: ConfigurationProvider
 
-    val lastVersion: () -> Ref?
+    /**
+     * Returns the latest tag from this repository.
+     *
+     * The implementor should decide (and document) what the "LATEST" means and how it is calculated.
+     */
+    val latestVersionTag: () -> Ref?
 
     /**
      * Returns a list of [Commit]s in this repository,

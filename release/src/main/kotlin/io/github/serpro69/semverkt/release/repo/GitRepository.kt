@@ -1,6 +1,8 @@
 package io.github.serpro69.semverkt.release.repo
 
 import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
+import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
@@ -11,16 +13,28 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
     private val tags: () -> List<Ref> = {
         git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
     }
-    override val lastVersion: () -> Ref? = {
+
+    /**
+     * Returns the latest tag from this git repository.
+     *
+     * The tags are filtered by the [GitTagConfig.prefix],
+     * and tags that don't start with the specified prefix are omitted.
+     *
+     * The tags are compared using [Semver.compareTo], and the tag with maximum version is returned.
+     */
+    override val latestVersionTag: () -> Ref? = {
         val tags = tags()
         if (tags.isNotEmpty()) {
-            val comparator = { o1: Ref, o2: Ref ->
+            val comparator: (Ref, Ref) -> Int = { o1: Ref, o2: Ref ->
                 semver(config.git.tag)(o1).compareTo(semver(config.git.tag)(o2))
             }
             tags.maxOfWith(comparator) { it }
         } else null
     }
 
+    /**
+     * Returns a log of [Commit]s from HEAD and [untilTag] ref, with an optional [predicate] to filter out the commits.
+     */
     override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {
         val objectId = untilTag?.let { git.repository.refDatabase.peel(it)?.peeledObjectId ?: it.objectId }
         return log(end = objectId, predicate = predicate)
