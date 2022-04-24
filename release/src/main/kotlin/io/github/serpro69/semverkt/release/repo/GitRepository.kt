@@ -1,6 +1,6 @@
 package io.github.serpro69.semverkt.release.repo
 
-import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
+import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
@@ -9,7 +9,7 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 
-class GitRepository(override val config: ConfigurationProvider) : Repository {
+class GitRepository(override val config: Configuration) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
 
     override val head: () -> ObjectId = { git.repository.resolve(Constants.HEAD) }

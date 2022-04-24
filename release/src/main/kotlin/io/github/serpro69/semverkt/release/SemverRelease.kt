@@ -1,6 +1,6 @@
 package io.github.serpro69.semverkt.release
 
-import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
+import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
@@ -19,14 +19,14 @@ import io.github.serpro69.semverkt.spec.Semver
  */
 class SemverRelease {
     private val repo: Repository
-    private val config: ConfigurationProvider
+    private val config: Configuration
 
     val currentVersion: () -> Semver?
 
     /**
      * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.
      */
-    constructor(configuration: ConfigurationProvider) {
+    constructor(configuration: Configuration) {
         repo = GitRepository(configuration)
         config = configuration
         currentVersion = { repo.latestVersionTag()?.let { semver(configuration.git.tag)(it) } }

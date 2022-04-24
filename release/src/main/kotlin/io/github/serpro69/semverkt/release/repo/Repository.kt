@@ -1,6 +1,6 @@
 package io.github.serpro69.semverkt.release.repo
 
-import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
+import io.github.serpro69.semverkt.release.configuration.Configuration
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
@@ -8,11 +8,11 @@ import org.eclipse.jgit.revwalk.RevCommit
 /**
  * An interface representation of a repository
  *
- * @property config [ConfigurationProvider] for this repository.
+ * @property config [Configuration] for this repository.
  */
 interface Repository : AutoCloseable {
 
-    val config: ConfigurationProvider
+    val config: Configuration
 
     /**
      * Returns the `HEAD` of this repository.
