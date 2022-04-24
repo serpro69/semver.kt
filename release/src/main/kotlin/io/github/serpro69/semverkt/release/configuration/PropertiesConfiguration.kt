@@ -39,6 +39,7 @@ class PropertiesConfiguration(properties: Properties = Properties()) : Configura
         override val initialVersion: Semver = autoConfig.propertyOrNull("version.initialVersion") ?: super.initialVersion
         override val defaultIncrement: Increment = autoConfig.propertyOrNull("version.defaultIncrement") ?: super.defaultIncrement
         override val preReleaseId: String = autoConfig.propertyOrNull("version.preReleaseId") ?: super.preReleaseId
+        override val initialPreRelease: Int = autoConfig.propertyOrNull("version.initialPreRelease") ?: super.initialPreRelease
         override val snapshotSuffix: String = autoConfig.propertyOrNull("version.snapshotSuffix") ?: super.snapshotSuffix
     }
 }

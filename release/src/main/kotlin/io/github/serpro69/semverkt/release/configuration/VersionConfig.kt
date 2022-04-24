@@ -7,5 +7,6 @@ interface VersionConfig {
     val initialVersion: Semver get() = Semver("0.1.0")
     val defaultIncrement: Increment get() = Increment.MINOR
     val preReleaseId: String get() = "rc"
+    val initialPreRelease: Int get() = 1
     val snapshotSuffix: String get() = "SNAPSHOT"
 }
