@@ -3,6 +3,15 @@ package io.github.serpro69.semverkt.release.configuration
 import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.spec.Semver
 
+/**
+ * Semantic Version configuration.
+ *
+ * @property initialVersion     the initial version that will be created if no versions exist
+ * @property defaultIncrement   the version element to increment by default, when no explicit increment is specified
+ * @property preReleaseId       the pre-release identifier string
+ * @property initialPreRelease  the initial number for new pre-release versions
+ * @property snapshotSuffix     the snapshot version suffix
+ */
 interface VersionConfig {
     val initialVersion: Semver get() = Semver("0.1.0")
     val defaultIncrement: Increment get() = Increment.MINOR

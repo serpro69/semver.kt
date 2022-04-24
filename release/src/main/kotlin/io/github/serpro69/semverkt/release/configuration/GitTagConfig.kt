@@ -8,7 +8,6 @@ package io.github.serpro69.semverkt.release.configuration
  * @property useBranches    whether to use branches to determine releases, instead of tags; defaults to `false`
  */
 interface GitTagConfig {
-
     val prefix: String get() = "v"
     val separator: String get() = ""
     val useBranches: Boolean get() = false
