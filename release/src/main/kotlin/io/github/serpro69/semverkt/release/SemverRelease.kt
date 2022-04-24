@@ -17,7 +17,7 @@ import io.github.serpro69.semverkt.spec.Semver
  *
  * @property currentVersion the current (last) version in a given repository
  */
-class SemverRelease {
+class SemverRelease : AutoCloseable {
     private val repo: Repository
     private val config: Configuration
 
@@ -39,6 +39,10 @@ class SemverRelease {
         repo = repository
         config = repo.config
         currentVersion = { repo.latestVersionTag()?.let { semver(config.git.tag)(it) } }
+    }
+
+    override fun close() {
+        repo.close()
     }
 
     /**
