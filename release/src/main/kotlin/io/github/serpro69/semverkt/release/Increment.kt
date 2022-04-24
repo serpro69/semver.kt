@@ -6,11 +6,12 @@ enum class Increment {
     PATCH,
     PRE_RELEASE,
     DEFAULT,
+    NONE,
     ;
 
     companion object {
         fun getByName(name: String): Increment {
-            return values().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: DEFAULT
+            return values().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
         }
     }
 

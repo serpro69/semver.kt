@@ -4,6 +4,7 @@ import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
@@ -13,6 +14,8 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
     private val tags: () -> List<Ref> = {
         git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
     }
+
+    override val head: () -> ObjectId = { git.repository.resolve(Constants.HEAD) }
 
     /**
      * Returns the latest tag from this git repository.
@@ -28,7 +31,7 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
             val comparator: (Ref, Ref) -> Int = { o1: Ref, o2: Ref ->
                 semver(config.git.tag)(o1).compareTo(semver(config.git.tag)(o2))
             }
-            tags.maxOfWith(comparator) { it }
+            tags.maxOfWith(comparator) { git.repository.refDatabase.peel(it) }
         } else null
     }
 
@@ -64,6 +67,10 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
         }
 
         return commits
+    }
+
+    override fun close() {
+        git.close()
     }
 
     private fun log(start: ObjectId? = null, end: ObjectId? = null): Sequence<RevCommit> {

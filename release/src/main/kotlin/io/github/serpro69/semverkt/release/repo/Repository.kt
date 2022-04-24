@@ -10,9 +10,14 @@ import org.eclipse.jgit.revwalk.RevCommit
  *
  * @property config [ConfigurationProvider] for this repository.
  */
-interface Repository {
+interface Repository : AutoCloseable {
 
     val config: ConfigurationProvider
+
+    /**
+     * Returns the `HEAD` of this repository.
+     */
+    val head: () -> ObjectId
 
     /**
      * Returns the latest tag from this repository.

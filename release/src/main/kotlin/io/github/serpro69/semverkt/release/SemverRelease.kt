@@ -1,6 +1,8 @@
 package io.github.serpro69.semverkt.release
 
 import io.github.serpro69.semverkt.release.configuration.ConfigurationProvider
+import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
+import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.release.repo.Commit
 import io.github.serpro69.semverkt.release.repo.GitRepository
@@ -54,7 +56,10 @@ class SemverRelease {
      *
      * @param release if `false` appends [VersionConfig.snapshotSuffix] to the final version
      */
-    fun increment(increment: Increment, release: Boolean): Semver {
+    fun increment(
+        increment: Increment,
+        release: Boolean = (increment != Increment.DEFAULT),
+    ): Semver {
         val nextVersion = currentVersion()?.let {
             when (increment) {
                 Increment.MAJOR -> it.incrementMajor()
@@ -69,9 +74,9 @@ class SemverRelease {
                     it.preRelease?.let { _ -> increment(Increment.PRE_RELEASE, release) }
                         ?: increment(config.version.defaultIncrement, release)
                 }
+                Increment.NONE -> currentVersion()
             }
         } ?: config.version.initialVersion
-        // TODO check if nextVersion != currentVersion
         return if (release || increment == Increment.PRE_RELEASE) nextVersion else nextVersion.withSnapshot()
     }
 
@@ -91,11 +96,29 @@ class SemverRelease {
 
     /**
      * Returns the next [Increment] based on the [Repository.latestVersionTag].
+     *
+     * IF any of the commits contain a keyword for incrementing a specific version, as configured by [GitMessageConfig],
+     * THEN that increment will be returned based on the precedence rules,
+     * ELSE [Increment.NONE] is returned.
+     *
+     * IF the repository `HEAD` points to the [Repository.latestVersionTag],
+     * OR the repository `HEAD` points to any other existing release tag, as configured by [GitTagConfig.prefix],
+     * THEN [Increment.NONE] is returned.
+     *
+     * Precedence rules for commit message keywords, from highest to lowest:
+     * - [GitMessageConfig.major]
+     * - [GitMessageConfig.minor]
+     * - [GitMessageConfig.patch]
+     * - [GitMessageConfig.preRelease]
      */
-    fun nextIncrement(): Increment = repo.log(repo.latestVersionTag()).nextIncrement()
+    fun nextIncrement(): Increment {
+        val latestTag = repo.latestVersionTag()
+        val tagObjectId = latestTag?.peeledObjectId ?: latestTag?.objectId
+        return if (repo.head() == tagObjectId) Increment.NONE else repo.log(latestTag).nextIncrement()
+    }
 
     private fun List<Commit>.nextIncrement(): Increment {
-        var inc = Increment.DEFAULT
+        var inc = Increment.NONE
         forEach { c ->
             if (c.message.full().contains(config.git.message.major)) return Increment.MAJOR
             if (inc > Increment.MINOR && c.message.full().contains(config.git.message.minor)) {
