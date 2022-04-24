@@ -49,7 +49,9 @@ class SemverReleaseTest : DescribeSpec() {
                     semverRelease().nextIncrement() shouldBe Increment.NONE
                 }
                 it("when HEAD points to a release tag") {
-                    TODO("not implemented")
+                    git().addRelease(3, Semver("1.0.0"))
+                    git().checkout().setName("v0.4.0").call()
+                    semverRelease().nextIncrement() shouldBe Increment.NONE
                 }
             }
         }

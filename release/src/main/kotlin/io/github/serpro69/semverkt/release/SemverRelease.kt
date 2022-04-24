@@ -112,9 +112,11 @@ class SemverRelease {
      * - [GitMessageConfig.preRelease]
      */
     fun nextIncrement(): Increment {
+        val head = repo.head()
         val latestTag = repo.latestVersionTag()
         val tagObjectId = latestTag?.peeledObjectId ?: latestTag?.objectId
-        return if (repo.head() == tagObjectId) Increment.NONE else repo.log(latestTag).nextIncrement()
+        val isHeadOnTag by lazy { repo.tags().any { head == it.peeledObjectId || head == it.objectId } }
+        return if (head == tagObjectId || isHeadOnTag) Increment.NONE else repo.log(latestTag).nextIncrement()
     }
 
     private fun List<Commit>.nextIncrement(): Increment {

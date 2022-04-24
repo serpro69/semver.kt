@@ -11,11 +11,18 @@ import org.eclipse.jgit.revwalk.RevCommit
 
 class GitRepository(override val config: ConfigurationProvider) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
-    private val tags: () -> List<Ref> = {
-        git.tagList().call().filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
-    }
 
     override val head: () -> ObjectId = { git.repository.resolve(Constants.HEAD) }
+
+    /**
+     * Returns a list of (potentially peeled) tag [Ref]s from this repository,
+     * filtered by the [GitTagConfig.prefix]
+     */
+    override val tags: () -> List<Ref> = {
+        git.tagList().call()
+            .filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
+            .map { it.peel() }
+    }
 
     /**
      * Returns the latest tag from this git repository.
@@ -31,7 +38,7 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
             val comparator: (Ref, Ref) -> Int = { o1: Ref, o2: Ref ->
                 semver(config.git.tag)(o1).compareTo(semver(config.git.tag)(o2))
             }
-            tags.maxOfWith(comparator) { git.repository.refDatabase.peel(it) }
+            tags.maxOfWith(comparator) { it }
         } else null
     }
 
@@ -39,7 +46,7 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
      * Returns a log of [Commit]s from HEAD and [untilTag] ref, with an optional [predicate] to filter out the commits.
      */
     override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {
-        val objectId = untilTag?.let { git.repository.refDatabase.peel(it)?.peeledObjectId ?: it.objectId }
+        val objectId = untilTag?.let { it.peel().peeledObjectId ?: it.objectId }
         return log(end = objectId, predicate = predicate)
     }
 
@@ -51,7 +58,7 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
         val commits: List<Commit> = log(start = start, end = end).fold(mutableListOf()) { acc, commit ->
             if (predicate(commit)) {
                 val tag = tags().lastOrNull { ref ->
-                    val tagId: ObjectId = git.repository.refDatabase.peel(ref)?.peeledObjectId ?: ref.objectId
+                    val tagId: ObjectId = ref.peeledObjectId ?: ref.objectId
                     commit.id == tagId
                 }
                 val c = Commit(
@@ -80,5 +87,7 @@ class GitRepository(override val config: ConfigurationProvider) : Repository {
         } else if (end != null) log.not(end)
         return log.call().asSequence()
     }
+
+    private fun Ref.peel(): Ref = git.repository.refDatabase.peel(this)
 }
 

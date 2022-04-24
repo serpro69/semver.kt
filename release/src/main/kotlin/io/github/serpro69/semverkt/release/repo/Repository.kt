@@ -20,6 +20,11 @@ interface Repository : AutoCloseable {
     val head: () -> ObjectId
 
     /**
+     * Returns a list of tag [Ref]s from this repository.
+     */
+    val tags: () -> List<Ref>
+
+    /**
      * Returns the latest tag from this repository.
      *
      * The implementor should decide (and document) what the "LATEST" means and how it is calculated.
