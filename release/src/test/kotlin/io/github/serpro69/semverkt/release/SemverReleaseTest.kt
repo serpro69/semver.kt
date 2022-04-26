@@ -1,5 +1,6 @@
 package io.github.serpro69.semverkt.release
 
+import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.release.repo.Repository
 import io.github.serpro69.semverkt.spec.Semver
@@ -9,6 +10,8 @@ import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
 import io.kotest.matchers.shouldBe
 import org.eclipse.jgit.api.Git
+import java.nio.file.Files
+import java.util.*
 
 class SemverReleaseTest : DescribeSpec() {
     private var repo: Repository = GitRepository(testConfiguration)
@@ -136,6 +139,7 @@ class SemverReleaseTest : DescribeSpec() {
                 git().addCommit("Test commit")
                 semverRelease().snapshot(Increment.DEFAULT) shouldBe Semver("1.1.0-SNAPSHOT")
             }
+
             context("create new pre release") {
                 it("snapshot version should not change") {
                     git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
@@ -156,6 +160,30 @@ class SemverReleaseTest : DescribeSpec() {
                     semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.1.0-rc.1")
                     semverRelease().createPreRelease(Increment.PATCH) shouldBe Semver("1.0.1-rc.1")
                     semverRelease().createPreRelease(Increment.DEFAULT) shouldBe Semver("1.1.0-rc.1")
+                }
+            }
+
+            context("promote pre-release to a release") {
+                it("should promote to a release version") {
+                    git().addRelease(0, Semver("1.0.0-rc.1"))
+                    semverRelease().promoteToRelease() shouldBe Semver("1.0.0")
+                }
+                it("should return current version if not on pre-release") {
+                    git().addRelease(0, Semver("1.0.0"))
+                    with(semverRelease()) {
+                        promoteToRelease() shouldBe currentVersion()
+                    }
+                }
+                it("should return null if no versions exist in the project") {
+                    val tempDir = Files.createTempDirectory("semver-test")
+                    val git = Git.init().setGitDir(tempDir.toFile()).call()
+                    git.addCommit("Test commit")
+                    val props = Properties().apply {
+                        this["git.repo.directory"] = tempDir
+                    }
+                    val sv = SemverRelease(GitRepository(PropertiesConfiguration(props)))
+                    sv.promoteToRelease() shouldBe null
+                    tempDir.toFile().deleteRecursively()
                 }
             }
         }

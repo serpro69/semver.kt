@@ -99,6 +99,19 @@ class SemverRelease : AutoCloseable {
     }
 
     /**
+     * Promotes a pre-release version to a release version.
+     *
+     * IF [currentVersion] is a pre-release version,
+     * THEN a copy of the [currentVersion] is returned as a normal version (with the pre-release component stripped),
+     * ELSE the [currentVersion] version is returned.
+     */
+    fun promoteToRelease(): Semver? {
+        return with(currentVersion()) {
+            this?.preRelease?.let { copy(preRelease = null, buildMetadata = null) } ?: this
+        }
+    }
+
+    /**
      * Returns the next [Increment] based on the [Repository.latestVersionTag].
      *
      * IF any of the commits contain a keyword for incrementing a specific version, as configured by [GitMessageConfig],

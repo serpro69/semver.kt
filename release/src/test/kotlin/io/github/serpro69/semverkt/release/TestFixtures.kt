@@ -5,7 +5,6 @@ import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.revwalk.RevCommit
-import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
@@ -37,20 +36,17 @@ fun Git.addRelease(
     noOfCommits: Int,
     version: Semver,
     annotated: Boolean = true,
-    path: Path = testConfiguration.git.repo.directory
 ) {
     for (i in 0 until noOfCommits) {
-        addCommit("Commit ${faker.random.randomString(10)}", path)
+        addCommit("Commit ${faker.random.randomString(10)}")
     }
-    addCommit("Next release commit\n\nRelease version $version", path)
+    addCommit("Next release commit\n\nRelease version $version")
     tag().setAnnotated(annotated).setName("v$version").setForceUpdate(true).call()
 }
 
-fun Git.addCommit(
-    message: String,
-    repoPath: Path = testConfiguration.git.repo.directory
-): RevCommit {
-    repoPath.resolve("${faker.random.randomString(10)}.txt").toFile().createNewFile()
+fun Git.addCommit(message: String): RevCommit {
+    val repoPath = repository.directory
+    repoPath.resolve("${faker.random.randomString(10)}.txt").createNewFile()
     add().addFilepattern(".").call()
     return commit().setMessage(message).call()
 }
