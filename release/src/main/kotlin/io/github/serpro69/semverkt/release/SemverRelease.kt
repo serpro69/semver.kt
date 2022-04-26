@@ -124,7 +124,7 @@ class SemverRelease : AutoCloseable {
     }
 
     private fun List<Commit>.nextIncrement(): Increment {
-        var inc = Increment.NONE
+        var inc = Increment.DEFAULT
         forEach { c ->
             if (c.message.full().contains(config.git.message.major)) return Increment.MAJOR
             if (inc > Increment.MINOR && c.message.full().contains(config.git.message.minor)) {

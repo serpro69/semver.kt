@@ -39,11 +39,13 @@ class SemverReleaseTest : DescribeSpec() {
                 git().addCommit("Release [pre release]")
                 semverRelease().nextIncrement() shouldBe Increment.PRE_RELEASE
             }
-            context("should return NONE") {
+            context("should return DEFAULT") {
                 it("when no keywords found") {
                     git().addCommit("Not a release")
-                    semverRelease().nextIncrement() shouldBe Increment.NONE
+                    semverRelease().nextIncrement() shouldBe Increment.DEFAULT
                 }
+            }
+            context("should return NONE") {
                 it("when HEAD points to latest release") {
                     git().addRelease(0, Semver("1.0.0"))
                     semverRelease().nextIncrement() shouldBe Increment.NONE
