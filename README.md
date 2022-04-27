@@ -1,6 +1,12 @@
-# `Semver.kt`
+# `semver.kt`
 
 <a href="https://github.com/serpro69/semver.kt"> <img src="docs/logo.png" alt="semver.kt"/> </a>
+
+[![Build Status](https://img.shields.io/github/workflow/status/serpro69/semver.kt/Build?logo=github&style=for-the-badge)](https://github.com/serpro69/semver.kt/actions/workflows/build.yml)
+[![Issues](https://img.shields.io/github/issues/serpro69/semver.kt.svg?logo=GitHub&style=for-the-badge&color=lightblue)](https://github.com/serpro69/semver.kt/issues)
+![GitHub Top Lang](https://img.shields.io/github/languages/top/serpro69/semver.kt.svg?logo=Kotlin&logoColor=white&color=A97BFF&style=for-the-badge)
+[![Awesome Kotlin](https://img.shields.io/badge/awesome-kotlin-orange?logo=Awesome-Lists&style=for-the-badge)](https://github.com/KotlinBy/awesome-kotlin)
+[![Licence](https://img.shields.io/github/license/serpro69/semver.kt.svg?style=for-the-badge)](LICENSE.adoc)
 
 ***NB! This is still in pretty-much early development, thus breaking changes are to be expected until first stable release.***
 
