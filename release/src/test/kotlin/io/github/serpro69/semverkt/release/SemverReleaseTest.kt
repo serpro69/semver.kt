@@ -145,13 +145,13 @@ class SemverReleaseTest : DescribeSpec() {
                     git().addRelease(0, Semver("1.0.0-SNAPSHOT"))
                     git().addCommit("Test commit")
                     semverRelease().createPreRelease(Increment.MAJOR) shouldBe Semver("1.0.0-SNAPSHOT")
+                    semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-SNAPSHOT")
+                    semverRelease().createPreRelease(Increment.DEFAULT) shouldBe Semver("1.0.0-SNAPSHOT")
                 }
                 it("pre-release version should not change") {
-                    val noChangeVer = Semver("1.0.0-rc.1")
-                    git().addRelease(0, noChangeVer)
-                    git().addCommit("Test commit")
-                    semverRelease().createPreRelease(Increment.MAJOR) shouldBe noChangeVer
-                    semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe noChangeVer
+                    git().addRelease(1, Semver("1.0.0-rc.3"))
+                    semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe Semver("1.0.0-rc.3")
+                    semverRelease().createPreRelease(Increment.NONE) shouldBe Semver("1.0.0-rc.3")
                 }
                 it("release version should not change") {
                     git().addRelease(0, Semver("1.0.0"))
@@ -159,8 +159,18 @@ class SemverReleaseTest : DescribeSpec() {
                     semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe Semver("1.0.0")
                     semverRelease().createPreRelease(Increment.NONE) shouldBe Semver("1.0.0")
                 }
-                it("first pre-release version should be created") {
+                it("first pre-release version should be created for the specified increment") {
                     git().addRelease(0, Semver("1.0.0"))
+                    git().addCommit("Test commit")
+                    semverRelease().createPreRelease(Increment.MAJOR) shouldBe Semver("2.0.0-rc.1")
+                    semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.1.0-rc.1")
+                    semverRelease().createPreRelease(Increment.PATCH) shouldBe Semver("1.0.1-rc.1")
+                    semverRelease().createPreRelease(Increment.DEFAULT) shouldBe Semver("1.1.0-rc.1")
+                }
+                it("normal version should be bumped and first pre-release created") {
+                    git().addRelease(1, Semver("1.0.0-rc.1"))
+                    git().addRelease(1, Semver("1.0.0-rc.2"))
+                    git().addRelease(1, Semver("1.0.0-rc.3"))
                     git().addCommit("Test commit")
                     semverRelease().createPreRelease(Increment.MAJOR) shouldBe Semver("2.0.0-rc.1")
                     semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.1.0-rc.1")
@@ -175,7 +185,11 @@ class SemverReleaseTest : DescribeSpec() {
                         this["git.repo.directory"] = tempDir
                     }
                     val sv = SemverRelease(GitRepository(PropertiesConfiguration(props)))
-                    sv.createPreRelease() shouldBe Semver("0.1.0-rc.1")
+                    sv.createPreRelease(Increment.MAJOR) shouldBe Semver("0.1.0-rc.1")
+                    sv.createPreRelease(Increment.MINOR) shouldBe Semver("0.1.0-rc.1")
+                    sv.createPreRelease(Increment.PRE_RELEASE) shouldBe Semver("0.1.0-rc.1")
+                    sv.createPreRelease(Increment.DEFAULT) shouldBe Semver("0.1.0-rc.1")
+                    sv.createPreRelease(Increment.NONE) shouldBe Semver("0.1.0-rc.1")
                     tempDir.toFile().deleteRecursively()
                 }
             }

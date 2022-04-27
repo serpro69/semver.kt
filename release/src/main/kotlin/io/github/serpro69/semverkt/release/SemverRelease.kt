@@ -47,18 +47,41 @@ class SemverRelease : AutoCloseable {
 
     /**
      * Returns the next release version after the [currentVersion] based on the [increment].
+     *
+     * See also [SemverRelease.increment] for the rules that are used when releasing the versions.
      */
     fun release(increment: Increment): Semver = increment(increment, true)
 
     /**
      * Returns the next snapshot version after the [currentVersion] based on the [increment].
+     *
+     * See also [SemverRelease.increment] for the rules that are used when creating version snapshots.
      */
     fun snapshot(increment: Increment): Semver = increment(increment, false)
 
     /**
      * Increment the [currentVersion] to the next [Semver] using the [increment].
      *
-     * @param release if `false` appends [VersionConfig.snapshotSuffix] to the final version
+     * The following rules apply when incrementing the [currentVersion]:
+     *
+     * 1. **IF the [currentVersion] is `null`.**
+     * THEN initial version is returned as configured by [VersionConfig.initialVersion].
+     *
+     * 2. **The [increment] is a [Increment.PRE_RELEASE].**
+     * IF [currentVersion] is a pre-release version,
+     * THEN the [Semver.preRelease] component is incremented,
+     * ELSE the [currentVersion] is returned.
+     *
+     * 3. **The [increment] is [Increment.DEFAULT].**
+     * IF [currentVersion] is a pre-release version,
+     * THEN the [Semver.preRelease] component is incremented,
+     * ELSE the [currentVersion] is incremented using [VersionConfig.defaultIncrement].
+     *
+     * 4. **If the [increment] is [Increment.NONE],**
+     * THEN the [currentVersion] is returned.
+     *
+     * @param increment the version component to increment
+     * @param release   if `false` appends [VersionConfig.snapshotSuffix] to the final version
      */
     fun increment(
         increment: Increment,
@@ -89,34 +112,43 @@ class SemverRelease : AutoCloseable {
      *
      * The following rules apply when creating a new pre-release version:
      *
-     * - IF [currentVersion] is already a pre-release version, returns the [currentVersion],
-     * ELSE increases the [currentVersion] to the next [increment]
+     * 1. **WHEN [currentVersion] is a pre-release version.**
+     * IF the [currentVersion] is a snapshot version (ends with the [VersionConfig.snapshotSuffix]),
+     * OR the [increment] is [Increment.PRE_RELEASE] or [Increment.NONE]
+     * THEN the [currentVersion] is returned,
+     * ELSE increases the [currentVersion] to the next [increment],
      * and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number.
      *
-     * - IF [currentVersion] is `null`, THEN a pre-release version with [VersionConfig.initialVersion] is returned.
+     * 2. **WHEN [currentVersion] is `null`,**
+     * THEN a new pre-release version consisting of [VersionConfig.initialVersion] and [VersionConfig.initialPreRelease] is returned,
      *
-     * - IF [increment] is [Increment.PRE_RELEASE] or [Increment.NONE],
-     * THEN [currentVersion] is returned.
+     * 3. **WHEN [currentVersion] is a release version.**
+     * IF [increment] is one of [Increment.MAJOR], [Increment.MINOR], [Increment.PATCH] or [Increment.DEFAULT],
+     * THEN increases the [currentVersion] to the next [increment]
+     *   and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number,
+     * ELSE the [currentVersion] is returned.
      */
     fun createPreRelease(increment: Increment): Semver {
-        return currentVersion()?.preRelease?.let { currentVersion() } ?: run {
-            val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
-            if (increment in listOf(Increment.PRE_RELEASE, Increment.NONE)) {
-                currentVersion() ?: release(increment).copy(preRelease = preRelease)
-            } else {
-                release(increment).copy(preRelease = preRelease)
+        val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
+        return with(currentVersion()) {
+            this?.preRelease?.let {
+                if (this.isSnapshot() || increment in listOf(Increment.PRE_RELEASE, Increment.NONE)) this else {
+                    val nextVer = if (increment == Increment.DEFAULT) {
+                        release(config.version.defaultIncrement)
+                    } else release(increment)
+                    nextVer.copy(preRelease = preRelease)
+                }
+            } ?: run {
+                if (increment in listOf(Increment.PRE_RELEASE, Increment.NONE)) {
+                    this ?: release(increment).copy(preRelease = preRelease)
+                } else {
+                    release(increment).copy(preRelease = preRelease)
+                }
             }
         }
     }
 
-    /**
-     * Creates a pre-release version with a given [increment], and returns as [Semver] instance.
-     *
-     * IF [currentVersion] is already a pre-release version, returns the [currentVersion],
-     * ELSE increases the [currentVersion] to the next [increment]
-     * and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number.
-     */
-    fun createPreRelease(): Semver = createPreRelease(Increment.PRE_RELEASE)
+    private fun Semver.isSnapshot(): Boolean = toString().endsWith("-${config.version.snapshotSuffix}")
 
     /**
      * Promotes a pre-release version to a release version.
