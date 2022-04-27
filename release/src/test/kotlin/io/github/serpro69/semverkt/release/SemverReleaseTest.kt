@@ -19,7 +19,7 @@ class SemverReleaseTest : DescribeSpec() {
     private val git = { Git.open(testConfiguration.git.repo.directory.toFile()) }
 
     init {
-        describe("next version Increment ") {
+        describe("next version Increment from commit") {
             it("should return MAJOR") {
                 git().addCommit("Release [major]")
                 git().addCommit("Release [pre release]")
@@ -153,6 +153,12 @@ class SemverReleaseTest : DescribeSpec() {
                     semverRelease().createPreRelease(Increment.MAJOR) shouldBe noChangeVer
                     semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe noChangeVer
                 }
+                it("release version should not change") {
+                    git().addRelease(0, Semver("1.0.0"))
+                    git().addCommit("Test commit")
+                    semverRelease().createPreRelease(Increment.PRE_RELEASE) shouldBe Semver("1.0.0")
+                    semverRelease().createPreRelease(Increment.NONE) shouldBe Semver("1.0.0")
+                }
                 it("first pre-release version should be created") {
                     git().addRelease(0, Semver("1.0.0"))
                     git().addCommit("Test commit")
@@ -160,6 +166,17 @@ class SemverReleaseTest : DescribeSpec() {
                     semverRelease().createPreRelease(Increment.MINOR) shouldBe Semver("1.1.0-rc.1")
                     semverRelease().createPreRelease(Increment.PATCH) shouldBe Semver("1.0.1-rc.1")
                     semverRelease().createPreRelease(Increment.DEFAULT) shouldBe Semver("1.1.0-rc.1")
+                }
+                it("initial version with pre-release should be created") {
+                    val tempDir = Files.createTempDirectory("semver-test")
+                    val git = Git.init().setGitDir(tempDir.toFile()).call()
+                    git.addCommit("Test commit")
+                    val props = Properties().apply {
+                        this["git.repo.directory"] = tempDir
+                    }
+                    val sv = SemverRelease(GitRepository(PropertiesConfiguration(props)))
+                    sv.createPreRelease() shouldBe Semver("0.1.0-rc.1")
+                    tempDir.toFile().deleteRecursively()
                 }
             }
 

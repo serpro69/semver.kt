@@ -85,18 +85,38 @@ class SemverRelease : AutoCloseable {
     }
 
     /**
-     * Creates a pre-release version with an [increment] increment, and returns as [Semver] instance.
+     * Creates a pre-release version with a given [increment], and returns as [Semver] instance.
      *
-     * IF [currentVersion] is already a pre-release version, returns the [currentVersion],
-     * ELSE [release]s the [currentVersion] to the next [increment]
+     * The following rules apply when creating a new pre-release version:
+     *
+     * - IF [currentVersion] is already a pre-release version, returns the [currentVersion],
+     * ELSE increases the [currentVersion] to the next [increment]
      * and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number.
+     *
+     * - IF [currentVersion] is `null`, THEN a pre-release version with [VersionConfig.initialVersion] is returned.
+     *
+     * - IF [increment] is [Increment.PRE_RELEASE] or [Increment.NONE],
+     * THEN [currentVersion] is returned.
      */
     fun createPreRelease(increment: Increment): Semver {
         return currentVersion()?.preRelease?.let { currentVersion() } ?: run {
             val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
-            release(increment).copy(preRelease = preRelease)
+            if (increment in listOf(Increment.PRE_RELEASE, Increment.NONE)) {
+                currentVersion() ?: release(increment).copy(preRelease = preRelease)
+            } else {
+                release(increment).copy(preRelease = preRelease)
+            }
         }
     }
+
+    /**
+     * Creates a pre-release version with a given [increment], and returns as [Semver] instance.
+     *
+     * IF [currentVersion] is already a pre-release version, returns the [currentVersion],
+     * ELSE increases the [currentVersion] to the next [increment]
+     * and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number.
+     */
+    fun createPreRelease(): Semver = createPreRelease(Increment.PRE_RELEASE)
 
     /**
      * Promotes a pre-release version to a release version.
