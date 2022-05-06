@@ -9,6 +9,9 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 
+/**
+ * Represents a git [Repository] implementation.
+ */
 class GitRepository(override val config: Configuration) : Repository {
     private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
 
