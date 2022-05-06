@@ -218,6 +218,16 @@ class SemverReleaseTest : DescribeSpec() {
                 }
             }
         }
+
+        it("should not take invalid tag for consideration") {
+            with(git()) {
+                addRelease(0, Semver("1.0.0"))
+                addCommit("Test commit")
+                tag().setAnnotated(true).setName("x1.2.3").setForceUpdate(true).call()
+                addCommit("Test commit")
+            }
+            semverRelease().release(Increment.MAJOR) shouldBe Semver("2.0.0")
+        }
     }
 
     override fun beforeSpec(spec: Spec) {
