@@ -46,6 +46,16 @@ class SemverRelease : AutoCloseable {
     }
 
     /**
+     * Returns the [version] IF it's not equal to [currentVersion] AND not already present in the [repo],
+     * ELSE returns `null`.
+     */
+    fun release(version: Semver): Semver? {
+        val moreThanCurrent = currentVersion()?.let { version > it } ?: true
+        val exists by lazy { repo.tags().map { semver(config.git.tag)(it) }.any { it == version } }
+        return if (moreThanCurrent && !exists) version else null
+    }
+
+    /**
      * Returns the next release version after the [currentVersion] based on the [increment].
      *
      * See also [SemverRelease.increment] for the rules that are used when releasing the versions.
