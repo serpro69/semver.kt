@@ -228,6 +228,28 @@ class SemverReleaseTest : DescribeSpec() {
             }
             semverRelease().release(Increment.MAJOR) shouldBe Semver("2.0.0")
         }
+
+        describe("manual release") {
+            it("should be possible to release the version manually when versions exist") {
+                semverRelease().release(Semver("1.0.0")) shouldBe Semver("1.0.0")
+            }
+            it("should be possible to release the version manually when no versions exist") {
+                val tempDir = Files.createTempDirectory("semver-test")
+                val git = Git.init().setGitDir(tempDir.toFile()).call()
+                git.addCommit("Test commit")
+                val props = Properties().apply { this["git.repo.directory"] = tempDir }
+                val sv = SemverRelease(GitRepository(PropertiesConfiguration(props)))
+                sv.release(Semver("1.0.0")) shouldBe Semver("1.0.0")
+                tempDir.toFile().deleteRecursively()
+            }
+            it("should return null if version is less than latest version") {
+                git().addRelease(0, Semver("2.0.0"))
+                semverRelease().release(Semver("1.0.0")) shouldBe null
+            }
+            it("should return null if version already exists") {
+                semverRelease().release(Semver("0.3.0")) shouldBe null
+            }
+        }
     }
 
     override fun beforeSpec(spec: Spec) {
