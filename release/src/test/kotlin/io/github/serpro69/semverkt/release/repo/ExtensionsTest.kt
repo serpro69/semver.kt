@@ -20,15 +20,15 @@ class ExtensionsTest : DescribeSpec() {
         }
     }
 
-    override fun beforeSpec(spec: Spec) {
+    override suspend fun beforeSpec(spec: Spec) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 
-    override fun beforeEach(testCase: TestCase) {
+    override suspend fun beforeEach(testCase: TestCase) {
         testRepo()
     }
 
-    override fun afterEach(testCase: TestCase, result: TestResult) {
+    override suspend fun afterEach(testCase: TestCase, result: TestResult) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 }

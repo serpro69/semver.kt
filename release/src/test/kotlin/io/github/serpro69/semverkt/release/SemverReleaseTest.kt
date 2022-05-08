@@ -252,16 +252,16 @@ class SemverReleaseTest : DescribeSpec() {
         }
     }
 
-    override fun beforeSpec(spec: Spec) {
+    override suspend fun beforeSpec(spec: Spec) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 
-    override fun beforeTest(testCase: TestCase) {
+    override suspend fun beforeTest(testCase: TestCase) {
         repo = GitRepository(testConfiguration)
         testRepo()
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override suspend fun afterTest(testCase: TestCase, result: TestResult) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 }
