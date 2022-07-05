@@ -230,4 +230,13 @@ class SemverTest : DescribeSpec({
             }
         }
     }
+
+    describe("static Semver functions") {
+        it("isValid should return true for valid version") {
+            Semver.isValid("1.2.3") shouldBe true
+        }
+        it("isValid should return false for invalid version") {
+            Semver.isValid("123") shouldBe false
+        }
+    }
 })

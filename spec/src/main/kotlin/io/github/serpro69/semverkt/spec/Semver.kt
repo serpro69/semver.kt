@@ -30,6 +30,16 @@ class Semver(private val version: String) : Comparable<Semver> {
     val minor: Int
     val patch: Int
 
+    companion object {
+        fun isValid(version: String): Boolean {
+            return try {
+                Semver(version).isValid()
+            } catch (e: IllegalVersionException) {
+                false
+            }
+        }
+    }
+
     init {
         normalVersion.split(".").also {
             if (it.size != 3) throw IllegalVersionException("$version version number MUST take the form X.Y.Z")
