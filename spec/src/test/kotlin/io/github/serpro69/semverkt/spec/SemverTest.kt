@@ -236,7 +236,11 @@ class SemverTest : DescribeSpec({
             Semver.isValid("1.2.3") shouldBe true
         }
         it("isValid should return false for invalid version") {
-            Semver.isValid("123") shouldBe false
+            assertSoftly {
+                Semver.isValid("v1.2.3") shouldBe false
+                Semver.isValid("42") shouldBe false
+                Semver.isValid("foobar") shouldBe false
+            }
         }
     }
 })

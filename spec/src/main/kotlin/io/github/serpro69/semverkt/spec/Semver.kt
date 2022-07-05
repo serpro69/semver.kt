@@ -44,9 +44,13 @@ class Semver(private val version: String) : Comparable<Semver> {
         normalVersion.split(".").also {
             if (it.size != 3) throw IllegalVersionException("$version version number MUST take the form X.Y.Z")
             if (it.contains("")) throw IllegalVersionException("$version version number MUST not contain empty elements")
-            major = it[0].toInt()
-            minor = it[1].toInt()
-            patch = it[2].toInt()
+            try {
+                major = it[0].toInt()
+                minor = it[1].toInt()
+                patch = it[2].toInt()
+            } catch (e: NumberFormatException) {
+                throw IllegalVersionException("Normal version of '$version' MUST only contain numbers")
+            }
         }
         PreRelease(version.substringBefore("+").substringAfter("-", "").takeWhile { it != '+' }).also {
             preRelease = if (it.value == "") null else it
