@@ -5,8 +5,12 @@ import kotlin.math.sign
 
 /**
  * Returns an instance of [Semver] from this receiver string.
+ *
+ * @param prefix a version prefix, for example when having a git tag `v1.2.3` representing a version, that should be stripped.
  */
-fun String.toSemver(): Semver = Semver(this)
+fun String.toSemver(prefix: String? = null): Semver {
+    return Semver(prefix?.let { replace(Regex("""^$prefix"""), "") } ?: this)
+}
 
 /**
  * Represents a semantic [version] as per [Semantic Versioning 2.0.0](https://semver.org/#semantic-versioning-200) specification.

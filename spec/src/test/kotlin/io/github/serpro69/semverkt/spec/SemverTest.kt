@@ -9,6 +9,7 @@ import io.kotest.matchers.comparables.beEqualComparingTo
 import io.kotest.matchers.comparables.beGreaterThan
 import io.kotest.matchers.comparables.beLessThan
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.assertThrows
 
 // Semantic Versioning Specification 2.0.0
 class SemverTest : DescribeSpec({
@@ -240,6 +241,16 @@ class SemverTest : DescribeSpec({
                 Semver.isValid("v1.2.3") shouldBe false
                 Semver.isValid("42") shouldBe false
                 Semver.isValid("foobar") shouldBe false
+            }
+        }
+        it("should convert string to Semver") {
+            assertSoftly {
+                "1.2.3".toSemver() shouldBe Semver("1.2.3")
+                "1.2.3".toSemver("") shouldBe Semver("1.2.3")
+                "1.2.3".toSemver(" ") shouldBe Semver("1.2.3")
+                "v1.2.3".toSemver("v") shouldBe Semver("1.2.3")
+                "foo1.2.3".toSemver("foo") shouldBe Semver("1.2.3")
+                assertThrows<IllegalVersionException> { "v1.2.3".toSemver() shouldBe Semver("1.2.3") }
             }
         }
     }
