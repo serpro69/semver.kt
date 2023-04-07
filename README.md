@@ -1,3 +1,5 @@
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua)
+
 # `semver.kt`
 
 <a href="https://github.com/serpro69/semver.kt"> <img src="docs/logo.png" alt="semver.kt"/> </a>
