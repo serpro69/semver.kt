@@ -32,7 +32,7 @@ tasks.check {
 gradlePlugin {
     plugins {
         create("semver-release") {
-            id = "io.github.serpro69.gradle.semver-release"
+            id = "${project.group}.${name}"
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
     }
