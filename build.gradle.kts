@@ -19,10 +19,10 @@ subprojects {
     group = parent?.group?.toString() ?: "io.github.serpro69"
     version = rootProject.version
     val subProject = this@subprojects
-    var projectArtifactId = "${rootProject.name}-${subProject.name}"
-    if (subProject.name == "gradle-plugin") {
+    val projectArtifactId = "${rootProject.name}-${subProject.name}"
+    val isGradlePlugin = subProject.name == "gradle-plugin"
+    if (isGradlePlugin) {
         group = "$group.gradle"
-        projectArtifactId = "semver-release"
     }
 
     repositories {
@@ -33,8 +33,10 @@ subprojects {
         plugin("java")
         plugin("org.jetbrains.kotlin.jvm")
         plugin("org.jetbrains.dokka")
-        plugin("signing")
-        plugin("maven-publish")
+        if (!isGradlePlugin) {
+            plugin("signing")
+            plugin("maven-publish")
+        }
     }
 
     dependencies {
@@ -122,47 +124,49 @@ subprojects {
     val pomDeveloperName = "Serhii Prodan"
 
     val publicationName = projectArtifactId.split(Regex("""[\.-]""")).joinToString("") { it.capitalize() }
-    publishing {
-        publications {
-            create<MavenPublication>(publicationName) {
-                groupId = artifactGroup
-                artifactId = projectArtifactId
-                version = artifactVersion
-                from(components["java"])
-                artifact(sourcesJar)
-                artifact(dokkaJavadocJar)
+    if (!isGradlePlugin) {
+        publishing {
+            publications {
+                create<MavenPublication>(publicationName) {
+                    groupId = artifactGroup
+                    artifactId = projectArtifactId
+                    version = artifactVersion
+                    from(components["java"])
+                    artifact(sourcesJar)
+                    artifact(dokkaJavadocJar)
 
-                pom {
-                    packaging = "jar"
-                    name.set(projectArtifactId)
-                    description.set(pomDesc)
-                    url.set(pomUrl)
-                    scm {
-                        url.set(pomScmUrl)
-                    }
-                    issueManagement {
-                        url.set(pomIssueUrl)
-                    }
-                    licenses {
-                        license {
-                            name.set(pomLicenseName)
-                            url.set(pomLicenseUrl)
+                    pom {
+                        packaging = "jar"
+                        name.set(projectArtifactId)
+                        description.set(pomDesc)
+                        url.set(pomUrl)
+                        scm {
+                            url.set(pomScmUrl)
                         }
-                    }
-                    developers {
-                        developer {
-                            id.set(pomDeveloperId)
-                            name.set(pomDeveloperName)
+                        issueManagement {
+                            url.set(pomIssueUrl)
+                        }
+                        licenses {
+                            license {
+                                name.set(pomLicenseName)
+                                url.set(pomLicenseUrl)
+                            }
+                        }
+                        developers {
+                            developer {
+                                id.set(pomDeveloperId)
+                                name.set(pomDeveloperName)
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    signing {
-        if (!version.toString().endsWith("SNAPSHOT")) {
-            sign(publishing.publications[publicationName])
+        signing {
+            if (!version.toString().endsWith("SNAPSHOT")) {
+                sign(publishing.publications[publicationName])
+            }
         }
     }
 
