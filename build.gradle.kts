@@ -19,7 +19,11 @@ subprojects {
     group = parent?.group?.toString() ?: "io.github.serpro69"
     version = rootProject.version
     val subProject = this@subprojects
-    val projectArtifactId = "${rootProject.name}-${subProject.name}"
+    var projectArtifactId = "${rootProject.name}-${subProject.name}"
+    if (subProject.name == "gradle-plugin") {
+        group = "$group.gradle"
+        projectArtifactId = "semver-release"
+    }
 
     repositories {
         mavenCentral()
