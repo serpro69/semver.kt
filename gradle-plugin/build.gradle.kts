@@ -14,8 +14,27 @@ dependencies {
     testCompileOnly(gradleTestKit())
     integrationTestImplementation(project)
     functionalTestImplementation(project)
+    functionalTestImplementation("io.kotest:kotest-runner-junit5-jvm:5.3.0")
+    functionalTestImplementation("io.kotest:kotest-assertions-core-jvm:5.3.0")
+}
+
+val functionalTestTask = tasks.register<Test>("functionalTest") {
+    group = "verification"
+    testClassesDirs = functionalTest.output.classesDirs
+    classpath = functionalTest.runtimeClasspath
+    useJUnitPlatform()
+}
+
+tasks.check {
+    dependsOn(functionalTestTask)
 }
 
 gradlePlugin {
+    plugins {
+        create("semver-release") {
+            id = "io.github.serpro69.gradle.semver-release"
+            implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
+        }
+    }
     testSourceSets(functionalTest)
 }

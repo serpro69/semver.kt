@@ -9,10 +9,11 @@ class SemverKtPlugin : Plugin<Settings> {
     private val logger = Logging.getLogger(this::class.java)
 
     override fun apply(settings: Settings) {
-        logger.log(LogLevel.ERROR, settings.rootDir.absolutePath)
+//        logger.log(LogLevel.ERROR, settings.rootDir.absolutePath)
         settings.gradle.allprojects { project ->
             project.version = "1.2.3"
+//            logger.log(LogLevel.ERROR, project.version.toString())
         }
-        logger.log(LogLevel.ERROR, settings.gradle.rootProject.version.toString())
+//        logger.log(LogLevel.ERROR, settings.gradle.rootProject.version.toString())
     }
 }
