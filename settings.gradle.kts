@@ -1,4 +1,7 @@
 rootProject.name = "semver.kt"
 
-include("spec")
-include("release")
+include(
+    "gradle-plugin",
+    "spec",
+    "release"
+)
