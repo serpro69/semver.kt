@@ -21,9 +21,6 @@ subprojects {
     val subProject = this@subprojects
     val projectArtifactId = "${rootProject.name}-${subProject.name}"
     val isGradlePlugin = subProject.name == "gradle-plugin"
-    if (isGradlePlugin) {
-        group = "$group.gradle"
-    }
 
     repositories {
         mavenCentral()
@@ -33,10 +30,10 @@ subprojects {
         plugin("java")
         plugin("org.jetbrains.kotlin.jvm")
         plugin("org.jetbrains.dokka")
-        if (!isGradlePlugin) {
+//        if (!isGradlePlugin) {
             plugin("signing")
             plugin("maven-publish")
-        }
+//        }
     }
 
     dependencies {
@@ -124,7 +121,7 @@ subprojects {
     val pomDeveloperName = "Serhii Prodan"
 
     val publicationName = projectArtifactId.split(Regex("""[\.-]""")).joinToString("") { it.capitalize() }
-    if (!isGradlePlugin) {
+//    if (!isGradlePlugin) {
         publishing {
             publications {
                 create<MavenPublication>(publicationName) {
@@ -168,7 +165,7 @@ subprojects {
                 sign(publishing.publications[publicationName])
             }
         }
-    }
+//    }
 
     tasks {
         assemble {

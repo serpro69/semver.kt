@@ -11,4 +11,10 @@ interface GitConfig{
     val repo: GitRepoConfig
     val tag: GitTagConfig
     val message: GitMessageConfig
+
+    fun jsonString(): String {
+        return """
+            "git": { ${repo.jsonString()}, ${tag.jsonString()}, ${message.jsonString()} }
+        """.trimIndent()
+    }
 }
