@@ -9,6 +9,19 @@ class SemverKtTestProject : AbstractProject() {
     private val buildFile = projectDir.resolve("build.gradle.kts")
 
     init {
+//        projectDir.resolve("abc.txt").writeText("hello world")
+//
+//        projectDir.resolve("sub").createDirectories()
+//            .also {
+//                it.resolve("build.gradle.kts")
+//                .writeText("""
+//                    plugins {
+//                    }
+//                """.trimIndent())
+//
+//                it.resolve("abc.txt")
+//                    .writeText("another one")
+//            }
         // Yes, this is independent of our plugin project's properties file
         gradlePropertiesFile.writeText(
             """
@@ -33,6 +46,7 @@ class SemverKtTestProject : AbstractProject() {
 //            }
       
             rootProject.name = 'test-project'
+//            include 'sub'
             """.trimIndent()
         )
 

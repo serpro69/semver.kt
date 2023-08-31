@@ -11,4 +11,10 @@ interface GitTagConfig {
     val prefix: String get() = "v"
     val separator: String get() = ""
     val useBranches: Boolean get() = false
+
+    fun jsonString(): String {
+        return """
+            "tag": { "prefix": "$prefix", "separator": "$separator", "useBranches": "$useBranches" }
+        """.trimIndent()
+    }
 }

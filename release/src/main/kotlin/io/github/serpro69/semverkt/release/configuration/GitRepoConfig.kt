@@ -12,4 +12,10 @@ import kotlin.io.path.Path
 interface GitRepoConfig {
     val directory: Path get() = Path(".")
     val remoteName: String get() = "origin"
+
+    fun jsonString(): String {
+        return """
+            "repo": { "directory": "$directory", "remoteName": "$remoteName" }
+        """.trimIndent()
+    }
 }

@@ -15,4 +15,10 @@ interface GitMessageConfig {
     val patch: String get() = "[patch]"
     val preRelease: String get() = "[pre release]"
     val ignoreCase: Boolean get() = false
+
+    fun jsonString(): String {
+        return """
+            "message": { "major": "$major", "minor": "$minor", "patch": "$patch", "preRelease": "$preRelease", "ignoreCase": "$ignoreCase" }
+        """.trimIndent()
+    }
 }

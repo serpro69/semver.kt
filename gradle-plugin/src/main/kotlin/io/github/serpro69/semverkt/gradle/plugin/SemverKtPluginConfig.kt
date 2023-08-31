@@ -19,12 +19,12 @@ class SemverKtPluginConfig : Configuration {
         private set
 
     fun git(block: SemverKtPluginGitConfig.() -> Unit): Configuration {
-        block.invoke(git)
+        git.apply(block)
         return this
     }
 
     fun version(block: SemverKtPluginVersionConfig.() -> Unit): Configuration {
-        block.invoke(version)
+        version.apply(block)
         return this
     }
 }
@@ -40,23 +40,20 @@ class SemverKtPluginVersionConfig internal constructor() : VersionConfig {
 
 @ConfigDsl
 class SemverKtPluginGitConfig internal constructor() : GitConfig {
-    override var repo = SemverKtPluginGitRepoConfig()
-        private set
-    override var tag = SemverKtPluginGitTagConfig()
-        private set
-    override var message = SemverKtPluginGitMessageConfig()
-        private set
+    override val repo = SemverKtPluginGitRepoConfig()
+    override val tag = SemverKtPluginGitTagConfig()
+    override val message = SemverKtPluginGitMessageConfig()
 
     fun repo(block: SemverKtPluginGitRepoConfig.() -> Unit) {
-        block.invoke(repo)
+        repo.apply(block)
     }
 
     fun tag(block: SemverKtPluginGitTagConfig.() -> Unit) {
-        block.invoke(tag)
+        tag.apply(block)
     }
 
     fun message(block: SemverKtPluginGitMessageConfig.() -> Unit) {
-        block.invoke(message)
+        message.apply(block)
     }
 }
 

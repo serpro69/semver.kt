@@ -8,4 +8,10 @@ package io.github.serpro69.semverkt.release.configuration
 interface Configuration {
     val git: GitConfig
     val version: VersionConfig
+
+    fun jsonString(): String {
+        return """
+            { ${git.jsonString()}, ${version.jsonString()} }
+        """.trimIndent()
+    }
 }
