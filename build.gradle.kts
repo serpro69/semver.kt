@@ -2,11 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
-    kotlin("jvm") version "1.6.20" apply false
-    id("org.jetbrains.dokka") version "1.5.31"
+    kotlin("jvm") version "1.9.10" apply false
+    id("org.jetbrains.dokka") version "1.8.20"
     `maven-publish`
     signing
-    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0-rc-1"
 }
 
 repositories {
@@ -41,9 +41,9 @@ subprojects {
 
     dependencies {
         implementation(kotlin("stdlib-jdk8"))
-        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.3.0")
-        testImplementation("io.kotest:kotest-assertions-core-jvm:5.3.0")
-        testImplementation("io.github.serpro69:kotlin-faker:1.10.0")
+        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.6.2")
+        testImplementation("io.kotest:kotest-assertions-core-jvm:5.6.2")
+        testImplementation("io.github.serpro69:kotlin-faker:1.14.0")
     }
 
     configure<JavaPluginExtension> {
@@ -182,7 +182,7 @@ val jar by tasks.getting(Jar::class) {
 }
 
 nexusPublishing {
-    repositories {
+    this@nexusPublishing.repositories {
         sonatype {
             stagingProfileId.set(properties["stagingProfileId"]?.toString())
         }
