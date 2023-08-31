@@ -17,7 +17,7 @@ enum class Increment {
 
     companion object {
         fun getByName(name: String): Increment {
-            return values().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
+            return entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
         }
     }
 

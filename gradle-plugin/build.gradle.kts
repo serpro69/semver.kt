@@ -1,5 +1,4 @@
 plugins {
-    kotlin("jvm")
     `java-gradle-plugin`
 }
 
@@ -14,8 +13,8 @@ dependencies {
     testCompileOnly(gradleTestKit())
     integrationTestImplementation(project)
     functionalTestImplementation(project)
-    functionalTestImplementation("io.kotest:kotest-runner-junit5-jvm:5.3.0")
-    functionalTestImplementation("io.kotest:kotest-assertions-core-jvm:5.3.0")
+    functionalTestImplementation("io.kotest:kotest-runner-junit5-jvm:5.6.2")
+    functionalTestImplementation("io.kotest:kotest-assertions-core-jvm:5.6.2")
 }
 
 val functionalTestTask = tasks.register<Test>("functionalTest") {
