@@ -1,5 +1,7 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
+import io.github.serpro69.semverkt.release.Increment
+import io.github.serpro69.semverkt.release.SemverRelease
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
 import org.gradle.api.Plugin
@@ -25,6 +27,9 @@ class SemverKtPlugin : Plugin<Settings> {
 
             // override configuration via extension
             project.extensions.create("semver-release", SemverPluginExtension::class.java, config)
+
+            val release = SemverRelease(config)
+            project.version = release.release(Increment.MINOR)
         }
 
         logger.log(LogLevel.LIFECYCLE, config.jsonString())
