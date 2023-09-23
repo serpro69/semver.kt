@@ -41,6 +41,12 @@ subprojects {
         testImplementation("io.kotest:kotest-runner-junit5-jvm:5.6.2")
         testImplementation("io.kotest:kotest-assertions-core-jvm:5.6.2")
         testImplementation("io.github.serpro69:kotlin-faker:1.14.0")
+
+        if (subProject.name in listOf("gradle-plugin", "release")) {
+            val jgitVer = "5.13.0.202109080827-r"
+            implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
+            implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
+        }
     }
 
     configure<JavaPluginExtension> {

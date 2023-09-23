@@ -1,7 +1,6 @@
 package io.github.serpro69.semverkt.gradle.plugin.gradle
 
 import io.github.serpro69.semverkt.gradle.plugin.fixture.AbstractProject
-import org.gradle.internal.impldep.org.apache.maven.settings.building.SettingsBuilder
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.util.GradleVersion
