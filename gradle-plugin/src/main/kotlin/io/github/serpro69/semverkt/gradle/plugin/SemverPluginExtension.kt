@@ -1,8 +1,7 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
-@Suppress("unused")
 @ConfigDsl
-abstract class SemverPluginExtension(val config: SemverKtPluginConfig) {
+abstract class SemverPluginExtension(private val config: SemverKtPluginConfig) {
 
     fun git(block: SemverKtPluginGitConfig.() -> Unit): SemverPluginExtension {
         config.git.apply(block)
