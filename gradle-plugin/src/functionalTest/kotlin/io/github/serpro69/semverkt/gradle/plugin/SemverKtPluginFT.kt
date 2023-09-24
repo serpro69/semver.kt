@@ -14,19 +14,79 @@ class SemverKtPluginFT : DescribeSpec({
 
     assertSoftly = true
 
-    describe("versioning from commits") {
-        listOf("major", "minor", "patch").forEach { keyword ->
-            it("test initial version from commit message with [$keyword] keyword") {
+    listOf("major", "minor", "patch").forEach { keyword ->
+        describe("versioning from commits") {
+            it("should set initial version via commit message with [$keyword] keyword") {
                 val project = SemverKtTestProject()
+                // arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit\n\n[$keyword]").call()
                 }
+                // act
                 val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
+                // assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
                 result.output shouldContain "Calculated next version: 0.1.0"
+            }
+
+            it("should set next version via commit message with [$keyword] keyword") {
+                val project = SemverKtTestProject()
+                // arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[$keyword]").call()
+                }
+                // act
+                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                val nextVer = when (keyword) {
+                    "major" -> "1.0.0"
+                    "minor" -> "0.2.0"
+                    "patch" -> "0.1.1"
+                    else -> "42" // shouldn't really get here
+                }
+                result.output shouldContain "Calculated next version: $nextVer"
+            }
+        }
+
+        describe("versioning from gradle properties") {
+            it("should set initial version via -Pincrement=$keyword") {
+                val project = SemverKtTestProject()
+                // act
+                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=$keyword"))
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+                result.output shouldContain "Calculated next version: 0.1.0"
+            }
+
+            it("should take precedence with -Pincrement=$keyword over commit message with [major] keyword") {
+                val project = SemverKtTestProject()
+                // arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[major]")
+                        .call() // set to major to check if lower precedence values will override
+                }
+                // act
+                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=$keyword"))
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                val nextVer = when (keyword) {
+                    "major" -> "1.0.0"
+                    "minor" -> "0.2.0"
+                    "patch" -> "0.1.1"
+                    else -> "42" // shouldn't really get here
+                }
+                result.output shouldContain "Calculated next version: $nextVer"
             }
         }
     }
