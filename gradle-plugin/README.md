@@ -47,7 +47,7 @@ If you need the `TagTask` class in your Gradle build script, for example, for a 
 
 ### `semver-release` Extension
 
-The plugin provides a settings- and a project-extension called `semver-release`, which, if used, takes precedence over the json-based configuration.
+The plugin provides a settings--extension called `semver-release`, which, if used, takes precedence over the json-based configuration.
 
 In the `settings.gradle.kts`, the extension can be configured as follows:
 
@@ -64,25 +64,6 @@ settings.extensions.configure<SemverPluginExtension>("semver-release") {
     version {
         defaultIncrement = Increment.MINOR
         preReleaseId = "rc"
-    }
-}
-```
-
-In the `build.gradle.kts` the extension can be configured in a similar fashion after adding the plugin classes to the build script classpath, but the extension function can be used instead of getting the extension by name: 
-
-```kotlin
-plugins {
-    // apply plugin to get access to it's functions in the build script
-    id("io.github.serpro69.semver-release") version "$ver" apply false
-}
-
-// configure the plugin
-`semver-release` {
-    git {
-        // git configuration
-    }
-    version {
-        // version configuration
     }
 }
 ```

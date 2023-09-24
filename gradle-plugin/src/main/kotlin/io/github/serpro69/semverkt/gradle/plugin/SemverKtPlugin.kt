@@ -11,7 +11,6 @@ import io.github.serpro69.semverkt.release.Increment.PRE_RELEASE
 import io.github.serpro69.semverkt.release.SemverRelease
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
-import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.Plugin
 import org.gradle.api.initialization.Settings
 import org.gradle.api.logging.LogLevel
@@ -29,14 +28,10 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             JsonConfiguration(it)
         }
+        // override configuration via settings extension
         settings.extensions.create("semver-release", SemverPluginExtension::class.java, config)
+        // configure allprojects with semver
         settings.gradle.allprojects { project ->
-//            project.version = Semver("1.2.3")
-//            logger.log(LogLevel.LIFECYCLE, (project.version as Semver).normalVersion)
-
-            // override configuration via extension
-            project.extensions.create("semver-release", SemverPluginExtension::class.java, config)
-
             val promoteRelease = project.hasProperty("promoteRelease")
             val preRelease = project.hasProperty("preRelease")
             val increment = project.findProperty("increment")?.let { Increment.getByName(it.toString()) }
@@ -60,17 +55,24 @@ class SemverKtPlugin : Plugin<Settings> {
                     logger.log(LogLevel.INFO, "Create pre-release...")
                     createPreRelease(increaseVersion)
                 } else when (increaseVersion) {
-                    MAJOR, MINOR, PATCH -> release(increaseVersion)
+                    MAJOR, MINOR, PATCH -> {
+                        logger.log(LogLevel.INFO, "Create release...")
+                        release(increaseVersion)
+                    }
                     PRE_RELEASE -> {
                         latestVersion?.preRelease?.let {
+                            logger.log(LogLevel.INFO, "Next pre-release...")
                             release(increaseVersion)
-                        } ?: createPreRelease(DEFAULT)
+                        } ?: run {
+                            logger.log(LogLevel.INFO, "Create default pre-release...")
+                            createPreRelease(DEFAULT)
+                        }
                     }
                     DEFAULT, NONE -> latestVersion
                 }
-                logger.log(LogLevel.LIFECYCLE, "Next version: $nextVersion")
-                project.version = nextVersion as Semver
-                logger.log(LogLevel.LIFECYCLE, "Set project.version: ${(project.version as Semver)}")
+                logger.log(LogLevel.INFO, "Next version: $nextVersion")
+                project.version = nextVersion
+                logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
                 logger.log(LogLevel.INFO, "Done...")
                 latestVersion to nextVersion
             }
@@ -79,10 +81,11 @@ class SemverKtPlugin : Plugin<Settings> {
                 it.description = "Create a tag for the next version"
                 it.latestVersion.set(latestVersion)
                 it.nextVersion.set(nextVersion)
+                it.dryRun.set(project.hasProperty("dryRun"))
             }
         }
 
         logger.log(LogLevel.DEBUG, "Using configuration: ${config.jsonString()}")
-        logger.log(LogLevel.DEBUG, "Finish applying plugin...")
+        logger.log(LogLevel.INFO, "Finish applying plugin...")
     }
 }
