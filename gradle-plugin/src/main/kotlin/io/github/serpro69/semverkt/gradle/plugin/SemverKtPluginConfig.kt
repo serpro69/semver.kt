@@ -8,12 +8,13 @@ import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.spec.Semver
+import org.gradle.api.initialization.Settings
 import java.nio.file.Path
 
 @ConfigDsl
-class SemverKtPluginConfig : Configuration {
+class SemverKtPluginConfig(settings: Settings?) : Configuration {
 
-    override var git = SemverKtPluginGitConfig()
+    override var git = SemverKtPluginGitConfig(settings)
         private set
     override var version = SemverKtPluginVersionConfig()
         private set
@@ -39,8 +40,8 @@ class SemverKtPluginVersionConfig internal constructor() : VersionConfig {
 }
 
 @ConfigDsl
-class SemverKtPluginGitConfig internal constructor() : GitConfig {
-    override val repo = SemverKtPluginGitRepoConfig()
+class SemverKtPluginGitConfig internal constructor(settings: Settings?) : GitConfig {
+    override val repo = SemverKtPluginGitRepoConfig(settings)
     override val tag = SemverKtPluginGitTagConfig()
     override val message = SemverKtPluginGitMessageConfig()
 
@@ -58,9 +59,9 @@ class SemverKtPluginGitConfig internal constructor() : GitConfig {
 }
 
 @ConfigDsl
-class SemverKtPluginGitRepoConfig internal constructor() : GitRepoConfig {
+class SemverKtPluginGitRepoConfig internal constructor(settings: Settings?) : GitRepoConfig {
 
-    override var directory: Path = super.directory
+    override var directory: Path = settings?.settingsDir?.toPath() ?: super.directory // use settings dir as default path for plugin config
     override var remoteName: String = super.remoteName
 }
 

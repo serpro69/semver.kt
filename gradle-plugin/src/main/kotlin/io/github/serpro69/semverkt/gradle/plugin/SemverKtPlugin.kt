@@ -24,7 +24,7 @@ class SemverKtPlugin : Plugin<Settings> {
         val config: Configuration = settings.settingsDir.resolve("semver-release.json").let {
             if (!it.exists()) {
                 logger.log(LogLevel.DEBUG, "semver-release.json file not found in settings dir")
-                return@let SemverKtPluginConfig()
+                return@let SemverKtPluginConfig(settings)
             }
             JsonConfiguration(it)
         }

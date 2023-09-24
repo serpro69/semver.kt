@@ -11,7 +11,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
 
     describe("Plugin Configuration") {
         context("configuration dsl functions") {
-            val config = with(SemverKtPluginConfig()) {
+            val config = with(SemverKtPluginConfig(null)) {
                 git {
                     tag {
                         prefix = "test"
