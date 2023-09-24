@@ -16,9 +16,9 @@
 
 This repo contains three modules which can be used separately: 
 
-- [`semver.kt-spec`](spec) - a kotlin implementation of [semver](https://github.com/semver/semver) spec
-- [`semver.kt-release`](release) - provides functionality for automated release versioning (based on git tags) which adheres to semver rules
-- [`semver.kt-gradle-plugin`](gradle-plugin) a gradle plugin for automated releases during builds
+- [`io.github.serpro69:semver.kt-spec`](spec) - a kotlin implementation of [semver](https://github.com/semver/semver) spec
+- [`io.github.serpro69:semver.kt-release`](release) - provides functionality for automated release versioning (based on git tags) which adheres to semver rules
+- [`io.github.serpro69.semantic-release`](gradle-plugin) a gradle plugin for automated semantic versioning during builds
 
 ## Why?
 

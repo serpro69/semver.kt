@@ -47,7 +47,7 @@ tasks.check {
 
 gradlePlugin {
     plugins {
-        create("semver-release") {
+        create("semantic-versioning") {
             id = "${project.group}.${name}"
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
