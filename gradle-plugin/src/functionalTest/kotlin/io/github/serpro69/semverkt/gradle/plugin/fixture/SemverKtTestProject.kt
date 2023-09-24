@@ -1,11 +1,13 @@
 package io.github.serpro69.semverkt.gradle.plugin.fixture
 
+import org.eclipse.jgit.api.Git
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.writeText
 
 class SemverKtTestProject : AbstractProject() {
 
     private val gradlePropertiesFile = projectDir.resolve("gradle.properties")
-    private val settingsFile = projectDir.resolve("settings.gradle")
+    private val settingsFile = projectDir.resolve("settings.gradle.kts")
     private val buildFile = projectDir.resolve("build.gradle.kts")
 
     init {
@@ -32,21 +34,22 @@ class SemverKtTestProject : AbstractProject() {
         // Yes, our project under test can use build scans. It's a real project!
         settingsFile.writeText(
             """
+            import java.nio.file.Paths
+            import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+
             plugins {
-//                id 'com.gradle.enterprise' version '3.8.1'
-                id 'io.github.serpro69.gradle.semver-release'
+                id("io.github.serpro69.semver-release")
             }
       
-//            gradleEnterprise {
-//                buildScan {
-//                   publishAlways()
-//                   termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-//                   termsOfServiceAgree = 'yes'
-//                }
-//            }
-      
-            rootProject.name = 'test-project'
-//            include 'sub'
+            rootProject.name = "test-project"
+
+            settings.extensions.configure<SemverPluginExtension>("semver-release") {
+                git {
+                    repo {
+                        directory = Paths.get("${projectDir.absolutePathString()}")
+                    }
+                }
+            }
             """.trimIndent()
         )
 
@@ -66,5 +69,10 @@ class SemverKtTestProject : AbstractProject() {
             }
             """.trimIndent()
         )
+
+        Git.open(projectDir.toFile()).use {
+            it.add().addFilepattern(".").call()
+            it.commit().setMessage("add project files").call()
+        }
     }
 }
