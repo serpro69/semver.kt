@@ -7,20 +7,37 @@ val integrationTestImplementation by configurations
 val functionalTest: SourceSet by sourceSets.creating
 val functionalTestImplementation by configurations
 
+sourceSets {
+    listOf(integrationTest, functionalTest).map { it.name }.forEach {
+        getByName(it) {
+            resources.srcDir("src/$it/resources")
+            compileClasspath += main.get().compileClasspath + test.get().compileClasspath
+            runtimeClasspath += main.get().runtimeClasspath + test.get().runtimeClasspath
+        }
+    }
+}
+
+configurations {
+    getByName("integrationTestImplementation") { extendsFrom(testImplementation.get()) }
+    getByName("integrationTestRuntimeOnly") { extendsFrom(testRuntimeOnly.get()) }
+    getByName("functionalTestImplementation") { extendsFrom(testImplementation.get()) }
+    getByName("functionalTestRuntimeOnly") { extendsFrom(testRuntimeOnly.get()) }
+}
+
 dependencies {
+    val integrationTestImplementation by configurations
+    val functionalTestImplementation by configurations
     compileOnly(gradleApi())
     api(project(":release"))
     testCompileOnly(gradleTestKit())
     integrationTestImplementation(project)
     functionalTestImplementation(project)
-    functionalTestImplementation("io.kotest:kotest-runner-junit5-jvm:5.6.2")
-    functionalTestImplementation("io.kotest:kotest-assertions-core-jvm:5.6.2")
 }
 
 val functionalTestTask = tasks.register<Test>("functionalTest") {
     group = "verification"
-    testClassesDirs = functionalTest.output.classesDirs
-    classpath = functionalTest.runtimeClasspath
+    testClassesDirs = sourceSets["functionalTest"].output.classesDirs
+    classpath = sourceSets["functionalTest"].runtimeClasspath
     useJUnitPlatform()
 }
 
@@ -35,5 +52,5 @@ gradlePlugin {
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
     }
-    testSourceSets(functionalTest)
+    testSourceSets(sourceSets["functionalTest"])
 }
