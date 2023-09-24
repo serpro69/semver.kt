@@ -21,15 +21,15 @@ class SemverKtPlugin : Plugin<Settings> {
     private val logger = Logging.getLogger(this::class.java)
 
     override fun apply(settings: Settings) {
-        val config: Configuration = settings.settingsDir.resolve("semver-release.json").let {
+        val config: Configuration = settings.settingsDir.resolve("semantic-versioning.json").let {
             if (!it.exists()) {
-                logger.log(LogLevel.DEBUG, "semver-release.json file not found in settings dir")
+                logger.log(LogLevel.DEBUG, "semantic-versioning.json file not found in settings dir")
                 return@let SemverKtPluginConfig(settings)
             }
             JsonConfiguration(it)
         }
         // override configuration via settings extension
-        settings.extensions.create("semver-release", SemverPluginExtension::class.java, config)
+        settings.extensions.create("semantic-versioning", SemverPluginExtension::class.java, config)
         // configure allprojects with semver
         settings.gradle.allprojects { project ->
             val promoteRelease = project.hasProperty("promoteRelease")

@@ -1,4 +1,4 @@
-# `io.github.serpro69.semver-release:$version`
+# `io.github.serpro69.semantic-versioning:$version`
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.serpro69/semver.kt-release?style=for-the-badge)](https://search.maven.org/artifact/io.github.serpro69/semver.kt-release)
 [![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/io.github.serpro69/semver.kt-release?label=snapshot-version&server=https%3A%2F%2Foss.sonatype.org&style=for-the-badge&color=yellow)](#downloading)
@@ -7,7 +7,7 @@
 
 Gradle settings plugin for semantic versioning releases.
 
-This Gradle plugin provides support for [semantic versioning](http://semver.org) of gradle builds. It is easy to use and extremely configurable. The plugin allows you to bump the major, minor, patch or pre-release version based on the latest version (identified from a git tag). It's main advantage (and main motivation for creating this project) over other similar semver-release projects is that it explicitly avoids to write versions to build files and only uses git tags, thus eliminating the "Release new version" noise from the git logs. 
+This Gradle plugin provides support for [semantic versioning](http://semver.org) of gradle builds. It is easy to use and extremely configurable. The plugin allows you to bump the major, minor, patch or pre-release version based on the latest version (identified from a git tag). It's main advantage (and main motivation for creating this project) over other similar semantic-versioning projects is that it explicitly avoids to write versions to build files and only uses git tags, thus eliminating the "Release new version" noise from the git logs. 
 
 The version can be bumped by using version-component-specific project properties, or alternatively based on the contents of a commit message. If no manual bumping is done via commit message or project property, the plugin will increment the version-component with the lowest precedence; this is usually the patch version, but can be the pre-release version if the latest version is a pre-release one. The plugin does its best to ensure that you do not accidentally violate semver rules while generating your versions; in cases where this might happen the plugin forces you to be explicit about violating these rules.
 
@@ -17,17 +17,17 @@ _**Note**: The gradle documentation specifies that the version property is an `O
 
 ## Usage
 
-The latest version of this plugin can be found on [semver-release gradle plugin](link) page. Using the plugin is quite simple:
+The latest version of this plugin can be found on [semantic-versioning gradle plugin](link) page. Using the plugin is quite simple:
 
 **In `settings.gradle.kts`**
 
 ```kotlin
 plugins {
-    id("io.github.serpro69.semver-release") version "$ver"
+    id("io.github.serpro69.semantic-versioning") version "$ver"
 }
 ```
 
-Additionally, you may want to add `semver-release.json` configuration file in the corresponding project-directory of each project in the build that should be handled by this plugin. The file _must_ be in the same directory as `settings.gradle` file. This file allows you to set options to configure the plugin's behavior (see [Json Configuration](#json-configuration)). In most cases you don't want to version your subprojects separately from the main (root) project, and instead want to keep their versions in sync. For this you can simply set the version of each subproject to the version of the root project in the root project's `build.gradle.kts`:
+Additionally, you may want to add `semantic-versioning.json` configuration file in the corresponding project-directory of each project in the build that should be handled by this plugin. The file _must_ be in the same directory as `settings.gradle` file. This file allows you to set options to configure the plugin's behavior (see [Json Configuration](#json-configuration)). In most cases you don't want to version your subprojects separately from the main (root) project, and instead want to keep their versions in sync. For this you can simply set the version of each subproject to the version of the root project in the root project's `build.gradle.kts`:
 
 ```kotlin
 subprojects {
@@ -45,14 +45,14 @@ If you need the `TagTask` class in your Gradle build script, for example, for a 
 
 ### Json Configuration
 
-### `semver-release` Extension
+### `semantic-versioning` Extension
 
-The plugin provides a settings--extension called `semver-release`, which, if used, takes precedence over the json-based configuration.
+The plugin provides a settings-extension called `semantic-versioning`, which, if used, takes precedence over the json-based configuration.
 
 In the `settings.gradle.kts`, the extension can be configured as follows:
 
 ```kotlin
-settings.extensions.configure<SemverPluginExtension>("semver-release") {
+settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
     git {
         message {
             major = "<major>"

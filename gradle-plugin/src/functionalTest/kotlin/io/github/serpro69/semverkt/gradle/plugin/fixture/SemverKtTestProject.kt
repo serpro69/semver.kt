@@ -38,12 +38,12 @@ class SemverKtTestProject : AbstractProject() {
             import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
 
             plugins {
-                id("io.github.serpro69.semver-release")
+                id("io.github.serpro69.semantic-versioning")
             }
       
             rootProject.name = "test-project"
 
-            settings.extensions.configure<SemverPluginExtension>("semver-release") {
+            settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
                 git {
                     repo {
                         directory = Paths.get("${projectDir.absolutePathString()}")
