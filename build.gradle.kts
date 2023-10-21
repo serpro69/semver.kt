@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.util.*
 
 plugins {
     java
@@ -20,7 +21,7 @@ subprojects {
     version = rootProject.version
     val subProject = this@subprojects
     val projectArtifactId = "${rootProject.name}-${subProject.name}"
-    val isGradlePlugin = subProject.name == "gradle-plugin"
+    val isGradlePlugin = subProject.name == "semantic-versioning"
 
     repositories {
         mavenCentral()
@@ -30,10 +31,8 @@ subprojects {
         plugin("java")
         plugin("org.jetbrains.kotlin.jvm")
         plugin("org.jetbrains.dokka")
-//        if (!isGradlePlugin) {
-            plugin("signing")
-            plugin("maven-publish")
-//        }
+        if (!isGradlePlugin) plugin("maven-publish")
+        plugin("signing")
     }
 
     dependencies {
@@ -42,7 +41,7 @@ subprojects {
         testImplementation("io.kotest:kotest-assertions-core-jvm:5.6.2")
         testImplementation("io.github.serpro69:kotlin-faker:1.14.0")
 
-        if (subProject.name in listOf("gradle-plugin", "release")) {
+        if (subProject.name in listOf("release", "semantic-versioning")) {
             val jgitVer = "5.13.0.202109080827-r"
             implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
             implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
@@ -126,8 +125,13 @@ subprojects {
     val pomDeveloperId = "serpro69"
     val pomDeveloperName = "Serhii Prodan"
 
-    val publicationName = projectArtifactId.split(Regex("""[\.-]""")).joinToString("") { it.capitalize() }
-//    if (!isGradlePlugin) {
+    val publicationName = projectArtifactId
+        .split(Regex("""[\.-]"""))
+        .joinToString("") {
+            it.replaceFirstChar { c -> if (c.isLowerCase()) c.titlecase(Locale.getDefault()) else c.toString() }
+        }
+
+    if (!isGradlePlugin) { // com.gradle.plugin-publish applies its own publishing config
         publishing {
             publications {
                 create<MavenPublication>(publicationName) {
@@ -171,7 +175,7 @@ subprojects {
                 sign(publishing.publications[publicationName])
             }
         }
-//    }
+    }
 
     tasks {
         assemble {
