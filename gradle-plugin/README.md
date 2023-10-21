@@ -45,6 +45,8 @@ If you need the `TagTask` class in your Gradle build script, for example, for a 
 
 ### Json Configuration
 
+TODO
+
 ### `semantic-versioning` Extension
 
 The plugin provides a settings-extension called `semantic-versioning`, which, if used, takes precedence over the json-based configuration.
@@ -67,3 +69,17 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
     }
 }
 ```
+
+### Gradle Properties
+
+Some options can also be overridden via gradle properties, namely the plugin makes use of the following properties:
+
+- `promoteRelease` - boolean type property, promotes current pre-release to a release version
+- `preRelease` - boolean type property, creates a new pre-release version from the current release
+- `increment` - string type property, sets increment for the next version
+  - setting increment via gradle property take precedence over json and plugin-extension configurations
+  - accepted values are (case-insensitive):
+    - `major`
+    - `minor`
+    - `patch`
+    - `pre_release`
