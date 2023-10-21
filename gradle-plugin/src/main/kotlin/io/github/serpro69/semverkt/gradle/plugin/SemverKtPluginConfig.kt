@@ -14,6 +14,34 @@ import java.nio.file.Path
 @ConfigDsl
 class SemverKtPluginConfig(settings: Settings?) : Configuration {
 
+    constructor(config: Configuration, settings: Settings? = null) : this(settings) {
+        git {
+            repo {
+                directory = settings?.settingsDir?.toPath() ?: config.git.repo.directory
+                remoteName = config.git.repo.remoteName
+            }
+            message {
+                major = config.git.message.major
+                minor = config.git.message.minor
+                patch = config.git.message.patch
+                preRelease = config.git.message.preRelease
+                ignoreCase = config.git.message.ignoreCase
+            }
+            tag {
+                prefix = config.git.tag.prefix
+                separator = config.git.tag.separator
+                useBranches = config.git.tag.useBranches
+            }
+        }
+        version {
+            initialVersion = config.version.initialVersion
+            defaultIncrement = config.version.defaultIncrement
+            preReleaseId = config.version.preReleaseId
+            initialPreRelease = config.version.initialPreRelease
+            snapshotSuffix = config.version.snapshotSuffix
+        }
+    }
+
     override var git = SemverKtPluginGitConfig(settings)
         private set
     override var version = SemverKtPluginVersionConfig()

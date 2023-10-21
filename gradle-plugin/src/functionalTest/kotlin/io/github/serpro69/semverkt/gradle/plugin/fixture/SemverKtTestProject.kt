@@ -1,14 +1,21 @@
 package io.github.serpro69.semverkt.gradle.plugin.fixture
 
+import io.github.serpro69.semverkt.release.configuration.Configuration
 import org.eclipse.jgit.api.Git
+import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.writeText
 
-class SemverKtTestProject : AbstractProject() {
+class SemverKtTestProject() : AbstractProject() {
 
     private val gradlePropertiesFile = projectDir.resolve("gradle.properties")
     private val settingsFile = projectDir.resolve("settings.gradle.kts")
     private val buildFile = projectDir.resolve("build.gradle.kts")
+    private val configFile = projectDir.resolve("semantic-versioning.json")
+
+    constructor(configure: (dir: Path) -> Configuration) : this() {
+        configFile.writeText(configure(projectDir).jsonString())
+    }
 
     init {
 //        projectDir.resolve("abc.txt").writeText("hello world")
