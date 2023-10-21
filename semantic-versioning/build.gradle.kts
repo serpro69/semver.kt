@@ -1,5 +1,6 @@
 plugins {
     `java-gradle-plugin`
+    id("com.gradle.plugin-publish") version "1.2.1"
 }
 
 val integrationTest: SourceSet by sourceSets.creating
@@ -46,11 +47,32 @@ tasks.check {
 }
 
 gradlePlugin {
+    website = "https://github.com/serpro69/semver.kt"
+    vcsUrl = "https://github.com/serpro69/semver.kt.git"
     plugins {
-        create("semantic-versioning") {
+        create(project.name) {
             id = "${project.group}.${name}"
+            displayName = "Automated semantic versioning of gradle projects through git tags"
+            description = "This plugin helps you to automatically version your gradle project according to semver rules"
+            tags = listOf("semver", "release", "semantic", "versioning")
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
     }
     testSourceSets(sourceSets["functionalTest"])
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "localPluginRepo"
+            url = uri("./build/local-plugin-repo")
+        }
+    }
+}
+
+// workaround for https://github.com/gradle-nexus/publish-plugin/issues/84
+tasks.withType<PublishToMavenRepository>().configureEach {
+    onlyIf {
+        !repository.name.contains("sonatype", ignoreCase = true)
+    }
 }
