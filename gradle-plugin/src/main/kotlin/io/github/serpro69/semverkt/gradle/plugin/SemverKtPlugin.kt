@@ -9,7 +9,6 @@ import io.github.serpro69.semverkt.release.Increment.NONE
 import io.github.serpro69.semverkt.release.Increment.PATCH
 import io.github.serpro69.semverkt.release.Increment.PRE_RELEASE
 import io.github.serpro69.semverkt.release.SemverRelease
-import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
 import org.gradle.api.Plugin
 import org.gradle.api.initialization.Settings
@@ -21,12 +20,12 @@ class SemverKtPlugin : Plugin<Settings> {
     private val logger = Logging.getLogger(this::class.java)
 
     override fun apply(settings: Settings) {
-        val config: Configuration = settings.settingsDir.resolve("semantic-versioning.json").let {
-            if (!it.exists()) {
-                logger.log(LogLevel.DEBUG, "semantic-versioning.json file not found in settings dir")
-                return@let SemverKtPluginConfig(settings)
+        val config: SemverKtPluginConfig = settings.settingsDir.resolve("semantic-versioning.json").let {
+            if (it.exists()) {
+                logger.log(LogLevel.DEBUG, "Using semantic-versioning.json for plugin configuration...")
+                return@let SemverKtPluginConfig(JsonConfiguration(it), settings)
             }
-            JsonConfiguration(it)
+            SemverKtPluginConfig(settings)
         }
         // override configuration via settings extension
         settings.extensions.create("semantic-versioning", SemverPluginExtension::class.java, config)
