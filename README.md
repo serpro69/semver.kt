@@ -4,7 +4,7 @@
 
 <a href="https://github.com/serpro69/semver.kt"> <img src="docs/logo.png" alt="semver.kt"/> </a>
 
-[![Build Status](https://img.shields.io/github/workflow/status/serpro69/semver.kt/Build?logo=github&style=for-the-badge)](https://github.com/serpro69/semver.kt/actions/workflows/build.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/serpro69/semver.kt/build.yml?branch=master&logo=github&style=for-the-badge)](https://github.com/serpro69/semver.kt/actions/workflows/build.yml)
 [![Issues](https://img.shields.io/github/issues/serpro69/semver.kt.svg?logo=GitHub&style=for-the-badge&color=lightblue)](https://github.com/serpro69/semver.kt/issues)
 ![GitHub Top Lang](https://img.shields.io/github/languages/top/serpro69/semver.kt.svg?logo=Kotlin&logoColor=white&color=A97BFF&style=for-the-badge)
 [![Awesome Kotlin](https://img.shields.io/badge/awesome-kotlin-orange?logo=Awesome-Lists&style=for-the-badge)](https://github.com/KotlinBy/awesome-kotlin)
