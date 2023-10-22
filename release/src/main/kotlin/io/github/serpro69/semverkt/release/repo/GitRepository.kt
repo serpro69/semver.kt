@@ -4,16 +4,25 @@ import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
+import java.io.IOException
 
 /**
  * Represents a git [Repository] implementation.
  */
 class GitRepository(override val config: Configuration) : Repository {
-    private val git: Git by lazy { Git.open(config.git.repo.directory.toFile()) }
+    private val git: Git by lazy {
+        val repoDir = config.git.repo.directory.toFile()
+        try {
+            Git.open(repoDir)
+        } catch (e: IOException) {
+            throw IOException("Can't open $repoDir as git repository", e)
+        }
+    }
 
     override val head: () -> ObjectId = { git.repository.resolve(Constants.HEAD) }
 
