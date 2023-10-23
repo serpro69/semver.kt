@@ -4,7 +4,7 @@ import java.util.*
 plugins {
     java
     kotlin("jvm") version "1.9.10" apply false
-    id("org.jetbrains.dokka") version "1.8.20"
+    id("org.jetbrains.dokka") version "1.9.10"
     `maven-publish`
     signing
     id("io.github.gradle-nexus.publish-plugin") version "2.0.0-rc-1"
@@ -38,9 +38,9 @@ subprojects {
 
     dependencies {
         implementation(kotlin("stdlib-jdk8"))
-        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.6.2")
-        testImplementation("io.kotest:kotest-assertions-core-jvm:5.6.2")
-        testImplementation("io.github.serpro69:kotlin-faker:1.14.0")
+        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.7.2")
+        testImplementation("io.kotest:kotest-assertions-core-jvm:5.7.2")
+        testImplementation("io.github.serpro69:kotlin-faker:1.15.0")
 
         if (subProject.name in listOf("release", "semantic-versioning")) {
             val jgitVer = "5.13.0.202109080827-r"
