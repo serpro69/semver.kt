@@ -4,7 +4,7 @@ import io.github.serpro69.semverkt.gradle.plugin.fixture.AbstractProject
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.util.GradleVersion
-import java.lang.management.ManagementFactory.getRuntimeMXBean
+import java.io.PrintWriter
 import java.nio.file.Path
 
 object Builder {
@@ -57,13 +57,16 @@ object Builder {
         vararg args: String
     ): GradleRunner = GradleRunner.create().apply {
         forwardOutput()
-        if (withPluginClasspath) {
-            withPluginClasspath()
-        }
+        forwardStdOutput(PrintWriter(System.out))
+        forwardStdError(PrintWriter(System.err))
+        if (withPluginClasspath) withPluginClasspath()
         withGradleVersion(gradleVersion.version)
         withProjectDir(projectDir.toFile())
-        withArguments(args.toList() + "-s")
+        withArguments(*args, "-s")
+        // disables gradle daemon , which causes out-of-memory when running multiple tests
+        // https://discuss.gradle.org/t/testkit-how-to-turn-off-daemon/17843/2
+        withDebug(true)
         // Ensure this value is true when `--debug-jvm` is passed to Gradle, and false otherwise
-        withDebug(getRuntimeMXBean().inputArguments.toString().indexOf("-agentlib:jdwp") > 0)
+//        withDebug(getRuntimeMXBean().inputArguments.toString().indexOf("-agentlib:jdwp") > 0)
     }
 }

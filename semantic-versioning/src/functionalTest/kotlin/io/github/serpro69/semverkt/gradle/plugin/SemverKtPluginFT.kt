@@ -5,12 +5,14 @@ import io.github.serpro69.semverkt.gradle.plugin.gradle.Builder
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
 import io.github.serpro69.semverkt.release.configuration.PojoConfiguration
+import io.kotest.core.names.DuplicateTestNameMode
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import org.eclipse.jgit.api.Git
 import org.gradle.testkit.runner.TaskOutcome
+import org.gradle.util.GradleVersion
 import java.nio.file.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.writeText
@@ -18,20 +20,21 @@ import kotlin.io.path.writeText
 class SemverKtPluginFT : DescribeSpec({
 
     assertSoftly = true
+    duplicateTestNameMode = DuplicateTestNameMode.Silent
 
     listOf("major", "minor", "patch", "pre release").forEach { keyword ->
         describe("versioning from commits") {
             it("should set initial version via commit message with [$keyword] keyword") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit\n\n[$keyword]").call()
                 }
-                // act
+                // Act
                 val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
                 if (keyword == "pre release") result.output shouldContain "Calculated next version: 0.1.0-rc.1"
@@ -40,16 +43,16 @@ class SemverKtPluginFT : DescribeSpec({
 
             it("should set next version via commit message with [$keyword] keyword") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit\n\n[$keyword]").call()
                 }
-                // act
+                // Act
                 val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 val nextVer = when (keyword) {
                     "major" -> "1.0.0"
@@ -67,9 +70,9 @@ class SemverKtPluginFT : DescribeSpec({
         describe("versioning from gradle properties") {
             it("should set initial version via -Pincrement=$keyword") {
                 val project = SemverKtTestProject()
-                // act
+                // Act
                 val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=$keyword"))
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
                 if (keyword == "pre_release") result.output shouldContain "Calculated next version: 0.1.0-rc.1"
@@ -78,7 +81,7 @@ class SemverKtPluginFT : DescribeSpec({
 
             it("should take precedence with -Pincrement=$keyword over commit message with [major] keyword") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
@@ -86,9 +89,9 @@ class SemverKtPluginFT : DescribeSpec({
                     it.commit().setMessage("New commit\n\n[major]")
                         .call() // set to major to check if lower precedence values will override
                 }
-                // act
+                // Act
                 val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=$keyword"))
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 val nextVer = when (keyword) {
                     "major" -> "1.0.0"
@@ -123,16 +126,16 @@ class SemverKtPluginFT : DescribeSpec({
                 "esaeler erp",
             ).forEach { keyword ->
                 it("should set initial version via commit message with [$keyword] keyword") {
-                    val project = SemverKtTestProject(config)
-                    // arrange
+                    val project = SemverKtTestProject(configure = config)
+                    // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                         it.add().addFilepattern("text.txt").call()
                         it.commit().setMessage("New commit\n\n[$keyword]").call()
                     }
-                    // act
+                    // Act
                     val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
-                    // assert
+                    // Assert
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                     // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
                     if (keyword == "esaeler erp") result.output shouldContain "Calculated next version: 0.1.0-rc.1"
@@ -140,17 +143,17 @@ class SemverKtPluginFT : DescribeSpec({
                 }
 
                 it("should set next version via commit message with [$keyword] keyword") {
-                    val project = SemverKtTestProject(config)
-                    // arrange
+                    val project = SemverKtTestProject(configure = config)
+                    // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
                         project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                         it.add().addFilepattern("text.txt").call()
                         it.commit().setMessage("New commit\n\n[$keyword]").call()
                     }
-                    // act
+                    // Act
                     val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
-                    // assert
+                    // Assert
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                     val nextVer = when (keyword) {
                         "rojam" -> "1.0.0"
@@ -222,6 +225,73 @@ class SemverKtPluginFT : DescribeSpec({
             result.output shouldContain "> Configure project :\nProject version: 0.1.0"
             result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
             result.output shouldNotContain "Calculated next version"
+        }
+    }
+
+    describe("compatible gradle version") {
+        // gradle 8.x
+        (0..4).forEach { minorVer ->
+            context("gradle 8.$minorVer") {
+                it("should be compatible") {
+                    val project = SemverKtTestProject()
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        it.commit().setMessage("New [minor] version").call()
+                    }
+                    // Act
+                    val result = Builder.build(
+                        gradleVersion = GradleVersion.version("8.$minorVer"),
+                        project = project,
+                        args = arrayOf("tag", "-PdryRun")
+                    )
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+                    result.output shouldContain "Calculated next version: 0.1.0"
+                }
+            }
+        }
+    }
+
+    describe("incompatible gradle version") {
+        // gradle 7.x
+        context("gradle 7.x") {
+            // disable soft assertions to fail-fast in Arrange
+            assertSoftly = false
+
+            it("should fail due to incompatible gradle version") {
+                // Arrange
+                // - run gradle task with default settings
+                val project = SemverKtTestProject(defaultSettings = true)
+                Builder.build(
+                    gradleVersion = GradleVersion.version("7.6.3"), // latest 7.x version
+                    project = project,
+                    args = arrayOf("clean")
+                    // just add some dumb assertion to verify gradle actually ran successfully
+                ).also { it.task(":clean")?.outcome shouldBe TaskOutcome.UP_TO_DATE }
+                // - add plugin to settings.gradle file
+                project.writePluginSettings()
+                // - add a file and commit with release keyword
+                Git.open(project.projectDir.toFile()).use {
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New [minor] version").call()
+                }
+                // Act
+                val result = Builder.buildAndFail(
+                    gradleVersion = GradleVersion.version("7.6.3"),
+                    project = project,
+                    args = arrayOf("tag", "-PdryRun")
+                )
+                // Assert
+                result.task(":tag")?.outcome shouldBe null // settings compilation should fail
+                result.output shouldNotContain "Calculated next version"
+            }
+
+            // re-enable soft assertions
+            assertSoftly = false
         }
     }
 })
