@@ -6,15 +6,40 @@ import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.writeText
 
-class SemverKtTestProject() : AbstractProject() {
+class SemverKtTestProject(
+    defaultSettings: Boolean = false
+) : AbstractProject() {
 
     private val gradlePropertiesFile = projectDir.resolve("gradle.properties")
     private val settingsFile = projectDir.resolve("settings.gradle.kts")
     private val buildFile = projectDir.resolve("build.gradle.kts")
     private val configFile = projectDir.resolve("semantic-versioning.json")
 
-    constructor(configure: (dir: Path) -> Configuration) : this() {
+    constructor(defaultSettings: Boolean = false, configure: (dir: Path) -> Configuration) : this(defaultSettings) {
         configFile.writeText(configure(projectDir).jsonString())
+    }
+
+    fun writePluginSettings() {
+        settingsFile.writeText(
+            """
+            import java.nio.file.Paths
+            import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+
+            plugins {
+                id("io.github.serpro69.semantic-versioning")
+            }
+      
+            rootProject.name = "test-project"
+
+            settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
+                git {
+                    repo {
+                        directory = Paths.get("${projectDir.absolutePathString()}")
+                    }
+                }
+            }
+            """.trimIndent()
+        )
     }
 
     init {
@@ -40,26 +65,12 @@ class SemverKtTestProject() : AbstractProject() {
         )
 
         // Yes, our project under test can use build scans. It's a real project!
-        settingsFile.writeText(
+        if (defaultSettings) settingsFile.writeText(
             """
-            import java.nio.file.Paths
-            import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
-
-            plugins {
-                id("io.github.serpro69.semantic-versioning")
-            }
-      
             rootProject.name = "test-project"
-
-            settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
-                git {
-                    repo {
-                        directory = Paths.get("${projectDir.absolutePathString()}")
-                    }
-                }
-            }
             """.trimIndent()
         )
+        else writePluginSettings()
 
         // Apply our plugin
         buildFile.writeText(
