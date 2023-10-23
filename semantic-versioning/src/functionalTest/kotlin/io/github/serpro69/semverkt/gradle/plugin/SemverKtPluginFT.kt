@@ -255,7 +255,11 @@ class SemverKtPluginFT : DescribeSpec({
         }
     }
 
-    describe("incompatible gradle version") {
+    // test is broken because plugin-under-test.metadata file contains effective classpath of the plugin,
+    // and hence even though we run with gradle 7.x, classpath contains kotlin 1.9.0,
+    // which is the reason why gradle 7.x is incompatible in the first place
+    // not sure yet how to make this work in an automated way
+    describe("!incompatible gradle version") {
         // gradle 7.x
         context("gradle 7.x") {
             // disable soft assertions to fail-fast in Arrange
