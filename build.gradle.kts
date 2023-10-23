@@ -8,6 +8,7 @@ plugins {
     `maven-publish`
     signing
     id("io.github.gradle-nexus.publish-plugin") version "2.0.0-rc-1"
+    id("io.github.serpro69.semantic-versioning") version "0.5.0" apply false
 }
 
 repositories {
