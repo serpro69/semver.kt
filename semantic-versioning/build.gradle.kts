@@ -61,6 +61,8 @@ gradlePlugin {
     testSourceSets(sourceSets["functionalTest"])
 }
 
+tasks["functionalTest"].dependsOn("pluginUnderTestMetadata")
+
 publishing {
     repositories {
         maven {
