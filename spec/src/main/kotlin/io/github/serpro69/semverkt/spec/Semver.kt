@@ -1,5 +1,6 @@
 package io.github.serpro69.semverkt.spec
 
+import java.io.Serializable
 import java.util.regex.Pattern
 import kotlin.math.sign
 
@@ -24,7 +25,7 @@ fun String.toSemver(prefix: String? = null): Semver {
  *
  * @constructor             creates an instance of [Semver] where semantic version is constructed from the [version] string
  */
-class Semver(private val version: String) : Comparable<Semver> {
+class Semver(private val version: String) : Comparable<Semver>, Serializable {
     private val versionPattern: Pattern =
         Pattern.compile("""^((?:\d+\.){2}\d+)(-(?:[0-9A-Za-z-]*.?)*)?(\+(?:[0-9A-Za-z-]*.?)*)?${'$'}""")
     val normalVersion: String = version.substringBefore("+").substringBefore("-")

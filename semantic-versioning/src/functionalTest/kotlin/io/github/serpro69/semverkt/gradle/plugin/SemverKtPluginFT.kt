@@ -14,6 +14,7 @@ import org.eclipse.jgit.api.Git
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.util.GradleVersion
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.writeText
 
@@ -296,6 +297,40 @@ class SemverKtPluginFT : DescribeSpec({
 
             // re-enable soft assertions
             assertSoftly = false
+        }
+    }
+
+    describe("multi-module project") {
+        it("should set next version via commit message") {
+            val project = SemverKtTestProject()
+            // arrange
+            Git.open(project.projectDir.toFile()).use {
+                it.tag().setName("v0.1.0").call() // set initial version
+                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                it.add().addFilepattern("text.txt").call()
+                it.commit().setMessage("New commit\n\n[minor]").call()
+            }
+            // act
+            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
+            // assert
+            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+            result.output shouldContain "Calculated next version: 0.2.0"
+        }
+
+        it("should set next version via gradle property") {
+            val project = SemverKtTestProject()
+            // arrange
+            Git.open(project.projectDir.toFile()).use {
+                it.tag().setName("v0.1.0").call() // set initial version
+                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                it.add().addFilepattern("text.txt").call()
+                it.commit().setMessage("New commit").call()
+            }
+            // act
+            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=minor"))
+            // assert
+            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+            result.output shouldContain "Calculated next version: 0.2.0"
         }
     }
 })
