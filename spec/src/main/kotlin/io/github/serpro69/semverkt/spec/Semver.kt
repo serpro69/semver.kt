@@ -35,6 +35,9 @@ class Semver(private val version: String) : Comparable<Semver> {
     val patch: Int
 
     companion object {
+        /**
+         * Returns `true` when [version] is a valid semver version and `false` otherwise
+         */
         fun isValid(version: String): Boolean {
             return try {
                 Semver(version).isValid()

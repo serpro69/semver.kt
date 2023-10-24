@@ -15,13 +15,15 @@ import io.github.serpro69.semverkt.spec.Semver
 /**
  * Provides functions for semantic releases of a project [Repository].
  *
- * @property currentVersion the current (last) version in a given repository
+ * @property currentVersion the current version in a given repository
+ * @property latestVersion the last version in a given repository
  */
 class SemverRelease : AutoCloseable {
     private val repo: Repository
     private val config: Configuration
 
     val currentVersion: () -> Semver?
+    val latestVersion: () -> Semver?
 
     /**
      * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.
@@ -29,7 +31,8 @@ class SemverRelease : AutoCloseable {
     constructor(configuration: Configuration) {
         repo = GitRepository(configuration)
         config = configuration
-        currentVersion = { repo.latestVersionTag()?.let { semver(configuration.git.tag)(it) } }
+        currentVersion = { repo.headVersionTag()?.let { semver(configuration.git.tag)(it) } }
+        latestVersion = { repo.latestVersionTag()?.let { semver(configuration.git.tag)(it) } }
     }
 
     /**
@@ -38,7 +41,8 @@ class SemverRelease : AutoCloseable {
     constructor(repository: Repository) {
         repo = repository
         config = repo.config
-        currentVersion = { repo.latestVersionTag()?.let { semver(config.git.tag)(it) } }
+        currentVersion = { repo.headVersionTag()?.let { semver(config.git.tag)(it) } }
+        latestVersion = { repo.latestVersionTag()?.let { semver(config.git.tag)(it) } }
     }
 
     override fun close() {
@@ -46,49 +50,49 @@ class SemverRelease : AutoCloseable {
     }
 
     /**
-     * Returns the [version] IF it's not equal to [currentVersion] AND not already present in the [repo],
+     * Returns the [version] IF it's moreThan [latestVersion] AND not already present in the [repo],
      * ELSE returns `null`.
      */
     fun release(version: Semver): Semver? {
-        val moreThanCurrent = currentVersion()?.let { version > it } ?: true
+        val moreThanLatest = latestVersion()?.let { version > it } ?: true
         val exists by lazy { repo.tags().map { semver(config.git.tag)(it) }.any { it == version } }
-        return if (moreThanCurrent && !exists) version else null
+        return if (moreThanLatest && !exists) version else null
     }
 
     /**
-     * Returns the next release version after the [currentVersion] based on the [increment].
+     * Returns the next release version after the [latestVersion] based on the [increment].
      *
      * See also [SemverRelease.increment] for the rules that are used when releasing the versions.
      */
     fun release(increment: Increment): Semver = increment(increment, true)
 
     /**
-     * Returns the next snapshot version after the [currentVersion] based on the [increment].
+     * Returns the next snapshot version after the [latestVersion] based on the [increment].
      *
      * See also [SemverRelease.increment] for the rules that are used when creating version snapshots.
      */
     fun snapshot(increment: Increment): Semver = increment(increment, false)
 
     /**
-     * Increment the [currentVersion] to the next [Semver] using the [increment].
+     * Increment the [latestVersion] to the next [Semver] using the [increment].
      *
-     * The following rules apply when incrementing the [currentVersion]:
+     * The following rules apply when incrementing the [latestVersion]:
      *
-     * 1. **IF the [currentVersion] is `null`.**
+     * 1. **IF the [latestVersion] is `null`.**
      * THEN initial version is returned as configured by [VersionConfig.initialVersion].
      *
      * 2. **The [increment] is a [Increment.PRE_RELEASE].**
-     * IF [currentVersion] is a pre-release version,
+     * IF [latestVersion] is a pre-release version,
      * THEN the [Semver.preRelease] component is incremented,
-     * ELSE the [currentVersion] is returned.
+     * ELSE the [latestVersion] is returned.
      *
      * 3. **The [increment] is [Increment.DEFAULT].**
-     * IF [currentVersion] is a pre-release version,
+     * IF [latestVersion] is a pre-release version,
      * THEN the [Semver.preRelease] component is incremented,
-     * ELSE the [currentVersion] is incremented using [VersionConfig.defaultIncrement].
+     * ELSE the [latestVersion] is incremented using [VersionConfig.defaultIncrement].
      *
      * 4. **If the [increment] is [Increment.NONE],**
-     * THEN the [currentVersion] is returned.
+     * THEN the [latestVersion] is returned.
      *
      * @param increment the version component to increment
      * @param release   if `false` appends [VersionConfig.snapshotSuffix] to the final version
@@ -97,7 +101,7 @@ class SemverRelease : AutoCloseable {
         increment: Increment,
         release: Boolean = (increment != Increment.DEFAULT),
     ): Semver {
-        val nextVersion = currentVersion()?.let {
+        val nextVersion = latestVersion()?.let {
             when (increment) {
                 Increment.MAJOR -> it.incrementMajor()
                 Increment.MINOR -> it.incrementMinor()
@@ -111,7 +115,7 @@ class SemverRelease : AutoCloseable {
                     it.preRelease?.let { _ -> increment(Increment.PRE_RELEASE, release) }
                         ?: increment(config.version.defaultIncrement, release)
                 }
-                Increment.NONE -> currentVersion()
+                Increment.NONE -> latestVersion()
             }
         } ?: config.version.initialVersion
         return if (release || increment == Increment.PRE_RELEASE) nextVersion else nextVersion.withSnapshot()
@@ -122,25 +126,25 @@ class SemverRelease : AutoCloseable {
      *
      * The following rules apply when creating a new pre-release version:
      *
-     * 1. **WHEN [currentVersion] is a pre-release version.**
-     * IF the [currentVersion] is a snapshot version (ends with the [VersionConfig.snapshotSuffix]),
+     * 1. **WHEN [latestVersion] is a pre-release version.**
+     * IF the [latestVersion] is a snapshot version (ends with the [VersionConfig.snapshotSuffix]),
      * OR the [increment] is [Increment.PRE_RELEASE] or [Increment.NONE]
-     * THEN the [currentVersion] is returned,
-     * ELSE increases the [currentVersion] to the next [increment],
+     * THEN the [latestVersion] is returned,
+     * ELSE increases the [latestVersion] to the next [increment],
      * and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number.
      *
-     * 2. **WHEN [currentVersion] is `null`,**
+     * 2. **WHEN [latestVersion] is `null`,**
      * THEN a new pre-release version consisting of [VersionConfig.initialVersion] and [VersionConfig.initialPreRelease] is returned,
      *
-     * 3. **WHEN [currentVersion] is a release version.**
+     * 3. **WHEN [latestVersion] is a release version.**
      * IF [increment] is one of [Increment.MAJOR], [Increment.MINOR], [Increment.PATCH] or [Increment.DEFAULT],
-     * THEN increases the [currentVersion] to the next [increment]
+     * THEN increases the [latestVersion] to the next [increment]
      *   and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number,
-     * ELSE the [currentVersion] is returned.
+     * ELSE the [latestVersion] is returned.
      */
     fun createPreRelease(increment: Increment): Semver {
         val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
-        return with(currentVersion()) {
+        return with(latestVersion()) {
             this?.preRelease?.let {
                 if (this.isSnapshot() || increment in listOf(Increment.PRE_RELEASE, Increment.NONE)) this else {
                     val nextVer = if (increment == Increment.DEFAULT) {
@@ -163,12 +167,12 @@ class SemverRelease : AutoCloseable {
     /**
      * Promotes a pre-release version to a release version.
      *
-     * IF [currentVersion] is a pre-release version,
-     * THEN a copy of the [currentVersion] is returned as a normal version (with the pre-release component stripped),
-     * ELSE the [currentVersion] version is returned.
+     * IF [latestVersion] is a pre-release version,
+     * THEN a copy of the [latestVersion] is returned as a normal version (with the pre-release component stripped),
+     * ELSE the [latestVersion] version is returned.
      */
     fun promoteToRelease(): Semver? {
-        return with(currentVersion()) {
+        return with(latestVersion()) {
             this?.preRelease?.let { copy(preRelease = null, buildMetadata = null) } ?: this
         }
     }
