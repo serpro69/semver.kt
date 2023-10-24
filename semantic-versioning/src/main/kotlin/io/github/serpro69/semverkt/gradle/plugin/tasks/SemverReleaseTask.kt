@@ -8,6 +8,8 @@ import org.gradle.api.tasks.Internal
 abstract class SemverReleaseTask : DefaultTask() {
 
     @get:Internal
+    internal abstract val currentVersion: Property<Semver>
+    @get:Internal
     internal abstract val latestVersion: Property<Semver>
     @get:Internal
     internal abstract val nextVersion: Property<Semver>

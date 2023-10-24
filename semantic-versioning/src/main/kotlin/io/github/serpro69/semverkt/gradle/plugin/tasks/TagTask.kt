@@ -1,5 +1,6 @@
 package io.github.serpro69.semverkt.gradle.plugin.tasks
 
+import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.gradle.api.logging.LogLevel.DEBUG
 import org.gradle.api.logging.LogLevel.LIFECYCLE
@@ -16,20 +17,32 @@ abstract class TagTask : SemverReleaseTask() {
 
     @TaskAction
     fun tag() {
-        val (latest, next) = latestVersion.orNull to nextVersion.orNull
+        val (current, latest, next) = Triple(currentVersion.orNull, latestVersion.orNull, nextVersion.orNull)
         logger.log(DEBUG, "latestVersion: $latest")
         logger.log(DEBUG, "nextVersion: $next")
-        if (next == latest) {
-            logger.log(LIFECYCLE, "latestVersion == nextVersion, not doing anything")
-        } else if (!dryRun.get() && next != null) {
-            with(project.buildFile.parentFile) {
-                logger.log(DEBUG, "Open repo at: $this")
-                val repo = Git.open(this)
-                logger.log(DEBUG, "Set tag to: v$next")
-                repo.setTag("v$next")
+        when {
+            // current version points at HEAD - don't do anything
+            current != null -> logger.log(LIFECYCLE, "Current version: $current")
+            // release new version
+            (next != null && latest != null) && (next > latest) -> {
+                logger.log(LIFECYCLE, "Calculated next version: $next")
+                setTag(next)
             }
-        } else {
-            logger.log(LIFECYCLE, "Calculated next version: $next")
+            // release first version
+            next != null && latest == null -> {
+                logger.log(LIFECYCLE, "Calculated next version: $next")
+                setTag(next)
+            }
+            else -> logger.log(LIFECYCLE, "Not doing anything")
+        }
+    }
+
+    private fun setTag(nextVer: Semver) {
+        if (!dryRun.get()) with(project.buildFile.parentFile) {
+            logger.log(DEBUG, "Open repo at: $this")
+            val repo = Git.open(this)
+            logger.log(DEBUG, "Set tag to: v$nextVer")
+            repo.setTag("v$nextVer")
         }
     }
 }

@@ -35,6 +35,7 @@ class SemverKtTestProject() : AbstractProject() {
         gradlePropertiesFile.writeText(
             """
             org.gradle.jvmargs=-Dfile.encoding=UTF-8
+            version=0.0.0
             """.trimIndent()
         )
 

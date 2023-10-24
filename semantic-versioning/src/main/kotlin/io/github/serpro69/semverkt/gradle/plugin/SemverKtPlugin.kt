@@ -31,26 +31,40 @@ class SemverKtPlugin : Plugin<Settings> {
         settings.extensions.create("semantic-versioning", SemverPluginExtension::class.java, config)
         // configure allprojects with semver
         settings.gradle.allprojects { project ->
-            val promoteRelease = project.hasProperty("promoteRelease")
-            val preRelease = project.hasProperty("preRelease")
-            val increment = project.findProperty("increment")?.let { Increment.getByName(it.toString()) }
+            val propPromoteRelease = project.hasProperty("promoteRelease")
+            val propPreRelease = project.hasProperty("preRelease")
+            val propIncrement = project.findProperty("increment")
+                ?.let { Increment.getByName(it.toString()) }
                 ?: NONE
 
-            val (latestVersion, nextVersion) = with(SemverRelease(config)) {
-                val latestVersion = currentVersion()
+            val (currentVersion, latestVersion, nextVersion) = with(SemverRelease(config)) {
+                // IF git HEAD points at a version, set and return it and don't do anything else
+                currentVersion()?.let {
+                    project.version = it
+                    return@with Triple(it, null, null)
+                }
+                // ELSE figure out next version
+                val latestVersion = latestVersion()
                 logger.log(LogLevel.INFO, "Current version: $latestVersion")
-                val increaseVersion = if (promoteRelease) NONE else with(nextIncrement()) {
-                    logger.log(LogLevel.DEBUG,"Next increment from property: $increment")
-                    logger.log(LogLevel.DEBUG,"Next increment from git commit: $this")
-                    if (increment !in listOf(DEFAULT, NONE)) {
-                        if (this == NONE) this else increment
-                    } else this
+                val increaseVersion = if (propPromoteRelease) NONE else with(nextIncrement()) {
+                    logger.log(LogLevel.DEBUG, "Next increment from property: $propIncrement")
+                    logger.log(LogLevel.DEBUG, "Next increment from git commit: $this")
+                    when (propIncrement) {
+                        // 1. check allowed values for gradle-property based increment
+                        // IF nextIncrement is NONE - we don't want to override it
+                        //  -> it contains some logic for checking existing versions and HEAD version
+                        // ELSE return increment from property
+                        // 2. just return the result of nextIncrement
+                        //  -> DEFAULT and NONE are not valid for property-based increment
+                        !in listOf(DEFAULT, NONE) -> if (this == NONE) this else propIncrement
+                        else -> this
+                    }
                 }
                 logger.log(LogLevel.INFO, "Calculated version increment: '$increaseVersion'")
-                val nextVersion = if (promoteRelease) {
+                val nextVersion = if (propPromoteRelease) {
                     logger.log(LogLevel.INFO, "Promote to release...")
                     promoteToRelease()
-                } else if (preRelease) {
+                } else if (propPreRelease) {
                     logger.log(LogLevel.INFO, "Create pre-release...")
                     createPreRelease(increaseVersion)
                 } else when (increaseVersion) {
@@ -67,17 +81,38 @@ class SemverKtPlugin : Plugin<Settings> {
                             createPreRelease(DEFAULT)
                         }
                     }
-                    DEFAULT, NONE -> latestVersion
+                    DEFAULT, NONE -> null
                 }
                 logger.log(LogLevel.INFO, "Next version: $nextVersion")
-                project.version = nextVersion
-                logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
+                when {
+                    (nextVersion != null && latestVersion != null) && (nextVersion >= latestVersion) -> {
+                        // only set version if nextVersion >= latestVersion
+                        project.version = nextVersion
+                        logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
+                    }
+                    nextVersion != null && latestVersion == null -> {
+                        // set initial version
+                        project.version = nextVersion
+                        logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
+                    }
+                    else -> {
+//                    if (config.useSnapshots) {
+//                        project.version = snapshot(increaseVersion)
+//                        logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
+//                    }
+                        logger.log(
+                            LogLevel.DEBUG,
+                            "Not doing anything: nextVersion $nextVersion < currentVersion $currentVersion"
+                        )
+                    }
+                }
                 logger.log(LogLevel.INFO, "Done...")
-                latestVersion to nextVersion
+                Triple(null, latestVersion, nextVersion)
             }
 
             project.tasks.register("tag", TagTask::class.java) {
                 it.description = "Create a tag for the next version"
+                it.currentVersion.set(currentVersion)
                 it.latestVersion.set(latestVersion)
                 it.nextVersion.set(nextVersion)
                 it.dryRun.set(project.hasProperty("dryRun"))
