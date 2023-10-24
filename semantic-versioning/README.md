@@ -82,3 +82,42 @@ Some options can also be overridden via gradle properties, namely the plugin mak
     - `minor`
     - `patch`
     - `pre_release`
+
+## Development
+
+TODO
+
+## Testing
+
+To run all tests execute `./gradlew clean test functionalTest`, which will run both unit and functional tests.
+
+### Testing from IDE
+
+To run *functional* tests in an IDE, a gradle runner has to be used because gradle needs to generate `plugin-under-test-medatada.properties` file.
+
+If running tests with gradle runner is not possible (I, for one, couldn't yet figure out how to do that with kotest tests in Intellij, even though I have set "Run tests using: Gradle" in Intellij's Build Tools -> Gradle settings), one could first generate the metadata with gradle by running `pluginUnderTestMedatata` task, and then execute tests in the IDE without cleaning the build directory.
+
+### Manual Testing
+
+To publish plugin and dependencies locally, run `./gradlew publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository`, which will publish dependencies to local maven directory (e.g. `~/.m2/repository`), and the plugin to `./build/local-plugin-repo`.
+
+Once that's done, one can setup gradle to fetch the plugin from local sources by updating `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        mavenLocal() // needed to fetch dependencies of the plugin which were published locally
+        mavenLocal {
+            url = uri("/path/to/semver.kt/semantic-versioning/build/local-plugin-repo")
+        }
+    }
+}
+
+plugins {
+    id("io.github.serpro69.semantic-versioning") version "0.0.0"
+}
+
+rootProject.name = "test"
+```

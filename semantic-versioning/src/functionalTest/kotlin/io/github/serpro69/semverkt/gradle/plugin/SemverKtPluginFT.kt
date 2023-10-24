@@ -8,6 +8,7 @@ import io.github.serpro69.semverkt.release.configuration.PojoConfiguration
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import org.eclipse.jgit.api.Git
 import org.gradle.testkit.runner.TaskOutcome
 import java.nio.file.Path
@@ -161,6 +162,66 @@ class SemverKtPluginFT : DescribeSpec({
                     result.output shouldContain "Calculated next version: $nextVer"
                 }
             }
+        }
+    }
+
+    describe("nextVersion < latestVersion") {
+        it("should NOT set version without keyword in commit message") {
+            val project = SemverKtTestProject()
+            // arrange
+            Git.open(project.projectDir.toFile()).use {
+                it.tag().setName("v0.1.0").call()
+                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                it.add().addFilepattern("text.txt").call()
+                it.commit().setMessage("New commit without release message").call()
+            }
+            // act
+            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
+            // assert
+            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+            // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+            result.output shouldContain "> Configure project :\nProject version: 0.0.0"
+            result.output shouldContain "> Task :tag\nNot doing anything"
+            result.output shouldNotContain "Calculated next version"
+        }
+    }
+
+    describe("current git HEAD with a version") {
+        it("should set version to current version with increment from commit message") {
+            val project = SemverKtTestProject()
+            // arrange
+            Git.open(project.projectDir.toFile()).use {
+                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                it.add().addFilepattern("text.txt").call()
+                it.commit().setMessage("New commit\n[minor]").call()
+                it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
+            }
+            // act
+            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
+            // assert
+            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+            // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+            result.output shouldContain "> Configure project :\nProject version: 0.1.0"
+            result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
+            result.output shouldNotContain "Calculated next version"
+        }
+        it("should set version to current version with increment from gradle properties") {
+            val project = SemverKtTestProject()
+            // arrange
+            Git.open(project.projectDir.toFile()).use {
+                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                it.add().addFilepattern("text.txt").call()
+                it.commit().setMessage("New commit").call()
+                it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
+            }
+            // act
+            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=minor"))
+            // assert
+            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+            // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+            result.output shouldContain "> Configure project :\nProject version: 0.1.0"
+            result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
+            result.output shouldNotContain "Calculated next version"
         }
     }
 })
