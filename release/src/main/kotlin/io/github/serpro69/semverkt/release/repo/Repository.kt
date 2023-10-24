@@ -32,6 +32,11 @@ interface Repository : AutoCloseable {
     val latestVersionTag: () -> Ref?
 
     /**
+     * Returns tag pointing at HEAD of this repository.
+     */
+    val headVersionTag: () -> Ref?
+
+    /**
      * Returns a list of [Commit]s in this repository,
      * with an optional [predicate] to filter the commits.
      *

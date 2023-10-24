@@ -4,7 +4,6 @@ import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
@@ -32,8 +31,14 @@ class GitRepository(override val config: Configuration) : Repository {
      */
     override val tags: () -> List<Ref> = {
         git.tagList().call()
-            .filter { it.name.startsWith("refs/tags/${config.git.tag.prefix}") }
-            .map { it.peel() }
+            .filter {
+                it.name.startsWith("refs/tags/${config.git.tag.prefix}")
+                    && Semver.isValid(it.simpleTagName.substringAfter(config.git.tag.prefix))
+            }.map { it.peel() }
+    }
+
+    override val headVersionTag: () -> Ref? = {
+        tags().firstOrNull { (it.peeledObjectId ?: it.objectId) == head().toObjectId() }
     }
 
     /**
