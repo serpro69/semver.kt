@@ -55,15 +55,13 @@ abstract class TagTask : SemverReleaseTask() {
 
     private fun setTag(nextVer: Semver, config: SemverKtPluginConfig) {
         if (!dryRun.get()) run {
-            // TODO is there a better way to handle multi-module projects?
-            //  tag might already exist (was set by root project or another sub-module)
-            val isHeadOnTag = GitRepository(config).use { repo ->
-                repo.tags().let { tags ->
-                    tags.isNotEmpty()
-                        && tags.last().let { t -> repo.head() == t.peeledObjectId || repo.head() == t.objectId }
+            // check if tag exists, don't try to create a duplicate
+            val tagExists = GitRepository(config).use { repo ->
+                repo.tags().any { 
+                    Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer 
                 }
             }
-            if (!isHeadOnTag) {
+            if (!tagExists) {
                 logger.log(DEBUG, "Open repo at: $this")
                 FileRepositoryBuilder()
                     .setWorkTree(project.projectDir)
@@ -73,7 +71,7 @@ abstract class TagTask : SemverReleaseTask() {
                         logger.log(DEBUG, "Set tag to: v$nextVer")
                         Git(it).use { git -> git.setTag("v$nextVer") }
                     }
-            } else logger.log(INFO, "Tag v$nextVer already exists in project")
+            } else logger.log(LIFECYCLE, "Tag v$nextVer already exists in project")
         }
     }
 }
