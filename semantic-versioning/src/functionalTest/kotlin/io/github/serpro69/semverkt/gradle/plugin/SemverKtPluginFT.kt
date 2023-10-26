@@ -184,48 +184,93 @@ class SemverKtPluginFT : DescribeSpec({
             // assert
             result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
             // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
-            result.output shouldContain "> Configure project :\nProject version: 0.0.0"
+            result.output shouldContain "> Configure project :\nProject test-project version: 0.0.0"
             result.output shouldContain "> Task :tag\nNot doing anything"
             result.output shouldNotContain "Calculated next version"
         }
     }
 
     describe("current git HEAD with a version") {
-        it("should set version to current version with increment from commit message") {
-            val project = SemverKtTestProject()
-            // arrange
-            Git.open(project.projectDir.toFile()).use {
-                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                it.add().addFilepattern("text.txt").call()
-                it.commit().setMessage("New commit\n[minor]").call()
-                it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
+        listOf(true, false).forEach { dryRun ->
+            it("should set version to current version with increment from commit message${if (dryRun) " and dryRun" else ""}") {
+                val project = SemverKtTestProject()
+                // arrange
+                Git.open(project.projectDir.toFile()).use {
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n[minor]").call()
+                    it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
+                }
+                // act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
+                val result = Builder.build(project = project, args = args)
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+                result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
+                result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
+                result.output shouldNotContain "Calculated next version"
             }
-            // act
-            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
-            // assert
-            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-            // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
-            result.output shouldContain "> Configure project :\nProject version: 0.1.0"
-            result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
-            result.output shouldNotContain "Calculated next version"
+            it("should set version to current version with increment from gradle properties${if (dryRun) " and dryRun" else ""}") {
+                val project = SemverKtTestProject()
+                // arrange
+                Git.open(project.projectDir.toFile()).use {
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit").call()
+                    it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
+                }
+                // act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
+                val result = Builder.build(project = project, args = args)
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+                result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
+                result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
+                result.output shouldNotContain "Calculated next version"
+            }
         }
-        it("should set version to current version with increment from gradle properties") {
-            val project = SemverKtTestProject()
-            // arrange
-            Git.open(project.projectDir.toFile()).use {
-                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                it.add().addFilepattern("text.txt").call()
-                it.commit().setMessage("New commit").call()
-                it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
+    }
+
+    describe("re-run 'tag' after releasing a version") {
+        listOf(true, false).forEach { dryRun ->
+            it("should return UP_TO_DATE with increment from commit${if (dryRun) " and dryRun" else ""}") {
+                val project = SemverKtTestProject()
+                // arrange
+                Git.open(project.projectDir.toFile()).use {
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[minor]").call()
+                }
+                Builder.build(project = project, args = arrayOf("tag", "-Pincrement=minor")) // release a version
+                // act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
+                val result = Builder.build(project = project, args = args)
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
+                result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
+                result.output shouldContain "> Task :tag UP-TO-DATE"
+                result.output shouldNotContain "Calculated next version"
             }
-            // act
-            val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=minor"))
-            // assert
-            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-            // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
-            result.output shouldContain "> Configure project :\nProject version: 0.1.0"
-            result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
-            result.output shouldNotContain "Calculated next version"
+            it("should return UP_TO_DATE with increment from gradle properties${if (dryRun) " and dryRun" else ""}") {
+                val project = SemverKtTestProject()
+                // arrange
+                Git.open(project.projectDir.toFile()).use {
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit").call()
+                }
+                Builder.build(project = project, args = arrayOf("tag", "-Pincrement=minor")) // release a version
+                // act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
+                val result = Builder.build(project = project, args = args)
+                // assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
+                result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
+                result.output shouldContain "> Task :tag UP-TO-DATE"
+                result.output shouldNotContain "Calculated next version"
+            }
         }
     }
 
