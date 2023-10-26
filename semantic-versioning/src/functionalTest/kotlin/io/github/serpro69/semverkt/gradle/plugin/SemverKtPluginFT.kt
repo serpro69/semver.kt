@@ -277,7 +277,7 @@ class SemverKtPluginFT : DescribeSpec({
                     // just add some dumb assertion to verify gradle actually ran successfully
                 ).also { it.task(":clean")?.outcome shouldBe TaskOutcome.UP_TO_DATE }
                 // - add plugin to settings.gradle file
-                project.writePluginSettings()
+                project.writePluginSettings(false)
                 // - add a file and commit with release keyword
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
@@ -302,7 +302,7 @@ class SemverKtPluginFT : DescribeSpec({
 
     describe("multi-module project") {
         it("should set next version via commit message") {
-            val project = SemverKtTestProject()
+            val project = SemverKtTestProject(multiModule = true)
             // arrange
             Git.open(project.projectDir.toFile()).use {
                 it.tag().setName("v0.1.0").call() // set initial version
@@ -314,11 +314,17 @@ class SemverKtPluginFT : DescribeSpec({
             val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
             // assert
             result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-            result.output shouldContain "Calculated next version: 0.2.0"
+            result.output shouldContain """
+                > Task :tag
+                Calculated next version: 0.2.0
+
+                > Task :submodule:tag
+                Calculated next version: 0.2.0
+            """.trimIndent()
         }
 
         it("should set next version via gradle property") {
-            val project = SemverKtTestProject()
+            val project = SemverKtTestProject(multiModule = true)
             // arrange
             Git.open(project.projectDir.toFile()).use {
                 it.tag().setName("v0.1.0").call() // set initial version
@@ -330,7 +336,13 @@ class SemverKtPluginFT : DescribeSpec({
             val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=minor"))
             // assert
             result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-            result.output shouldContain "Calculated next version: 0.2.0"
+            result.output shouldContain """
+                > Task :tag
+                Calculated next version: 0.2.0
+
+                > Task :submodule:tag
+                Calculated next version: 0.2.0
+            """.trimIndent()
         }
     }
 })

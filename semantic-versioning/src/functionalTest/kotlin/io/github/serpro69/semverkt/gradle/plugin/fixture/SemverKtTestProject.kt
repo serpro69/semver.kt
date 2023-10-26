@@ -4,10 +4,12 @@ import io.github.serpro69.semverkt.release.configuration.Configuration
 import org.eclipse.jgit.api.Git
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 
 class SemverKtTestProject(
-    defaultSettings: Boolean = false
+    defaultSettings: Boolean = false,
+    multiModule: Boolean = false,
 ) : AbstractProject() {
 
     private val gradlePropertiesFile = projectDir.resolve("gradle.properties")
@@ -15,11 +17,48 @@ class SemverKtTestProject(
     private val buildFile = projectDir.resolve("build.gradle.kts")
     private val configFile = projectDir.resolve("semantic-versioning.json")
 
-    constructor(defaultSettings: Boolean = false, configure: (dir: Path) -> Configuration) : this(defaultSettings) {
+    constructor(
+        defaultSettings: Boolean = false,
+        multiModule: Boolean = false,
+        configure: (dir: Path) -> Configuration,
+    ) : this(defaultSettings, multiModule) {
         configFile.writeText(configure(projectDir).jsonString())
     }
 
-    fun writePluginSettings() {
+    init {
+        gradlePropertiesFile.writeText(
+            """
+            org.gradle.jvmargs=-Dfile.encoding=UTF-8
+            version=0.0.0
+            """.trimIndent()
+        )
+
+        if (defaultSettings) settingsFile.writeText(
+            """
+            rootProject.name = "test-project"
+
+            ${if (multiModule) "include(\"submodule\")" else ""}
+            """.trimIndent()
+        )
+        else writePluginSettings(multiModule)
+
+        // Apply our plugin
+        buildFile.writeBuildFile()
+
+        if (multiModule) projectDir.resolve("submodule").createDirectories().also {
+            it.resolve("build.gradle.kts").writeText("""
+                plugins {
+                }
+            """.trimIndent())
+        }
+
+        Git.open(projectDir.toFile()).use {
+            it.add().addFilepattern(".").call()
+            it.commit().setMessage("add project files").call()
+        }
+    }
+
+    fun writePluginSettings(multiModule: Boolean) {
         settingsFile.writeText(
             """
             import java.nio.file.Paths
@@ -38,48 +77,20 @@ class SemverKtTestProject(
                     }
                 }
             }
+
+            ${if (multiModule) "include(\"submodule\")" else ""}
             """.trimIndent()
         )
     }
 
-    init {
-//        projectDir.resolve("abc.txt").writeText("hello world")
-//
-//        projectDir.resolve("sub").createDirectories()
-//            .also {
-//                it.resolve("build.gradle.kts")
-//                .writeText("""
-//                    plugins {
-//                    }
-//                """.trimIndent())
-//
-//                it.resolve("abc.txt")
-//                    .writeText("another one")
-//            }
-        // Yes, this is independent of our plugin project's properties file
-        gradlePropertiesFile.writeText(
-            """
-            org.gradle.jvmargs=-Dfile.encoding=UTF-8
-            version=0.0.0
-            """.trimIndent()
-        )
-
-        // Yes, our project under test can use build scans. It's a real project!
-        if (defaultSettings) settingsFile.writeText(
-            """
-            rootProject.name = "test-project"
-            """.trimIndent()
-        )
-        else writePluginSettings()
-
-        // Apply our plugin
-        buildFile.writeText(
+    private fun Path.writeBuildFile() {
+        writeText(
             """
             plugins {
                 java
             }
       
-            println("Project version: ${'$'}{project.version}")
+            println("Project ${'$'}{project.name} version: ${'$'}{project.version}")
 
             tasks.create("ft", Test::class.java) {
                 doFirst {
@@ -88,10 +99,5 @@ class SemverKtTestProject(
             }
             """.trimIndent()
         )
-
-        Git.open(projectDir.toFile()).use {
-            it.add().addFilepattern(".").call()
-            it.commit().setMessage("add project files").call()
-        }
     }
 }
