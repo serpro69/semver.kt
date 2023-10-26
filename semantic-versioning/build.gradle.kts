@@ -54,7 +54,7 @@ gradlePlugin {
             id = "${project.group}.${name}"
             displayName = "Automated semantic versioning of gradle projects through git tags"
             description = "This plugin helps you to automatically version your gradle project according to semver rules"
-            tags = listOf("semver", "release", "semantic", "versioning")
+            tags = listOf("semver", "release", "semantic", "versioning", "semantic-release", "semver-release")
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
     }
