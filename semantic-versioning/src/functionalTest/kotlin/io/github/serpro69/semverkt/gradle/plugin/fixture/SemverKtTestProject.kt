@@ -10,6 +10,7 @@ import kotlin.io.path.writeText
 class SemverKtTestProject(
     defaultSettings: Boolean = false,
     multiModule: Boolean = false,
+    useSnapshots: Boolean = false,
 ) : AbstractProject() {
 
     private val gradlePropertiesFile = projectDir.resolve("gradle.properties")
@@ -40,7 +41,7 @@ class SemverKtTestProject(
             ${if (multiModule) "include(\"submodule\")" else ""}
             """.trimIndent()
         )
-        else writePluginSettings(multiModule)
+        else writePluginSettings(multiModule = multiModule, useSnapshots = useSnapshots)
 
         // Apply our plugin
         buildFile.writeBuildFile()
@@ -58,7 +59,7 @@ class SemverKtTestProject(
         }
     }
 
-    fun writePluginSettings(multiModule: Boolean) {
+    fun writePluginSettings(multiModule: Boolean, useSnapshots: Boolean) {
         settingsFile.writeText(
             """
             import java.nio.file.Paths
@@ -75,6 +76,9 @@ class SemverKtTestProject(
                     repo {
                         directory = Paths.get("${projectDir.absolutePathString()}")
                     }
+                }
+                version {
+                    ${if (useSnapshots) "useSnapshots = true" else ""}
                 }
             }
 
