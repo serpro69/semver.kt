@@ -51,6 +51,16 @@ class SemverKtPlugin : Plugin<Settings> {
         }
     }
 
+    /**
+     * Calculates and sets next version for the [project] using the given [config],
+     * and returns a [Triple] of versions, where
+     * - `first` is currentVersion if it exists, or `null` otherwise
+     * - `second` is latestVersion if it exists, or `null` otherwise
+     * - `third` is the calculated nextVersion if it exists (given the current inputs and configuration),
+     *    or `null` otherwise
+     *
+     * IF `currentVersion` exists, both `latestVersion` and `nextVersion` will always return as `null`
+     */
     private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
         val propPromoteRelease = project.hasProperty("promoteRelease")
         val propPreRelease = project.hasProperty("preRelease")
@@ -63,6 +73,16 @@ class SemverKtPlugin : Plugin<Settings> {
             currentVersion()?.let {
                 project.version = it
                 return@with Triple(it, null, null)
+            }
+            // ELSE IF version is specified via gradle property, use that as nextVersion
+            val v = project.findProperty("version")?.toString()
+            if (v != null // TODO is this needed? isn't it always true in gradle?
+                && v != config.version.placeholderVersion.toString()
+                && v != "unspecified"
+                && Semver.isValid(v)
+            ) {
+                project.version = Semver(v)
+                return@with Triple(null, null, Semver(v))
             }
             // ELSE figure out next version
             val latestVersion = latestVersion()

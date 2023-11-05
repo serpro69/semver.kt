@@ -42,6 +42,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
                 config.git.message.major shouldBe "[major]"
                 config.git.repo.directory shouldBe Path(".")
                 config.version.preReleaseId shouldBe "rc"
+                config.version.placeholderVersion shouldBe Semver("0.0.0")
             }
         }
     }
