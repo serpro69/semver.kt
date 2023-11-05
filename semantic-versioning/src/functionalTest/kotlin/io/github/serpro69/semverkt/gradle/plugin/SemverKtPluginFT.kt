@@ -23,8 +23,8 @@ class SemverKtPluginFT : DescribeSpec({
     assertSoftly = true
     duplicateTestNameMode = DuplicateTestNameMode.Silent
 
-    listOf("major", "minor", "patch", "pre release").forEach { keyword ->
-        describe("versioning from commits") {
+    describe("versioning from commits") {
+        listOf("major", "minor", "patch", "pre release").forEach { keyword ->
             it("should set initial version via commit message with [$keyword] keyword") {
                 val project = SemverKtTestProject()
                 // Arrange
@@ -67,8 +67,8 @@ class SemverKtPluginFT : DescribeSpec({
         }
     }
 
-    listOf("major", "minor", "patch", "pre_release").forEach { keyword ->
-        describe("versioning from gradle properties") {
+    describe("versioning from gradle properties") {
+        listOf("major", "minor", "patch", "pre_release").forEach { keyword ->
             it("should set initial version via -Pincrement=$keyword") {
                 val project = SemverKtTestProject()
                 // Act
@@ -221,7 +221,8 @@ class SemverKtPluginFT : DescribeSpec({
                     it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
                 }
                 // act
-                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
+                val args =
+                    if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
                 val result = Builder.build(project = project, args = args)
                 // assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
@@ -263,7 +264,8 @@ class SemverKtPluginFT : DescribeSpec({
                 }
                 Builder.build(project = project, args = arrayOf("tag", "-Pincrement=minor")) // release a version
                 // act
-                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
+                val args =
+                    if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
                 val result = Builder.build(project = project, args = args)
                 // assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
@@ -381,7 +383,8 @@ class SemverKtPluginFT : DescribeSpec({
                     it.commit().setMessage("New commit").call()
                 }
                 // act
-                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
+                val args =
+                    if (dryRun) arrayOf("tag", "-PdryRun", "-Pincrement=minor") else arrayOf("tag", "-Pincrement=minor")
                 val result = Builder.build(project = project, args = args)
                 // assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
@@ -393,6 +396,47 @@ class SemverKtPluginFT : DescribeSpec({
                     Calculated next version: 0.2.0
                     ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
                 """.trimIndent().trim()
+            }
+        }
+    }
+
+    describe("setting version manually") {
+        listOf("major", "minor", "patch", "pre release").forEach { keyword ->
+            it("should set version via -Pversion even when commit message has [$keyword] keyword") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[$keyword]").call()
+                }
+                // Act
+                val result = Builder.build(
+                    project = project,
+                    args = arrayOf("tag", "-PdryRun", "-Pversion=42.0.0")
+                )
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                result.output shouldContain "Calculated next version: 42.0.0"
+            }
+
+            it("should set version via -Pversion even when -Pincrement=$keyword is used") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[$keyword]").call()
+                }
+                // Act
+                val result = Builder.build(
+                    project = project,
+                    args = arrayOf("tag", "-PdryRun", "-Pincrement=$keyword", "-Pversion=42.0.0")
+                )
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                result.output shouldContain "Calculated next version: 42.0.0"
             }
         }
     }

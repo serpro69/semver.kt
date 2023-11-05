@@ -96,6 +96,7 @@ abstract class ConfigurationProvider internal constructor(private val autoConfig
 
     override val version: VersionConfig = object : VersionConfig {
         override val initialVersion: Semver = autoConfig.propertyOrNull("version.initialVersion") ?: super.initialVersion
+        override val placeholderVersion: Semver = autoConfig.propertyOrNull("version.placeholderVersion") ?: super.placeholderVersion
         override val defaultIncrement: Increment = autoConfig.propertyOrNull("version.defaultIncrement") ?: super.defaultIncrement
         override val preReleaseId: String = autoConfig.propertyOrNull("version.preReleaseId") ?: super.preReleaseId
         override val initialPreRelease: Int = autoConfig.propertyOrNull("version.initialPreRelease") ?: super.initialPreRelease

@@ -35,6 +35,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
         }
         version {
             initialVersion = config.version.initialVersion
+            placeholderVersion = config.version.placeholderVersion
             defaultIncrement = config.version.defaultIncrement
             preReleaseId = config.version.preReleaseId
             initialPreRelease = config.version.initialPreRelease
@@ -61,6 +62,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
 @ConfigDsl
 class SemverKtPluginVersionConfig internal constructor() : VersionConfig {
     override var initialVersion: Semver = super.initialVersion
+    override var placeholderVersion: Semver = super.placeholderVersion
     override var defaultIncrement: Increment = super.defaultIncrement
     override var preReleaseId: String = super.preReleaseId
     override var initialPreRelease: Int = super.initialPreRelease
