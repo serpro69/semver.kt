@@ -40,6 +40,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
             preReleaseId = config.version.preReleaseId
             initialPreRelease = config.version.initialPreRelease
             snapshotSuffix = config.version.snapshotSuffix
+            useSnapshots = false
         }
     }
 
@@ -67,6 +68,7 @@ class SemverKtPluginVersionConfig internal constructor() : VersionConfig {
     override var preReleaseId: String = super.preReleaseId
     override var initialPreRelease: Int = super.initialPreRelease
     override var snapshotSuffix: String = super.snapshotSuffix
+    var useSnapshots: Boolean = false
 }
 
 @ConfigDsl

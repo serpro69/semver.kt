@@ -139,13 +139,10 @@ class SemverKtPlugin : Plugin<Settings> {
                     project.version = nextVersion
                     logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
                 }
-                else -> {
-//                    if (config.useSnapshots) {
-//                        project.version = snapshot(increaseVersion)
-//                        logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
-//                    }
-                    logger.log(LogLevel.DEBUG, "Not doing anything...")
-                }
+                else -> if (config.version.useSnapshots) {
+                    project.version = snapshot(increaseVersion)
+                    logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
+                } else logger.log(LogLevel.DEBUG, "Not doing anything...")
             }
             logger.log(LogLevel.INFO, "Done...")
             Triple(null, latestVersion, nextVersion)

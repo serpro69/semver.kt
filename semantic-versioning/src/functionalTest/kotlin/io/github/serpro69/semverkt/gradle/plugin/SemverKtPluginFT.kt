@@ -14,7 +14,6 @@ import org.eclipse.jgit.api.Git
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.util.GradleVersion
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.writeText
 
@@ -324,7 +323,7 @@ class SemverKtPluginFT : DescribeSpec({
                     // just add some dumb assertion to verify gradle actually ran successfully
                 ).also { it.task(":clean")?.outcome shouldBe TaskOutcome.UP_TO_DATE }
                 // - add plugin to settings.gradle file
-                project.writePluginSettings(false)
+                project.writePluginSettings(multiModule = false, useSnapshots = false)
                 // - add a file and commit with release keyword
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
@@ -437,6 +436,62 @@ class SemverKtPluginFT : DescribeSpec({
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 result.output shouldContain "Calculated next version: 42.0.0"
+            }
+        }
+    }
+
+    describe("f:snapshot versions") {
+        listOf("0.1.0", "0.2.0-rc.123", "0.2.0-rc.123+build.456").forEach { version ->
+            it("should set next snapshot version for version $version") {
+                val project = SemverKtTestProject(useSnapshots = true)
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v$version").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit").call()
+                }
+                // Act
+                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                val expectedVersion = when(version) {
+                    "0.1.0" -> "0.2.0-SNAPSHOT"
+                    "0.2.0-rc.123", "0.2.0-rc.123+build.456" -> "0.2.0-rc.124-SNAPSHOT"
+                    else -> "42"
+                }
+                val output = """
+                    > Configure project :
+                    Project test-project version: $expectedVersion
+
+                    > Task :tag
+                    Not doing anything
+                """.trimIndent()
+                result.output shouldContain output
+            }
+        }
+        context("SNAPSHOT version in pre-release with -PpromoteRelease") {
+            it("should set next snapshot version") {
+                val project = SemverKtTestProject(useSnapshots = true)
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v1.0.0-rc.1").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit").call()
+                }
+                // Act
+                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-PpromoteRelease"))
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
+                result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 1.0.0-SNAPSHOT
+
+                    > Task :tag
+                    Not doing anything
+                """.trimIndent()
             }
         }
     }
