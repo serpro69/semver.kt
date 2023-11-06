@@ -93,12 +93,13 @@ class SemverKtPlugin : Plugin<Settings> {
                 logger.log(LogLevel.DEBUG, "Next increment from git commit: $this")
                 when (propIncrement) {
                     // 1. check allowed values for gradle-property based increment
-                    //  -> DEFAULT and NONE are not valid for property-based 'increment'
+                    //    - DEFAULT is not used with 'increment' property
+                    //    - NONE means 'increment' property is not set or has invalid value
                     // IF nextIncrement is NONE
-                    //  -> we don't want to override it because contains some logic
-                    //     for checking existing versions and HEAD version
+                    //    - we don't want to override it because contains some logic
+                    //      for checking existing versions and HEAD version
                     // OR release property is not set
-                    //  -> releasing from command line requires a 'release' property to be used
+                    //    - releasing from command line requires a 'release' property to be used
                     // THEN return nextIncrement
                     // ELSE return increment from property
                     // 2. just return the result of nextIncrement
@@ -127,8 +128,21 @@ class SemverKtPlugin : Plugin<Settings> {
                         createPreRelease(DEFAULT)
                     }
                 }
-                // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
-                DEFAULT, NONE -> if (propRelease) release(config.version.defaultIncrement) else null
+                DEFAULT, NONE -> when {
+                    // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
+                    propRelease -> release(config.version.defaultIncrement)
+                    // if -Prelease is NOT set then create snapshot version if snapshots are enabled in configuration
+                    config.version.useSnapshots -> {
+                        val inc = when (propIncrement) {
+                            // DEFAULT is not used with 'increment' property
+                            // NONE means 'increment' property is not set or has invalid value
+                            !in listOf(DEFAULT, NONE) -> propIncrement
+                            else -> config.version.defaultIncrement
+                        }
+                        snapshot(inc)
+                    }
+                    else -> null
+                }
             }
             logger.log(LogLevel.INFO, "Next version: $nextVersion")
             when {
@@ -142,10 +156,7 @@ class SemverKtPlugin : Plugin<Settings> {
                     project.version = nextVersion
                     logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
                 }
-                else -> if (config.version.useSnapshots) {
-                    project.version = snapshot(increaseVersion)
-                    logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
-                } else logger.log(LogLevel.DEBUG, "Not doing anything...")
+                else -> logger.log(LogLevel.DEBUG, "Not doing anything...")
             }
             logger.log(LogLevel.INFO, "Done...")
             Triple(null, latestVersion, nextVersion)
