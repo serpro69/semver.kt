@@ -2,7 +2,7 @@ package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.gradle.plugin.tasks.TagTask
 import io.github.serpro69.semverkt.release.Increment
-import io.github.serpro69.semverkt.release.Increment.NONE
+import io.github.serpro69.semverkt.release.Increment.*
 import io.github.serpro69.semverkt.release.SemverRelease
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
 import io.github.serpro69.semverkt.spec.Semver
@@ -62,6 +62,7 @@ class SemverKtPlugin : Plugin<Settings> {
      * IF `currentVersion` exists, both `latestVersion` and `nextVersion` will always return as `null`
      */
     private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
+        val propRelease = project.hasProperty("release")
         val propPromoteRelease = project.hasProperty("promoteRelease")
         val propPreRelease = project.hasProperty("preRelease")
         val propIncrement = project.findProperty("increment")
@@ -86,25 +87,26 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             // ELSE figure out next version
             val latestVersion = latestVersion()
-            logger.log(LogLevel.INFO, "Current version: $latestVersion")
+            logger.log(LogLevel.INFO, "Latest version: $latestVersion")
             val increaseVersion = if (propPromoteRelease) NONE else with(nextIncrement()) {
                 logger.log(LogLevel.DEBUG, "Next increment from property: $propIncrement")
                 logger.log(LogLevel.DEBUG, "Next increment from git commit: $this")
                 when (propIncrement) {
                     // 1. check allowed values for gradle-property based increment
-                    // IF nextIncrement is NONE - we don't want to override it
-                    //  -> it contains some logic for checking existing versions and HEAD version
+                    //  -> DEFAULT and NONE are not valid for property-based 'increment'
+                    // IF nextIncrement is NONE
+                    //  -> we don't want to override it because contains some logic
+                    //     for checking existing versions and HEAD version
+                    // OR release property is not set
+                    //  -> releasing from command line requires a 'release' property to be used
+                    // THEN return nextIncrement
                     // ELSE return increment from property
                     // 2. just return the result of nextIncrement
-                    //  -> DEFAULT and NONE are not valid for property-based increment
-                    !in listOf(
-                        Increment.DEFAULT,
-                        NONE
-                    ) -> if (this == NONE) this else propIncrement
+                    !in listOf(DEFAULT, NONE) -> if (this == NONE || !propRelease) this else propIncrement
                     else -> this
                 }
             }
-            logger.log(LogLevel.INFO, "Calculated version increment: '$increaseVersion'")
+            logger.log(LogLevel.INFO, "Calculated version increment: $increaseVersion")
             val nextVersion = if (propPromoteRelease) {
                 logger.log(LogLevel.INFO, "Promote to release...")
                 promoteToRelease()
@@ -112,20 +114,21 @@ class SemverKtPlugin : Plugin<Settings> {
                 logger.log(LogLevel.INFO, "Create pre-release...")
                 createPreRelease(increaseVersion)
             } else when (increaseVersion) {
-                Increment.MAJOR, Increment.MINOR, Increment.PATCH -> {
+                MAJOR, MINOR, PATCH -> {
                     logger.log(LogLevel.INFO, "Create release...")
                     release(increaseVersion)
                 }
-                Increment.PRE_RELEASE -> {
+                PRE_RELEASE -> {
                     latestVersion?.preRelease?.let {
                         logger.log(LogLevel.INFO, "Next pre-release...")
                         release(increaseVersion)
                     } ?: run {
                         logger.log(LogLevel.INFO, "Create default pre-release...")
-                        createPreRelease(Increment.DEFAULT)
+                        createPreRelease(DEFAULT)
                     }
                 }
-                Increment.DEFAULT, NONE -> null
+                // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
+                DEFAULT, NONE -> if (propRelease) release(config.version.defaultIncrement) else null
             }
             logger.log(LogLevel.INFO, "Next version: $nextVersion")
             when {
