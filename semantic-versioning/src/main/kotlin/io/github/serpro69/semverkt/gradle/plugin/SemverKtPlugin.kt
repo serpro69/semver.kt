@@ -127,8 +127,14 @@ class SemverKtPlugin : Plugin<Settings> {
                     }
                 }
             } else if (propPreRelease) {
-                logger.log(LogLevel.INFO, "Create pre-release...")
-                createPreRelease(increaseVersion)
+                val inc = if (increaseVersion in listOf(DEFAULT, NONE)) DEFAULT else increaseVersion
+                with(createPreRelease(inc)) {
+                    logger.log(LogLevel.INFO, "Create pre-release $this from $latestVersion")
+                    when {
+                        propRelease -> this
+                        else -> null
+                    }
+                }
             } else when (increaseVersion) {
                 MAJOR, MINOR, PATCH -> {
                     logger.log(LogLevel.INFO, "Create release...")
