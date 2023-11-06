@@ -569,6 +569,7 @@ class SemverKtPluginFT : DescribeSpec({
         }
 
         context("!SNAPSHOT version in pre-release with -PpromoteRelease") {
+            TODO("this functionality isn't yet supported")
             it("should set next snapshot version") {
                 val project = SemverKtTestProject(useSnapshots = true)
                 // Arrange
@@ -592,7 +593,32 @@ class SemverKtPluginFT : DescribeSpec({
                 """.trimIndent()
             }
         }
+
         it("should never create a tag for a snapshot version") {
+            val project = SemverKtTestProject(useSnapshots = true)
+            // Arrange
+            Git.open(project.projectDir.toFile()).use {
+                it.tag().setName("v0.1.0").call() // set initial version
+                project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                it.add().addFilepattern("text.txt").call()
+                it.commit().setMessage("New commit").call()
+            }
+            // Act
+            val result = Builder.build(project = project, args = arrayOf("tag"))
+            // Assert
+            result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+            result.output shouldContain """
+                > Configure project :
+                Project test-project version: 0.2.0-SNAPSHOT
+
+                > Task :tag
+                Snapshot version, not doing anything
+            """.trimIndent()
+            with(Git.open(project.projectDir.toFile()).tagList().call()) {
+                size shouldBe 1
+                first().name shouldBe "refs/tags/v0.1.0"
+                last().name shouldBe "refs/tags/v0.1.0"
+            }
         }
     }
 })
