@@ -171,6 +171,64 @@ class SemverKtPluginFT : DescribeSpec({
                 Not doing anything
             """.trimIndent()
         }
+
+        context("pre-release version") {
+            listOf("0.1.0", "1.0.0-rc.1", "0.2.0-rc.123", "0.2.0-rc.123+build.456", "0.0.1-rc.1").forEach { version ->
+                it("should promote pre-release $version to release with -Prelease -PpromoteRelease options") {
+                    val project = SemverKtTestProject(useSnapshots = true)
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v$version").call() // set initial version
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        it.commit().setMessage("New commit").call()
+                    }
+                    // Act
+                    val result = Builder.build(
+                        project = project,
+                        args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpromoteRelease")
+                    )
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    val nextVer = when (version) {
+                        "0.1.0" -> "0.1.0" // since it's not a pre-release version, we can't really bump to next pre-release snapshot either
+                        "1.0.0-rc.1" -> "1.0.0"
+                        "0.2.0-rc.123", "0.2.0-rc.123+build.456" -> "0.2.0"
+                        "0.0.1-rc.1" -> "0.0.1"
+                        else -> "42" // shouldn't really get here
+                    }
+                    result.output shouldContain """
+                        > Configure project :
+                        Project test-project version: $nextVer
+
+                        > Task :tag
+                        ${if (version == "0.1.0") "Not doing anything" else "Calculated next version: $nextVer"}
+                    """.trimIndent()
+                }
+            }
+
+            it("shouldn't do anything if -Prelease is NOT set and snapshots are disabled") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0-rc.1").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit").call()
+                }
+                // Act
+                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-PpromoteRelease"))
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 0.0.0
+
+                    > Task :tag
+                    Not doing anything
+                """.trimIndent()
+            }
+        }
     }
 
     describe("custom configuration") {
@@ -568,8 +626,7 @@ class SemverKtPluginFT : DescribeSpec({
             }
         }
 
-        context("!SNAPSHOT version in pre-release with -PpromoteRelease") {
-            TODO("this functionality isn't yet supported")
+        context("SNAPSHOT version in pre-release with -PpromoteRelease") {
             it("should set next snapshot version") {
                 val project = SemverKtTestProject(useSnapshots = true)
                 // Arrange

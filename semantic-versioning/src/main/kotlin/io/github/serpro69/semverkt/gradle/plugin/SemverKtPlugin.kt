@@ -2,9 +2,15 @@ package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.gradle.plugin.tasks.TagTask
 import io.github.serpro69.semverkt.release.Increment
-import io.github.serpro69.semverkt.release.Increment.*
+import io.github.serpro69.semverkt.release.Increment.DEFAULT
+import io.github.serpro69.semverkt.release.Increment.MAJOR
+import io.github.serpro69.semverkt.release.Increment.MINOR
+import io.github.serpro69.semverkt.release.Increment.NONE
+import io.github.serpro69.semverkt.release.Increment.PATCH
+import io.github.serpro69.semverkt.release.Increment.PRE_RELEASE
 import io.github.serpro69.semverkt.release.SemverRelease
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
+import io.github.serpro69.semverkt.spec.PreRelease
 import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -109,8 +115,17 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             logger.log(LogLevel.INFO, "Calculated version increment: $increaseVersion")
             val nextVersion = if (propPromoteRelease) {
-                logger.log(LogLevel.INFO, "Promote to release...")
-                promoteToRelease()
+                with(promoteToRelease()) {
+                    logger.log(LogLevel.INFO, "Promote $latestVersion to $this")
+                    when {
+                        propRelease -> this
+                        config.version.useSnapshots -> this?.copy(
+                            preRelease = PreRelease(config.version.snapshotSuffix),
+                            buildMetadata = null
+                        )
+                        else -> null
+                    }
+                }
             } else if (propPreRelease) {
                 logger.log(LogLevel.INFO, "Create pre-release...")
                 createPreRelease(increaseVersion)
@@ -145,19 +160,21 @@ class SemverKtPlugin : Plugin<Settings> {
                 }
             }
             logger.log(LogLevel.INFO, "Next version: $nextVersion")
-            when {
-                (nextVersion != null && latestVersion != null) && (nextVersion >= latestVersion) -> {
-                    // only set version if nextVersion >= latestVersion
-                    project.version = nextVersion
-                    logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
-                }
-                nextVersion != null && latestVersion == null -> {
-                    // set initial version
-                    project.version = nextVersion
-                    logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
-                }
-                else -> logger.log(LogLevel.DEBUG, "Not doing anything...")
-            }
+            // set snapshot version explicitly because comparison with latestVersion might fail
+            // depending on the snapshot suffix
+            //  - because X.Y.Z-SNAPSHOT is considered a pre-release from semver perspective
+            //  - and identifiers with letters or hyphens are compared lexically in ASCII sort order
+            //    (see also https://semver.org/#spec-item-11 -> 4)
+            //  e.g. 1.0.0-SNAPSHOT < 1.0.0-rc.1
+            val setSnapshot by lazy { nextVersion.toString().endsWith(config.version.snapshotSuffix) }
+            // only set next version if nextVersion >= latestVersion
+            val setNext by lazy { (nextVersion != null && latestVersion != null) && (nextVersion >= latestVersion) }
+            // set initial version
+            val setInitial by lazy { latestVersion == null }
+            if (nextVersion != null && (setSnapshot || setNext || setInitial)) {
+                project.version = nextVersion
+                logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
+            } else logger.log(LogLevel.DEBUG, "Not doing anything...")
             logger.log(LogLevel.INFO, "Done...")
             Triple(null, latestVersion, nextVersion)
         }
