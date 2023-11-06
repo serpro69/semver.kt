@@ -6,7 +6,6 @@ import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.gradle.api.logging.LogLevel.DEBUG
-import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
@@ -39,6 +38,9 @@ abstract class TagTask : SemverReleaseTask() {
         when {
             // current version points at HEAD - don't do anything
             current != null -> logger.log(LIFECYCLE, "Current version: $current")
+            next != null && next.toString().endsWith(config.get().version.snapshotSuffix) -> {
+                logger.log(LIFECYCLE, "Snapshot version, not doing anything")
+            }
             // release new version
             (next != null && latest != null) && (next > latest) -> {
                 logger.log(LIFECYCLE, "Calculated next version: $next")
@@ -57,8 +59,8 @@ abstract class TagTask : SemverReleaseTask() {
         if (!dryRun.get()) run {
             // check if tag exists, don't try to create a duplicate
             val tagExists = GitRepository(config).use { repo ->
-                repo.tags().any { 
-                    Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer 
+                repo.tags().any {
+                    Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer
                 }
             }
             if (!tagExists) {
