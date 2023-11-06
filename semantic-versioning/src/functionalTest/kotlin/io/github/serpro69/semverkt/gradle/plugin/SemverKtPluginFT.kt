@@ -508,9 +508,44 @@ class SemverKtPluginFT : DescribeSpec({
         }
     }
 
-    describe("!snapshot versions") {
-        listOf("0.1.0", "0.2.0-rc.123", "0.2.0-rc.123+build.456").forEach { version ->
-            it("should set next snapshot version for version $version") {
+    describe("snapshot versions") {
+        listOf("0.1.0", "0.1.0-rc.123", "0.1.0-rc.123+build.456").forEach { version ->
+            listOf("major", "minor", "patch", "pre_release").forEach { inc ->
+                it("should set next snapshot version for version $version with -Pincrement=$inc") {
+                    val project = SemverKtTestProject(useSnapshots = true)
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v$version").call() // set initial version
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        it.commit().setMessage("New commit").call()
+                    }
+                    // Act
+                    val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Pincrement=$inc"))
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    val nextVer = when (inc) {
+                        "major" -> "1.0.0-SNAPSHOT"
+                        "minor" -> "0.2.0-SNAPSHOT"
+                        "patch" -> "0.1.1-SNAPSHOT"
+                        "pre_release" -> when (version) {
+                            "0.1.0" -> "0.1.0" // since it's not a pre-release version, we can't really bump to next pre-release snapshot either
+                            "0.1.0-rc.123", "0.1.0-rc.123+build.456" -> "0.1.0-rc.124-SNAPSHOT"
+                            else -> "42"
+                        }
+                        else -> "42" // shouldn't really get here
+                    }
+                    result.output shouldContain """
+                        > Configure project :
+                        Project test-project version: $nextVer
+
+                        > Task :tag
+                        ${if (version == "0.1.0" && inc == "pre_release") "Not doing anything" else "Snapshot version, not doing anything"}
+                    """.trimIndent()
+                }
+            }
+
+            it("should set next snapshot for version $version") {
                 val project = SemverKtTestProject(useSnapshots = true)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -523,22 +558,17 @@ class SemverKtPluginFT : DescribeSpec({
                 val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                val expectedVersion = when(version) {
-                    "0.1.0" -> "0.2.0-SNAPSHOT"
-                    "0.2.0-rc.123", "0.2.0-rc.123+build.456" -> "0.2.0-rc.124-SNAPSHOT"
-                    else -> "42"
-                }
-                val output = """
+                result.output shouldContain """
                     > Configure project :
-                    Project test-project version: $expectedVersion
+                    Project test-project version: 0.2.0-SNAPSHOT
 
                     > Task :tag
-                    Not doing anything
+                    Snapshot version, not doing anything
                 """.trimIndent()
-                result.output shouldContain output
             }
         }
-        context("SNAPSHOT version in pre-release with -PpromoteRelease") {
+
+        context("!SNAPSHOT version in pre-release with -PpromoteRelease") {
             it("should set next snapshot version") {
                 val project = SemverKtTestProject(useSnapshots = true)
                 // Arrange
@@ -558,12 +588,11 @@ class SemverKtPluginFT : DescribeSpec({
                     Project test-project version: 1.0.0-SNAPSHOT
 
                     > Task :tag
-                    Not doing anything
+                    Snapshot version, not doing anything
                 """.trimIndent()
             }
         }
         it("should never create a tag for a snapshot version") {
-            TODO()
         }
     }
 })
