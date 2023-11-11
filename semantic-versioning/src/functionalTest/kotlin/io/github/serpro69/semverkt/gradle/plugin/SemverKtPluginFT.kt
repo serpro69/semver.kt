@@ -71,7 +71,8 @@ class SemverKtPluginFT : DescribeSpec({
             it("should set initial version via -Prelease -Pincrement=$inc") {
                 val project = SemverKtTestProject()
                 // Act
-                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=$inc"))
+                val result =
+                    Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=$inc"))
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
@@ -90,7 +91,8 @@ class SemverKtPluginFT : DescribeSpec({
                         .call() // set to major to check if lower precedence values will override
                 }
                 // Act
-                val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=$inc"))
+                val result =
+                    Builder.build(project = project, args = arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=$inc"))
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 val nextVer = when (inc) {
@@ -171,11 +173,146 @@ class SemverKtPluginFT : DescribeSpec({
                 Not doing anything
             """.trimIndent()
         }
+    }
 
-        context("pre-release version") {
+    describe("pre-release version") {
+        listOf("0.0.1", "0.1.0", "1.0.0-rc.1", "1.0.0").forEach { version ->
+            // pre-release with default increment when neither '-Pincrement' property nor commit message '[keyword]' is present
+            it("should create new pre-release from $version with -Prelease -PpreRelease options") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v$version").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit").call()
+                }
+                // Act
+                val result = Builder.build(
+                    project = project,
+                    args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpreRelease")
+                )
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                // since no increment is set, using default one
+                val nextVer = when (version) { // new pre-release with DEFAULT increment
+                    "0.0.1" -> "0.1.0-rc.1"
+                    "0.1.0" -> "0.2.0-rc.1"
+                    "1.0.0-rc.1" , "1.0.0" -> "1.1.0-rc.1"
+                    else -> "42" // shouldn't really get here
+                }
+                result.output shouldContain """
+                        > Configure project :
+                        Project test-project version: $nextVer
+
+                        > Task :tag
+                        Calculated next version: $nextVer
+                    """.trimIndent()
+            }
+
+            // pre-release from commit message
+            listOf("major", "minor", "patch", "pre release").forEach { keyword ->
+                it("should create new pre-release from $version with -Prelease -PpreRelease options and [$keyword] keyword") {
+                    val project = SemverKtTestProject()
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v$version").call() // set initial version
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        it.commit().setMessage("New commit\n\n[$keyword]").call()
+                    }
+                    // Act
+                    val result = Builder.build(
+                        project = project,
+                        args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpreRelease")
+                    )
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    val nextVer = when (keyword) {
+                        "major" -> when (version) {
+                            "0.0.1", "0.1.0" -> "1.0.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "2.0.0-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "minor" -> when (version) {
+                            "0.0.1" -> "0.1.0-rc.1"
+                            "0.1.0" -> "0.2.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "1.1.0-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "patch" -> when (version) {
+                            "0.0.1" -> "0.0.2-rc.1"
+                            "0.1.0" -> "0.1.1-rc.1"
+                            "1.0.0-rc.1", "1.0.0"  -> "1.0.1-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "pre release" -> version // not a valid increment value
+                        else -> "42" // shouldn't really get here
+                    }
+                    result.output shouldContain """
+                        > Configure project :
+                        Project test-project version: $nextVer
+
+                        > Task :tag
+                        ${if (keyword == "pre release") "Not doing anything" else "Calculated next version: $nextVer"}
+                    """.trimIndent()
+                }
+            }
+
+            // pre-release from gradle properties
+            listOf("major", "minor", "patch", "pre_release").forEach { inc ->
+                it("should create new pre-release from $version with -Prelease -PpreRelease -Pincrement=$inc options") {
+                    val project = SemverKtTestProject()
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v$version").call() // set initial version
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        it.commit().setMessage("New commit").call()
+                    }
+                    // Act
+                    val result = Builder.build(
+                        project = project,
+                        args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpreRelease", "-Pincrement=$inc")
+                    )
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    val nextVer = when (inc) {
+                        "major" -> when (version) {
+                            "0.0.1", "0.1.0" -> "1.0.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "2.0.0-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "minor" -> when (version) {
+                            "0.0.1" -> "0.1.0-rc.1"
+                            "0.1.0" -> "0.2.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "1.1.0-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "patch" -> when (version) {
+                            "0.0.1" -> "0.0.2-rc.1"
+                            "0.1.0" -> "0.1.1-rc.1"
+                            "1.0.0-rc.1", "1.0.0"  -> "1.0.1-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "pre_release" -> version // not a valid increment value
+                        else -> "42" // shouldn't really get here
+                    }
+                    result.output shouldContain """
+                        > Configure project :
+                        Project test-project version: $nextVer
+
+                        > Task :tag
+                        ${if (inc == "pre_release") "Not doing anything" else "Calculated next version: $nextVer"}
+                    """.trimIndent()
+                }
+            }
+        }
+
+        context("promote to release with -PpromoteRelease option") {
             listOf("0.1.0", "1.0.0-rc.1", "0.2.0-rc.123", "0.2.0-rc.123+build.456", "0.0.1-rc.1").forEach { version ->
-                it("should promote pre-release $version to release with -Prelease -PpromoteRelease options") {
-                    val project = SemverKtTestProject(useSnapshots = true)
+                it("should promote pre-release $version to release with -Prelease option") {
+                    val project = SemverKtTestProject()
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v$version").call() // set initial version
@@ -297,16 +434,16 @@ class SemverKtPluginFT : DescribeSpec({
     describe("nextVersion < latestVersion") {
         it("should NOT set version without keyword in commit message") {
             val project = SemverKtTestProject()
-            // arrange
+            // Arrange
             Git.open(project.projectDir.toFile()).use {
                 it.tag().setName("v0.1.0").call()
                 project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                 it.add().addFilepattern("text.txt").call()
                 it.commit().setMessage("New commit without release message").call()
             }
-            // act
+            // Act
             val result = Builder.build(project = project, args = arrayOf("tag", "-PdryRun"))
-            // assert
+            // Assert
             result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
             // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
             result.output shouldContain "> Configure project :\nProject test-project version: 0.0.0"
@@ -319,17 +456,17 @@ class SemverKtPluginFT : DescribeSpec({
         listOf(true, false).forEach { dryRun ->
             it("should set version to current version with increment from commit message${if (dryRun) " and dryRun" else ""}") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit\n[minor]").call()
                     it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
                 }
-                // act
+                // Act
                 val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
                 val result = Builder.build(project = project, args = args)
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
                 result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
@@ -338,18 +475,18 @@ class SemverKtPluginFT : DescribeSpec({
             }
             it("should set version to current version with increment from gradle properties${if (dryRun) " and dryRun" else ""}") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit").call()
                     it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
                 }
-                // act
-                val args =
-                    if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor") else arrayOf("tag", "-Prelease", "-Pincrement=minor")
+                // Act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
+                else arrayOf("tag", "-Prelease", "-Pincrement=minor")
                 val result = Builder.build(project = project, args = args)
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
                 result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
@@ -363,17 +500,17 @@ class SemverKtPluginFT : DescribeSpec({
         listOf(true, false).forEach { dryRun ->
             it("should return UP_TO_DATE with increment from commit${if (dryRun) " and dryRun" else ""}") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit\n\n[minor]").call()
                 }
                 Builder.build(project = project, args = arrayOf("tag")) // release a version
-                // act
+                // Act
                 val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
                 val result = Builder.build(project = project, args = args)
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
                 result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
                 result.output shouldContain "> Task :tag UP-TO-DATE"
@@ -381,18 +518,23 @@ class SemverKtPluginFT : DescribeSpec({
             }
             it("should return UP_TO_DATE with increment from gradle properties${if (dryRun) " and dryRun" else ""}") {
                 val project = SemverKtTestProject()
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit").call()
                 }
-                Builder.build(project = project, args = arrayOf("tag", "-Prelease", "-Pincrement=minor")) // release a version
-                // act
-                val args =
-                    if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor") else arrayOf("tag", "-Prelease", "-Pincrement=minor")
+                // release a version
+                Builder.build(project = project, args = arrayOf("tag", "-Prelease", "-Pincrement=minor"))
+                // Act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
+                else arrayOf(
+                        "tag",
+                        "-Prelease",
+                        "-Pincrement=minor"
+                    )
                 val result = Builder.build(project = project, args = args)
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
                 result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
                 result.output shouldContain "> Task :tag UP-TO-DATE"
@@ -476,17 +618,17 @@ class SemverKtPluginFT : DescribeSpec({
         listOf(true, false).forEach { dryRun ->
             it("should set next version via commit${if (dryRun) " and dryRun" else ""}") {
                 val project = SemverKtTestProject(multiModule = true)
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit\n\n[minor]").call()
                 }
-                // act
+                // Act
                 val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
                 val result = Builder.build(project = project, args = args)
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 result.output shouldContain """
                     > Task :tag
@@ -500,18 +642,18 @@ class SemverKtPluginFT : DescribeSpec({
 
             it("should set next version via gradle property${if (dryRun) " and dryRun" else ""}") {
                 val project = SemverKtTestProject(multiModule = true)
-                // arrange
+                // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
                     it.commit().setMessage("New commit").call()
                 }
-                // act
+                // Act
                 val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
                 else arrayOf("tag", "-Prelease", "-Pincrement=minor")
                 val result = Builder.build(project = project, args = args)
-                // assert
+                // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 result.output shouldContain """
                     > Task :tag
