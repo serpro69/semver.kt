@@ -173,11 +173,11 @@ class SemverKtPluginFT : DescribeSpec({
                 Not doing anything
             """.trimIndent()
         }
-
     }
 
-    describe("f:pre-release version") {
+    describe("pre-release version") {
         listOf("0.0.1", "0.1.0", "1.0.0-rc.1", "1.0.0").forEach { version ->
+            // pre-release with default increment when neither '-Pincrement' property nor commit message '[keyword]' is present
             it("should create new pre-release from $version with -Prelease -PpreRelease options") {
                 val project = SemverKtTestProject()
                 // Arrange
@@ -210,6 +210,56 @@ class SemverKtPluginFT : DescribeSpec({
                     """.trimIndent()
             }
 
+            // pre-release from commit message
+            listOf("major", "minor", "patch", "pre release").forEach { keyword ->
+                it("should create new pre-release from $version with -Prelease -PpreRelease options and [$keyword] keyword") {
+                    val project = SemverKtTestProject()
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v$version").call() // set initial version
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        it.commit().setMessage("New commit\n\n[$keyword]").call()
+                    }
+                    // Act
+                    val result = Builder.build(
+                        project = project,
+                        args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpreRelease")
+                    )
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    val nextVer = when (keyword) {
+                        "major" -> when (version) {
+                            "0.0.1", "0.1.0" -> "1.0.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "2.0.0-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "minor" -> when (version) {
+                            "0.0.1" -> "0.1.0-rc.1"
+                            "0.1.0" -> "0.2.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "1.1.0-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "patch" -> when (version) {
+                            "0.0.1" -> "0.0.2-rc.1"
+                            "0.1.0" -> "0.1.1-rc.1"
+                            "1.0.0-rc.1", "1.0.0"  -> "1.0.1-rc.1"
+                            else -> "42" // shouldn't really get here
+                        }
+                        "pre release" -> version // not a valid increment value
+                        else -> "42" // shouldn't really get here
+                    }
+                    result.output shouldContain """
+                        > Configure project :
+                        Project test-project version: $nextVer
+
+                        > Task :tag
+                        ${if (keyword == "pre release") "Not doing anything" else "Calculated next version: $nextVer"}
+                    """.trimIndent()
+                }
+            }
+
+            // pre-release from gradle properties
             listOf("major", "minor", "patch", "pre_release").forEach { inc ->
                 it("should create new pre-release from $version with -Prelease -PpreRelease -Pincrement=$inc options") {
                     val project = SemverKtTestProject()
