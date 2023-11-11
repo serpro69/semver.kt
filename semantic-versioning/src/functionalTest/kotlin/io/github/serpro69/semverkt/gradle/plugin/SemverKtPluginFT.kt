@@ -195,10 +195,10 @@ class SemverKtPluginFT : DescribeSpec({
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // since no increment is set, using default one
-                val nextVer = when (version) {
+                val nextVer = when (version) { // new pre-release with DEFAULT increment
                     "0.0.1" -> "0.1.0-rc.1"
                     "0.1.0" -> "0.2.0-rc.1"
-                    "1.0.0-rc.1", "1.0.0" -> "1.1.0-rc.1"
+                    "1.0.0-rc.1" , "1.0.0" -> "1.1.0-rc.1"
                     else -> "42" // shouldn't really get here
                 }
                 result.output shouldContain """
@@ -206,7 +206,7 @@ class SemverKtPluginFT : DescribeSpec({
                         Project test-project version: $nextVer
 
                         > Task :tag
-                        ${if (version == "1.0.0-rc.1") "Not doing anything" else "Calculated next version: $nextVer"}
+                        Calculated next version: $nextVer
                     """.trimIndent()
             }
 
@@ -223,7 +223,7 @@ class SemverKtPluginFT : DescribeSpec({
                     // Act
                     val result = Builder.build(
                         project = project,
-                        args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpreRelease")
+                        args = arrayOf("tag", "-PdryRun", "-Prelease", "-PpreRelease", "-Pincrement=$inc")
                     )
                     // Assert
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
@@ -233,7 +233,7 @@ class SemverKtPluginFT : DescribeSpec({
                             "1.0.0-rc.1", "1.0.0" -> "2.0.0-rc.1"
                             else -> "42" // shouldn't really get here
                         }
-                        "minor", "pre_release" /* uses DEFAULT increment */ -> when (version) {
+                        "minor" -> when (version) {
                             "0.0.1" -> "0.1.0-rc.1"
                             "0.1.0" -> "0.2.0-rc.1"
                             "1.0.0-rc.1", "1.0.0" -> "1.1.0-rc.1"
@@ -242,9 +242,10 @@ class SemverKtPluginFT : DescribeSpec({
                         "patch" -> when (version) {
                             "0.0.1" -> "0.0.2-rc.1"
                             "0.1.0" -> "0.1.1-rc.1"
-                            "1.0.0-rc.1", "1.0.0"  -> "1.0.0-rc.1"
+                            "1.0.0-rc.1", "1.0.0"  -> "1.0.1-rc.1"
                             else -> "42" // shouldn't really get here
                         }
+                        "pre_release" -> version // not a valid increment value
                         else -> "42" // shouldn't really get here
                     }
                     result.output shouldContain """
@@ -252,7 +253,7 @@ class SemverKtPluginFT : DescribeSpec({
                         Project test-project version: $nextVer
 
                         > Task :tag
-                        Calculated next version: $nextVer
+                        ${if (inc == "pre_release") "Not doing anything" else "Calculated next version: $nextVer"}
                     """.trimIndent()
                 }
             }
