@@ -1,6 +1,7 @@
 package io.github.serpro69.semverkt.gradle.plugin.tasks
 
 import io.github.serpro69.semverkt.gradle.plugin.SemverKtPluginConfig
+import io.github.serpro69.semverkt.gradle.plugin.SemverKtPluginGitTagConfig
 import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.Semver
@@ -71,6 +72,7 @@ abstract class TagTask : SemverReleaseTask() {
                     Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer
                 }
             }
+            val t = "${config.git.tag.prefix}$nextVer"
             if (!tagExists) {
                 logger.log(DEBUG, "Open repo at: $this")
                 FileRepositoryBuilder()
@@ -78,14 +80,18 @@ abstract class TagTask : SemverReleaseTask() {
                     .findGitDir(project.projectDir)
                     .build()
                     .use {
-                        logger.log(DEBUG, "Set tag to: ${config.git.tag.prefix}$nextVer")
-                        Git(it).use { git -> git.setTag("${config.git.tag.prefix}$nextVer") }
+                        logger.log(DEBUG, "Set tag to: $t")
+                        Git(it).use { git -> git.setTag(t, config.git.tag) }
                     }
-            } else logger.log(LIFECYCLE, "Tag ${config.git.tag.prefix}$nextVer already exists in project")
+            } else logger.log(LIFECYCLE, "Tag $t already exists in project")
         }
     }
 }
 
-private fun Git.setTag(tagName: String) {
-    tag().setName(tagName).setMessage(tagName).setAnnotated(true).call()
+private fun Git.setTag(tagName: String, config: SemverKtPluginGitTagConfig) {
+    with(tag()) {
+        setName(tagName)
+        if (config.message.isNotBlank()) setMessage(config.message).setAnnotated(true)
+        call()
+    }
 }

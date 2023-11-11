@@ -5,13 +5,18 @@ import io.github.serpro69.semverkt.gradle.plugin.gradle.Builder
 import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
+import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.release.configuration.PojoConfiguration
 import io.kotest.core.names.DuplicateTestNameMode
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.kotest.matchers.types.instanceOf
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.revwalk.RevTag
+import org.eclipse.jgit.revwalk.RevWalk
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.util.GradleVersion
 import java.nio.file.Path
@@ -430,6 +435,42 @@ class SemverKtPluginFT : DescribeSpec({
                 }
             }
         }
+
+        context("annotated tags with a message") {
+            it("should create an annotated tag with a message from configuration") {
+                val config = PojoConfiguration(gitTagConfig = object : GitTagConfig {
+                    override val message: String = "There is no spoon"
+                })
+                val project = SemverKtTestProject(configure = { config })
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").setAnnotated(false).call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[minor]").call()
+                }
+                // Act
+                val result = Builder.build(project = project, args = arrayOf("tag"))
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 0.2.0
+
+                    > Task :tag
+                    Calculated next version: 0.2.0
+                """.trimIndent()
+                with(Git.open(project.projectDir.toFile())) {
+                    val tags = tagList().call()
+                    val walk = RevWalk(repository)
+                    val first = walk.parseAny(tags.first().objectId)
+                    val last = walk.parseAny(tags.last().objectId)
+                    first shouldNotBe instanceOf<RevTag>()
+                    last shouldBe instanceOf<RevTag>()
+                    (last as RevTag).fullMessage shouldBe "There is no spoon"
+                }
+            }
+        }
     }
 
     describe("nextVersion < latestVersion") {
@@ -529,11 +570,7 @@ class SemverKtPluginFT : DescribeSpec({
                 Builder.build(project = project, args = arrayOf("tag", "-Prelease", "-Pincrement=minor"))
                 // Act
                 val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                else arrayOf(
-                    "tag",
-                    "-Prelease",
-                    "-Pincrement=minor"
-                )
+                else arrayOf("tag", "-Prelease", "-Pincrement=minor")
                 val result = Builder.build(project = project, args = args)
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE

@@ -24,7 +24,15 @@ ifneq ($(__java_version_ok),$(shell echo 0))
 endif
 
 .PHONY: test
-test: ## Runs tests for the project
+test: _check_java ## Runs unit tests for the project
+	./gradlew clean test
+
+.PHONY: ft
+ft: _check_java ## Runs functional tests for the project
+	./gradlew clean functionalTest
+
+.PHONY: verify
+verify: _check_java ## Runs all tests for the project
 	./gradlew clean test functionalTest
 
 .PHONY: local
@@ -33,7 +41,7 @@ local: _check_java ## Publishes artifacts to local repos
 	./gradlew publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository -Pversion=0.0.0
 
 .PHONY: release
-release: _check_java test ## Publishes the next release
+release: _check_java verify ## Publishes the next release
 	# publish to sonatype and gradle-plugin-portal and close staging repo
 	./gradlew tag publishToSonatype closeSonatypeStagingRepository publishPlugins --info
 	# push git tag

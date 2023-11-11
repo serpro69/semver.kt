@@ -77,6 +77,7 @@ abstract class ConfigurationProvider internal constructor(private val autoConfig
 
     private val gitTagConfig = object : GitTagConfig {
         override val prefix: String = autoConfig.propertyOrNull("git.tag.prefix") ?: super.prefix
+        override val message: String = autoConfig.propertyOrNull("git.tag.message") ?: super.message
         override val separator: String = autoConfig.propertyOrNull("git.tag.separator") ?: super.separator
         override val useBranches: Boolean = autoConfig.propertyOrNull("git.tag.useBranches") ?: super.useBranches
     }

@@ -37,6 +37,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
             }
             tag {
                 prefix = config.git.tag.prefix
+                message = config.git.tag.message
                 separator = config.git.tag.separator
                 useBranches = config.git.tag.useBranches
             }
@@ -114,6 +115,7 @@ class SemverKtPluginGitRepoConfig internal constructor(settings: Settings?) : Gi
 class SemverKtPluginGitTagConfig internal constructor() : GitTagConfig {
 
     override var prefix: String = super.prefix
+    override var message: String = super.message
     override var separator: String = super.separator
     override var useBranches: Boolean = super.useBranches
 }
