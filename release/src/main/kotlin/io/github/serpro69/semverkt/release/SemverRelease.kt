@@ -3,6 +3,7 @@ package io.github.serpro69.semverkt.release
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.MonorepoConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.release.repo.Commit
 import io.github.serpro69.semverkt.release.repo.GitRepository
@@ -65,6 +66,8 @@ class SemverRelease : AutoCloseable {
      * See also [SemverRelease.increment] for the rules that are used when releasing the versions.
      */
     fun release(increment: Increment): Semver = increment(increment, true)
+
+    fun releaseModules(increment: Increment, monorepoConfig: MonorepoConfig): Pair<Semver, List<String>> = increment(increment, true) to emptyList()
 
     /**
      * Returns the next snapshot version after the [latestVersion] based on the [increment].

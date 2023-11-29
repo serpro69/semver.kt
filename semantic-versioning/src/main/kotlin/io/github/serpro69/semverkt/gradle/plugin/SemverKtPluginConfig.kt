@@ -6,6 +6,7 @@ import io.github.serpro69.semverkt.release.configuration.GitConfig
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.MonorepoConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.initialization.Settings
@@ -48,6 +49,8 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
         private set
     override var version = SemverKtPluginVersionConfig()
         private set
+    override val monorepo: MonorepoConfig
+        get() = TODO("Not yet implemented")
 
     fun git(block: SemverKtPluginGitConfig.() -> Unit): Configuration {
         git.apply(block)

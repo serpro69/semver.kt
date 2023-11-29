@@ -8,10 +8,11 @@ package io.github.serpro69.semverkt.release.configuration
 interface Configuration {
     val git: GitConfig
     val version: VersionConfig
+    val monorepo: MonorepoConfig
 
     fun jsonString(): String {
         return """
-            { ${git.jsonString()}, ${version.jsonString()} }
+            { ${git.jsonString()}, ${version.jsonString()}, ${monorepo.jsonString()} }
         """.trimIndent()
     }
 }
@@ -23,7 +24,8 @@ class PojoConfiguration(
     gitRepoConfig: GitRepoConfig = object : GitRepoConfig {},
     gitTagConfig: GitTagConfig = object : GitTagConfig {},
     gitMessageConfig: GitMessageConfig = object : GitMessageConfig {},
-    versionConfig: VersionConfig = object : VersionConfig {}
+    versionConfig: VersionConfig = object : VersionConfig {},
+    monorepoConfig: MonorepoConfig = object : MonorepoConfig {},
 ): Configuration {
     override val git: GitConfig = object : GitConfig {
         override val repo: GitRepoConfig = gitRepoConfig
@@ -31,4 +33,5 @@ class PojoConfiguration(
         override val message: GitMessageConfig = gitMessageConfig
     }
     override val version: VersionConfig = versionConfig
+    override val monorepo: MonorepoConfig = monorepoConfig
 }

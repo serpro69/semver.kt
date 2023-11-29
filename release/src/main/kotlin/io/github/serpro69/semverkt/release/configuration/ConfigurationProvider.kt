@@ -103,6 +103,11 @@ abstract class ConfigurationProvider internal constructor(private val autoConfig
         override val snapshotSuffix: String = autoConfig.propertyOrNull("version.snapshotSuffix") ?: super.snapshotSuffix
     }
 
+    override val monorepo: MonorepoConfig = object : MonorepoConfig {
+        // Properties-based configuration is not supported for modules
+        override val modules: List<ModuleConfig> = emptyList()
+    }
+
     /**
      * Returns a property of [T] type from this [AutoKonfig] receiver by the property name [name]
      * or throws an [AutoKonfigException] if the property is not found.
