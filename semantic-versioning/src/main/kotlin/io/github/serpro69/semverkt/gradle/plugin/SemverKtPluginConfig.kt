@@ -6,6 +6,7 @@ import io.github.serpro69.semverkt.release.configuration.GitConfig
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.MonorepoConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.spec.Semver
@@ -43,14 +44,17 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
             snapshotSuffix = config.version.snapshotSuffix
             useSnapshots = false
         }
+        monorepo {
+            modules = config.monorepo.modules
+        }
     }
 
     override var git = SemverKtPluginGitConfig(settings)
         private set
     override var version = SemverKtPluginVersionConfig()
         private set
-    override val monorepo: MonorepoConfig
-        get() = TODO("Not yet implemented")
+    override var monorepo = SemverKtPluginMonorepoConfig()
+        private set
 
     fun git(block: SemverKtPluginGitConfig.() -> Unit): Configuration {
         git.apply(block)
@@ -59,6 +63,11 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
 
     fun version(block: SemverKtPluginVersionConfig.() -> Unit): Configuration {
         version.apply(block)
+        return this
+    }
+
+    fun monorepo(block: SemverKtPluginMonorepoConfig.() -> Unit): Configuration {
+        monorepo.apply(block)
         return this
     }
 }
@@ -116,6 +125,12 @@ class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
     override var patch: String = super.patch
     override var preRelease: String = super.preRelease
     override var ignoreCase: Boolean = super.ignoreCase
+}
+
+@ConfigDsl
+class SemverKtPluginMonorepoConfig internal constructor() : MonorepoConfig {
+
+    override var modules: List<ModuleConfig> = super.modules
 }
 
 @DslMarker
