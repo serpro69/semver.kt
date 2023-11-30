@@ -7,8 +7,6 @@ import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.revwalk.RevCommit
-import java.io.File
-import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
@@ -83,9 +81,9 @@ fun Git.addRelease(
     tag().setAnnotated(annotated).setName("v$version").setForceUpdate(true).call()
 }
 
-fun Git.addCommit(message: String, path: String = ""): RevCommit {
+fun Git.addCommit(message: String, path: String = "", fileName: String = faker.random.randomString(10)): RevCommit {
     val repoPath = repository.directory.parentFile
-    repoPath.resolve(path).resolve("${faker.random.randomString(10)}.txt").createNewFile()
+    repoPath.resolve(path).resolve("$fileName.txt").createNewFile()
     add().addFilepattern(".").call()
     return commit().setMessage(message).call()
 }

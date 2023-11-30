@@ -243,4 +243,3 @@ class SemverRelease : AutoCloseable {
         }
     }
 }
-

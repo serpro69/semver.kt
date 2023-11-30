@@ -16,10 +16,11 @@ import org.eclipse.jgit.api.Git
 
 class RepositoryTest : DescribeSpec() {
 
+    private val repo: Repository = GitRepository(testConfiguration)
+    private val git = { Git.open(testConfiguration.git.repo.directory.toFile()) }
+
     init {
         describe("A git repository") {
-            val repo: Repository = GitRepository(testConfiguration)
-            val git = { Git.open(testConfiguration.git.repo.directory.toFile()) }
 
             context("log") {
                 it("should contain a list of versions") {
@@ -61,24 +62,41 @@ class RepositoryTest : DescribeSpec() {
                     repo.latestVersionTag()?.simpleTagName shouldBe "v0.4.0"
                 }
                 it("should return last version - unordered") {
-                    git().addRelease(3, Semver("3.0.0"))
-                    git().addRelease(3, Semver("2.0.0"))
-                    git().addRelease(3, Semver("1.0.0"))
+                    git().use {
+                        it.addRelease(3, Semver("3.0.0"))
+                        it.addRelease(3, Semver("2.0.0"))
+                        it.addRelease(3, Semver("1.0.0"))
+                    }
                     repo.latestVersionTag()?.simpleTagName shouldBe "v3.0.0"
                 }
             }
             context("HEAD version") {
                 it("should return annotated tag version at HEAD") {
-                    git().addRelease(1, Semver("1.0.0"), annotated = true)
+                    git().use { it.addRelease(1, Semver("1.0.0"), annotated = true) }
                     repo.headVersionTag()?.simpleTagName shouldBe "v1.0.0"
                 }
                 it("should return tag version at HEAD") {
-                    git().addRelease(1, Semver("1.0.0"), annotated = false)
+                    git().use { it.addRelease(1, Semver("1.0.0"), annotated = false) }
                     repo.headVersionTag()?.simpleTagName shouldBe "v1.0.0"
                 }
                 it("should return null if HEAD has no versions") {
-                    git().addCommit("Test commit without release")
+                    git().use { it.addCommit("Test commit without release") }
                     repo.headVersionTag() shouldBe null
+                }
+            }
+            context("diff") {
+                it("should contain a list of changed files between HEAD and last version") {
+                    git().use {
+                        it.tag().setName("v0.5.0").call()
+                        it.addCommit("Commit #7", fileName = "testfile")
+                        it.addCommit("Commit #8", fileName = "testfile2")
+                    }
+                    val diff = repo.diff(repo.head().name, repo.latestVersionTag()?.name!!)
+                    assertSoftly {
+                        diff.size shouldBe 2
+                        diff.first().oldPath shouldBe "testfile.txt"
+                        diff.last().oldPath shouldBe "testfile2.txt"
+                    }
                 }
             }
         }
@@ -93,6 +111,7 @@ class RepositoryTest : DescribeSpec() {
     }
 
     override suspend fun afterTest(testCase: TestCase, result: TestResult) {
+        repo.close()
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 }

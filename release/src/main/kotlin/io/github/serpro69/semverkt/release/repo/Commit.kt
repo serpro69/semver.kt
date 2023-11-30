@@ -29,3 +29,29 @@ data class Message(
     val title: String,
     val description: List<String>,
 )
+
+/**
+ * Represents a change to a file between two commits.
+ *
+ * @property oldPath File name of the old (pre-image).
+ *
+ * The meaning of the old name can differ depending on the semantic meaning of this patch:
+ * - *file add*: always `/dev/null`
+ * - *file modify*: always [newPath]
+ * - *file delete*: always the file being deleted
+ * - *file copy*: source file the copy originates from
+ * - *file rename*: source file the rename originates from
+ *
+ * @property newPath File name of the new (post-image).
+ *
+ * The meaning of the new name can differ depending on the semantic meaning of this patch:
+ * - *file add*: always the file being created
+ * - *file modify*: always [oldPath]
+ * - *file delete*: always `/dev/null`
+ * - *file copy*: destination file the copy ends up at
+ * - *file rename*: destination file the rename ends up at
+ */
+data class DiffEntry(
+    val oldPath: String,
+    val newPath: String,
+)

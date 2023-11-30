@@ -8,6 +8,7 @@ import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import java.io.IOException
 
 /**
@@ -95,6 +96,25 @@ class GitRepository(override val config: Configuration) : Repository {
 
     override fun close() {
         git.close()
+    }
+
+    override fun diff(start: String, end: String): List<DiffEntry> {
+        // change diff algorithm to histogram to avoid potential error 'invalid value diff.algorithm=patience'
+        // patience algorithm doesn't seem to be supported by jgit
+        val s = git.repository.resolve("$start^{tree}")
+        val e = git.repository.resolve("$end^{tree}")
+        git.repository.config.baseConfig.setString("diff", null, "algorithm", "histogram")
+        return git.repository.newObjectReader().use { reader ->
+            val oldTreeIter = CanonicalTreeParser().also { it.reset(reader, s) }
+            val newTreeIter = CanonicalTreeParser().also { it.reset(reader, e) }
+            Git(git.repository).use { git ->
+                git.diff()
+                    .setNewTree(newTreeIter)
+                    .setOldTree(oldTreeIter)
+                    .call()
+                    .map { DiffEntry(oldPath = it.oldPath, newPath = it.newPath) }
+            }
+        }
     }
 
     private fun log(start: ObjectId? = null, end: ObjectId? = null): Sequence<RevCommit> {

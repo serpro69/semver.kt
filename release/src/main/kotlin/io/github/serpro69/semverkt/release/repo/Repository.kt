@@ -3,6 +3,7 @@ package io.github.serpro69.semverkt.release.repo
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
+import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 
 /**
@@ -59,4 +60,17 @@ interface Repository : AutoCloseable {
         untilTag: Ref?,
         predicate: (RevCommit) -> Boolean = { true }
     ): List<Commit>
+
+    /**
+     * Returns the diff between [start] and [end] commits in this repository.
+     *
+     * These operators are supported for the [start] and [end] parameters:
+     * - **HEAD**, **MERGE_HEAD**, **FETCH_HEAD**
+     * - **SHA-1**: a complete or abbreviated SHA-1
+     * - **refs/...**: a complete reference name
+     * - **short-name**: a short reference name under `refs/heads`
+     * - `refs/tags`, or `refs/remotes` namespace
+     * - `ABBREV` as an abbreviated SHA-1.
+     */
+    fun diff(start: String, end: String): List<DiffEntry>
 }
