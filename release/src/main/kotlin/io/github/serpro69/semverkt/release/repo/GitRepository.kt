@@ -12,7 +12,7 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import java.io.IOException
 
 /**
- * Represents a git [Repository] implementation.
+ * Implementation of a git [Repository].
  */
 class GitRepository(override val config: Configuration) : Repository {
     private val git: Git by lazy {

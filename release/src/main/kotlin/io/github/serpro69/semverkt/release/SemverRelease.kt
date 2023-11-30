@@ -67,8 +67,6 @@ class SemverRelease : AutoCloseable {
      */
     fun release(increment: Increment): Semver = increment(increment, true)
 
-    fun releaseModules(increment: Increment, monorepoConfig: MonorepoConfig): Pair<Semver, List<String>> = increment(increment, true) to emptyList()
-
     /**
      * Returns the next snapshot version after the [latestVersion] based on the [increment].
      *

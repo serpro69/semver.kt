@@ -4,7 +4,6 @@ import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.release.repo.Repository
 import io.github.serpro69.semverkt.spec.Semver
-import io.kotest.core.config.configuration
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.core.test.TestCase
@@ -252,30 +251,6 @@ class SemverReleaseTest : DescribeSpec() {
             it("should return null if version already exists") {
                 semverRelease(repo).release(Semver("0.3.0")) shouldBe null
             }
-        }
-
-        describe("!mono-repo project") {
-            it("should create next version if a module's sources have changed") {
-                with(monorepoGit()) {
-                    addCommit("Change foo", "foo/src/main")
-                    addCommit("Release [patch]", "bar/src/main")
-                }
-                with(semverRelease(monoRepo)) {
-                    nextIncrement() shouldBe Increment.PATCH
-                    releaseModules(nextIncrement(), monoRepo.config.monorepo) shouldBe Semver("0.4.1") to listOf("foo", "bar")
-                }
-            }
-/*
-            it("should return latest version if a module's sources have NOT changed") {
-                with(monorepoGit()) {
-                    addCommit("Release [minor]", "bar/src/main")
-                }
-                with(semverRelease(monoRepo)) {
-                    nextIncrement() shouldBe Increment.PATCH
-                    releaseModules(nextIncrement()) shouldBe Semver("0.5.0") to listOf("bar")
-                }
-            }
-*/
         }
     }
 
