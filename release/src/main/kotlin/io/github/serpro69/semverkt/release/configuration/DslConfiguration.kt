@@ -7,6 +7,7 @@ import java.nio.file.Path
 /**
  * Provides access to default [Configuration] properties with optional overrides through DSL syntax
  */
+@PojoConfigDsl
 class DslConfiguration internal constructor() : Configuration {
 
     override var git = PojoGitConfig()
@@ -34,7 +35,17 @@ class DslConfiguration internal constructor() : Configuration {
 
 @PojoConfigDsl
 class PojoMonorepoConfig internal constructor() : MonorepoConfig {
-    override var modules: List<ModuleConfig> = super.modules
+    override val modules: MutableList<ModuleConfig> = mutableListOf()
+
+    fun module(block: DslModuleConfig.() -> Unit) {
+        modules.add(DslModuleConfig().apply(block))
+    }
+}
+
+@PojoConfigDsl
+class DslModuleConfig internal constructor() : ModuleConfig {
+    override var name: String = super.name
+    override var sources: Path = super.sources
 }
 
 @PojoConfigDsl
