@@ -27,9 +27,12 @@ val monorepoTestConfig = DslConfiguration {
     }
 
     monorepo {
-        val foo = ModuleConfig("foo", Path("src/main"))
-        val bar = ModuleConfig("bar", Path("src/main"))
-        modules = listOf(foo, bar)
+        module {
+            name = "foo"
+        }
+        module {
+            name = "bar"
+        }
     }
 }
 

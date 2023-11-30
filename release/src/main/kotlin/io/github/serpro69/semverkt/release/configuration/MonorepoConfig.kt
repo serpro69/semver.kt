@@ -1,6 +1,7 @@
 package io.github.serpro69.semverkt.release.configuration
 
 import java.nio.file.Path
+import kotlin.io.path.Path
 
 /**
  * Monorepo module configuration enables individual versioning of multi-modules in a mono-repo.
@@ -24,8 +25,8 @@ interface MonorepoConfig{
  * @property sources path to the main module sources
  */
 interface ModuleConfig {
-    val name: String
-    val sources: Path
+    val name: String get() = ""
+    val sources: Path get() = Path("src/main")
 
     fun jsonString(): String {
         return """
@@ -34,7 +35,7 @@ interface ModuleConfig {
     }
 }
 
-fun ModuleConfig(name: String, sources: Path): ModuleConfig = object : ModuleConfig {
+fun ModuleConfig(name: String, sources: Path? = null): ModuleConfig = object : ModuleConfig {
     override val name: String = name
-    override val sources: Path = sources
+    override val sources: Path = sources ?: super.sources
 }
