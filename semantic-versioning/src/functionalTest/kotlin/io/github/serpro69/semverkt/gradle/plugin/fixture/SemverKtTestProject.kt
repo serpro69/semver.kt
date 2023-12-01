@@ -10,6 +10,7 @@ import kotlin.io.path.writeText
 class SemverKtTestProject(
     defaultSettings: Boolean = false,
     multiModule: Boolean = false,
+    monorepo: Boolean = multiModule,
     useSnapshots: Boolean = false,
 ) : AbstractProject() {
 
@@ -21,8 +22,15 @@ class SemverKtTestProject(
     constructor(
         defaultSettings: Boolean = false,
         multiModule: Boolean = false,
+        monorepo: Boolean = multiModule,
+        useSnapshots: Boolean = false,
         configure: (dir: Path) -> Configuration,
-    ) : this(defaultSettings, multiModule) {
+    ) : this(
+        defaultSettings = defaultSettings,
+        multiModule = multiModule,
+        monorepo = monorepo,
+        useSnapshots = useSnapshots
+    ) {
         configFile.writeText(configure(projectDir).jsonString())
     }
 
@@ -38,19 +46,21 @@ class SemverKtTestProject(
             """
             rootProject.name = "test-project"
 
-            ${if (multiModule) "include(\"submodule\")" else ""}
+            ${if (multiModule) "include(\"foo\", \"bar\")" else ""}
             """.trimIndent()
         )
-        else writePluginSettings(multiModule = multiModule, useSnapshots = useSnapshots)
+        else writePluginSettings(multiModule = multiModule, useSnapshots = useSnapshots, monorepo = monorepo)
 
         // Apply our plugin
         buildFile.writeBuildFile()
 
-        if (multiModule) projectDir.resolve("submodule").createDirectories().also {
-            it.resolve("build.gradle.kts").writeText("""
+        if (multiModule) listOf("foo", "bar").forEach { subModule ->
+            projectDir.resolve(subModule).createDirectories().also {
+                it.resolve("build.gradle.kts").writeText("""
                 plugins {
                 }
-            """.trimIndent())
+                """.trimIndent())
+            }
         }
 
         Git.open(projectDir.toFile()).use {
@@ -59,11 +69,12 @@ class SemverKtTestProject(
         }
     }
 
-    fun writePluginSettings(multiModule: Boolean, useSnapshots: Boolean) {
+    fun writePluginSettings(multiModule: Boolean, useSnapshots: Boolean, monorepo: Boolean = multiModule) {
         settingsFile.writeText(
             """
-            import java.nio.file.Paths
             import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+            import io.github.serpro69.semverkt.release.configuration.ModuleConfig
+            import java.nio.file.Paths
 
             plugins {
                 id("io.github.serpro69.semantic-versioning")
@@ -80,9 +91,21 @@ class SemverKtTestProject(
                 version {
                     ${if (useSnapshots) "useSnapshots = true" else ""}
                 }
+                monorepo {
+                    ${if (monorepo && multiModule) 
+                    """
+                    // different ways to add module configuration
+                    |modules.add(ModuleConfig("foo", Paths.get(".")))
+                    |module {
+                    |    name = "bar"
+                    |    sources = Paths.get(".")
+                    |}
+                    """.trimMargin("|")
+                    else ""}
+                }
             }
 
-            ${if (multiModule) "include(\"submodule\")" else ""}
+            ${if (multiModule) "include(\"foo\", \"bar\")" else ""}
             """.trimIndent()
         )
     }

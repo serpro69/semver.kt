@@ -14,6 +14,7 @@ import org.eclipse.jgit.api.Git
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.util.GradleVersion
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.writeText
 
@@ -198,7 +199,7 @@ class SemverKtPluginFT : DescribeSpec({
                 val nextVer = when (version) { // new pre-release with DEFAULT increment
                     "0.0.1" -> "0.1.0-rc.1"
                     "0.1.0" -> "0.2.0-rc.1"
-                    "1.0.0-rc.1" , "1.0.0" -> "1.1.0-rc.1"
+                    "1.0.0-rc.1", "1.0.0" -> "1.1.0-rc.1"
                     else -> "42" // shouldn't really get here
                 }
                 result.output shouldContain """
@@ -243,7 +244,7 @@ class SemverKtPluginFT : DescribeSpec({
                         "patch" -> when (version) {
                             "0.0.1" -> "0.0.2-rc.1"
                             "0.1.0" -> "0.1.1-rc.1"
-                            "1.0.0-rc.1", "1.0.0"  -> "1.0.1-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "1.0.1-rc.1"
                             else -> "42" // shouldn't really get here
                         }
                         "pre release" -> version // not a valid increment value
@@ -292,7 +293,7 @@ class SemverKtPluginFT : DescribeSpec({
                         "patch" -> when (version) {
                             "0.0.1" -> "0.0.2-rc.1"
                             "0.1.0" -> "0.1.1-rc.1"
-                            "1.0.0-rc.1", "1.0.0"  -> "1.0.1-rc.1"
+                            "1.0.0-rc.1", "1.0.0" -> "1.0.1-rc.1"
                             else -> "42" // shouldn't really get here
                         }
                         "pre_release" -> version // not a valid increment value
@@ -529,10 +530,10 @@ class SemverKtPluginFT : DescribeSpec({
                 // Act
                 val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
                 else arrayOf(
-                        "tag",
-                        "-Prelease",
-                        "-Pincrement=minor"
-                    )
+                    "tag",
+                    "-Prelease",
+                    "-Pincrement=minor"
+                )
                 val result = Builder.build(project = project, args = args)
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
@@ -614,10 +615,10 @@ class SemverKtPluginFT : DescribeSpec({
         }
     }
 
-    describe("multi-module project") {
+    describe("f:multi-module project") {
         listOf(true, false).forEach { dryRun ->
             it("should set next version via commit${if (dryRun) " and dryRun" else ""}") {
-                val project = SemverKtTestProject(multiModule = true)
+                val project = SemverKtTestProject(multiModule = true, monorepo = false)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
@@ -631,17 +632,23 @@ class SemverKtPluginFT : DescribeSpec({
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 0.2.0
+
                     > Task :tag
                     Calculated next version: 0.2.0
 
-                    > Task :submodule:tag
+                    > Task :bar:tag
+                    Calculated next version: 0.2.0
+                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
+                    > Task :foo:tag
                     Calculated next version: 0.2.0
                     ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
                 """.trimIndent().trim()
             }
 
             it("should set next version via gradle property${if (dryRun) " and dryRun" else ""}") {
-                val project = SemverKtTestProject(multiModule = true)
+                val project = SemverKtTestProject(multiModule = true, monorepo = false)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
@@ -656,13 +663,102 @@ class SemverKtPluginFT : DescribeSpec({
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 0.2.0
+
                     > Task :tag
                     Calculated next version: 0.2.0
 
-                    > Task :submodule:tag
+                    > Task :bar:tag
+                    Calculated next version: 0.2.0
+                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
+                    > Task :foo:tag
                     Calculated next version: 0.2.0
                     ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
                 """.trimIndent().trim()
+            }
+
+            context("monorepo project") {
+                it("should set next version via commit${if (dryRun) " and dryRun" else ""}") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v0.1.0").call() // set initial version
+                        listOf("foo", "bar").forEach { module ->
+                            project.projectDir.resolve(module)
+                                .resolve("$module-text.txt")
+                                .createFile().writeText("Hello")
+                            it.add().addFilepattern(".").call()
+                        }
+                        it.commit().setMessage("New commit\n\n[minor]").call()
+                    }
+                    // Act
+                    val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
+                    val result = Builder.build(project = project, args = args)
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 0.2.0
+
+                    > Task :tag
+                    Calculated next version: 0.2.0
+
+                    > Task :bar:tag
+                    Calculated next version: 0.2.0
+                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
+                    > Task :foo:tag
+                    Calculated next version: 0.2.0
+                    ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
+                """.trimIndent().trim()
+                }
+
+                it("should set next version via gradle property${if (dryRun) " and dryRun" else ""}") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v0.1.0").call() // set initial version
+                        listOf("foo", "bar").forEach { module ->
+                            project.projectDir.resolve(module)
+                                .resolve("$module-text.txt")
+                                .createFile().writeText("Hello")
+                            it.add().addFilepattern(".").call()
+                        }
+                        it.commit().setMessage("New commit").call()
+                    }
+                    // Act
+                    val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
+                    else arrayOf("tag", "-Prelease", "-Pincrement=minor")
+                    val result = Builder.build(project = project, args = args)
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    result.output shouldContain """
+                    > Configure project :
+                    Project test-project version: 0.2.0
+
+                    > Task :tag
+                    Calculated next version: 0.2.0
+
+                    > Task :bar:tag
+                    Calculated next version: 0.2.0
+                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
+                    > Task :foo:tag
+                    Calculated next version: 0.2.0
+                    ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
+                """.trimIndent().trim()
+                }
+
+                it("should always set version for root project") {
+                    // TODO
+                }
+
+                it("should always set version for non-configured submodule") {
+                    // TODO
+                }
+
+                it("should not set version for configured submodule with no changes") {
+                    // TODO
+                }
             }
         }
     }
