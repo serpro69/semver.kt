@@ -46,6 +46,26 @@ If you need the `TagTask` class in your Gradle build script, for example, for a 
 
 <sup>1</sup> Latest based on ordering-rules defined in the semantic-version specification, **not latest by date**.
 
+### Release Workflow
+
+Incrementing new version can be done in one of the following ways, in ascending precedence order:
+
+- commit-based increment
+- gradle property-based increment
+- manually setting the version via `-Pversion`
+
+#### Releasing from commits
+
+A release based on the commit messages makes use of `git.message` configuration (see [Configuration](#configuration) section for more details), and looks up release keywords in square brackets (i.e `[minor]`) in commit messages between the current git HEAD (inclusive) and the latest version (exclusive).
+
+For example, if the latest version is `1.0.0`, and one of the commits since then contains `[minor]` string, the next version will be `1.1.0`
+
+Version precedence follows semver rules (`[major]` -> `[minor]` -> `[patch]` -> `[pre release]`), and if several commits contain a release keyword, then the highest precedence keyword will be used. For example, if there were 3 commits between latest version and current HEAD, and one of those commits contains `[minor]` keyword and another contains `[major]` keyword, the next version will be bumped with the major increment.
+
+#### Releasing via gradle properties
+
+TODO
+
 ## Configuration
 
 ### Json Configuration
@@ -104,6 +124,8 @@ The plugin provides a settings-extension called `semantic-versioning`, which, if
 In the `settings.gradle.kts`, the extension can be configured as follows:
 
 ```kotlin
+import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+
 settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
     git {
         message {
@@ -138,6 +160,63 @@ The plugin makes use of the following properties:
     - `patch`
     - `pre_release`
 
+### Monorepo project support
+
+The plugin supports individual versioning of submodules (subprojects) of monorepo projects.
+To configure a monorepo project, add the following configuration (also supported via json configuration):
+
+```kotlin
+import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+import kotlin.io.path.Path
+
+settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
+  monorepo {
+    module("foo") {}
+    module("bar") {
+        sources = Path("src/main")
+    }
+  }
+}
+
+include("foo")
+include("bar")
+include("baz")
+```
+
+Where `foo` and `bar` are directories of two submodules in a monorepo project.
+
+By default, the entire submodule directory is used to lookup changes. This can be customized via `sources` config property for a given submodule. In the above example, for `bar` module only changes to `bar/src/main` would be considered when making a new release. If no changes are detected between current git HEAD and last version in the repo, then the `version` property will not be applied to the submodule.
+
+Root project and any submodule that is not included in the monorepo configuration are always versioned, regardless of detected changes. In the above example, `baz` submodule would always have a new version applied (if applicable according to [Release Workflow](#release-workflow) rules.)
+
+By versioning submodules separately one can avoid publishing modules that do not contain any changes between current HEAD and last version, for example by configuring maven publication task as such:
+
+```kotlin
+tasks.withType<PublishToMavenRepository>().configureEach {
+  val predicate = provider { version.toString() != "0.0.0" }
+  onlyIf("new release") { predicate.get() }
+}
+```
+
+(Read more about [conditional publishing](https://docs.gradle.org/current/userguide/publishing_customization.html#sec:publishing_maven:conditional_publishing) in official gradle docs.)
+
+We use version `0.0.0` above as a "placeholder version" (exact value can be configured by modifying the `version.placeholderVersion` config property via plugin extension or json configuration), which is set in `gradle.properties` file in project's root directory:
+
+```properties
+# gradle.properties
+version=0.0.0
+```
+
+Any module that does not have changes will not get the new version applied to it, and hence will stay on version `0.0.0` throughout the build process runtime (barring some external modifications to the `version` property), and hence this can be used in conditional checks to skip certain tasks for a given module.
+
+This comes with some downsides which are good to be aware of when considering to version each submodule separately:
+
+- the whole project is still versioned in git via tags and according to semver rules, however (configured) submodules are versioned individually
+  - this could lead to confusions because git tag `v0.7.0` could potentially mean `foo:0.7.0` and at the same time `bar:0.6.0`
+  - there will be "version jumps" for individual submodules, e.g. last version of `bar` was `0.6.0` and next is `0.8.0`
+
+It can still be useful though, especially when each submodule has its own publishable artifacts. In such cases, more often than not one might not want to publish next version of an artifact that is exactly the same as the previous version.
+
 ## Development
 
 TODO
@@ -156,7 +235,7 @@ If running tests with gradle runner is not possible (I, for one, couldn't yet fi
 
 To publish plugin and dependencies locally, run `./gradlew publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository`, which will publish dependencies to local maven directory (e.g. `~/.m2/repository`), and the plugin to `./build/local-plugin-repo`.
 
-Once that's done, one can setup gradle to fetch the plugin from local sources by updating `settings.gradle.kts`:
+Once that's done, one can set up gradle to fetch the plugin from local sources by updating `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
