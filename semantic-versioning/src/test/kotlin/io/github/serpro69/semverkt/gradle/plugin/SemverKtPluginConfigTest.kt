@@ -1,6 +1,7 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.release.Increment
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.DescribeSpec
@@ -27,6 +28,12 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     initialVersion = Semver("1.2.3")
                     defaultIncrement = Increment.NONE
                 }
+                monorepo {
+                    modules.add(ModuleConfig("foo"))
+                    module {
+                        name = "bar"
+                    }
+                }
             }
             it("should override default configuration") {
                 assertSoftly {
@@ -35,6 +42,8 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     config.git.repo.remoteName shouldBe "not origin"
                     config.version.initialVersion shouldBe Semver("1.2.3")
                     config.version.defaultIncrement shouldBe Increment.NONE
+                    config.monorepo.modules.size shouldBe 2
+                    config.monorepo.modules.map { it.name } shouldBe listOf("foo", "bar")
                 }
             }
             it("should have default configuration intact") {

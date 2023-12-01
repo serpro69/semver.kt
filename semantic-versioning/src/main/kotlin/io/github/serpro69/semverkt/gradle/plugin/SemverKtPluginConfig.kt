@@ -13,8 +13,12 @@ import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.initialization.Settings
 import java.nio.file.Path
 
-@ConfigDsl
+@PluginConfigDsl
 class SemverKtPluginConfig(settings: Settings?) : Configuration {
+
+    override val git = SemverKtPluginGitConfig(settings)
+    override val version = SemverKtPluginVersionConfig()
+    override val monorepo = SemverKtPluginMonorepoConfig()
 
     constructor(config: Configuration, settings: Settings? = null) : this(settings) {
         git {
@@ -45,16 +49,9 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
             useSnapshots = false
         }
         monorepo {
-            modules = config.monorepo.modules
+            modules.addAll(config.monorepo.modules)
         }
     }
-
-    override var git = SemverKtPluginGitConfig(settings)
-        private set
-    override var version = SemverKtPluginVersionConfig()
-        private set
-    override var monorepo = SemverKtPluginMonorepoConfig()
-        private set
 
     fun git(block: SemverKtPluginGitConfig.() -> Unit): Configuration {
         git.apply(block)
@@ -72,7 +69,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
     }
 }
 
-@ConfigDsl
+@PluginConfigDsl
 class SemverKtPluginVersionConfig internal constructor() : VersionConfig {
     override var initialVersion: Semver = super.initialVersion
     override var placeholderVersion: Semver = super.placeholderVersion
@@ -83,7 +80,7 @@ class SemverKtPluginVersionConfig internal constructor() : VersionConfig {
     var useSnapshots: Boolean = false
 }
 
-@ConfigDsl
+@PluginConfigDsl
 class SemverKtPluginGitConfig internal constructor(settings: Settings?) : GitConfig {
     override val repo = SemverKtPluginGitRepoConfig(settings)
     override val tag = SemverKtPluginGitTagConfig()
@@ -102,14 +99,15 @@ class SemverKtPluginGitConfig internal constructor(settings: Settings?) : GitCon
     }
 }
 
-@ConfigDsl
+@PluginConfigDsl
 class SemverKtPluginGitRepoConfig internal constructor(settings: Settings?) : GitRepoConfig {
 
-    override var directory: Path = settings?.settingsDir?.toPath() ?: super.directory // use settings dir as default path for plugin config
+    // use settings dir as default path for plugin config
+    override var directory: Path = settings?.settingsDir?.toPath() ?: super.directory
     override var remoteName: String = super.remoteName
 }
 
-@ConfigDsl
+@PluginConfigDsl
 class SemverKtPluginGitTagConfig internal constructor() : GitTagConfig {
 
     override var prefix: String = super.prefix
@@ -117,7 +115,7 @@ class SemverKtPluginGitTagConfig internal constructor() : GitTagConfig {
     override var useBranches: Boolean = super.useBranches
 }
 
-@ConfigDsl
+@PluginConfigDsl
 class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
 
     override var major: String = super.major
@@ -127,11 +125,21 @@ class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
     override var ignoreCase: Boolean = super.ignoreCase
 }
 
-@ConfigDsl
+@Suppress("unused")
+@PluginConfigDsl
 class SemverKtPluginMonorepoConfig internal constructor() : MonorepoConfig {
+    override val modules: MutableList<ModuleConfig> = mutableListOf()
 
-    override var modules: List<ModuleConfig> = super.modules
+    fun module(block: SemverKtPluginModuleConfig.() -> Unit) {
+        modules.add(SemverKtPluginModuleConfig().apply(block))
+    }
+}
+
+@PluginConfigDsl
+class SemverKtPluginModuleConfig internal constructor() : ModuleConfig {
+    override var name: String = super.name
+    override var sources: Path = super.sources
 }
 
 @DslMarker
-annotation class ConfigDsl
+annotation class PluginConfigDsl
