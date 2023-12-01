@@ -12,6 +12,9 @@ interface GitConfig{
     val tag: GitTagConfig
     val message: GitMessageConfig
 
+    /**
+     * Returns a json string representation of this [GitConfig] instance.
+     */
     fun jsonString(): String {
         return """
             "git": { ${repo.jsonString()}, ${tag.jsonString()}, ${message.jsonString()} }

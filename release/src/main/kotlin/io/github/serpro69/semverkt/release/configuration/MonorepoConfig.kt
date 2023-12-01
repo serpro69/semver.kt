@@ -29,6 +29,9 @@ interface ModuleConfig {
     val name: String
     val sources: Path get() = Path(".")
 
+    /**
+     * Returns a json string representation of this [ModuleConfig] instance.
+     */
     fun jsonString(): String {
         return """
             { "name": "$name", "sources": "$sources" }
@@ -36,6 +39,9 @@ interface ModuleConfig {
     }
 }
 
+/**
+ * Creates a [ModuleConfig] instance with the given [name] and optional [sources].
+ */
 fun ModuleConfig(name: String, sources: Path? = null): ModuleConfig = object : ModuleConfig {
     override val name: String = name
     override val sources: Path = sources ?: super.sources

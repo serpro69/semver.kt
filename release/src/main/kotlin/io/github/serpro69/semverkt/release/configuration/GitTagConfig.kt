@@ -12,6 +12,9 @@ interface GitTagConfig {
     val separator: String get() = ""
     val useBranches: Boolean get() = false
 
+    /**
+     * Returns a json string representation of this [GitTagConfig] instance.
+     */
     fun jsonString(): String {
         return """
             "tag": { "prefix": "$prefix", "separator": "$separator", "useBranches": "$useBranches" }

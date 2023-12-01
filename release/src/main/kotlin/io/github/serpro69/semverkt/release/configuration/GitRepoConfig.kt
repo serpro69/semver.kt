@@ -13,6 +13,9 @@ interface GitRepoConfig {
     val directory: Path get() = Path(".")
     val remoteName: String get() = "origin"
 
+    /**
+     * Returns a json string representation of this [GitRepoConfig] instance.
+     */
     fun jsonString(): String {
         return """
             "repo": { "directory": "$directory", "remoteName": "$remoteName" }
