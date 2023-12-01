@@ -37,15 +37,20 @@ class DslConfiguration internal constructor() : Configuration {
 class PojoMonorepoConfig internal constructor() : MonorepoConfig {
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
-    fun module(block: DslModuleConfig.() -> Unit) {
-        modules.add(DslModuleConfig().apply(block))
+    fun module(name: String, block: DslModuleConfig.() -> Unit) {
+        modules.add(DslModuleConfig(name).apply(block))
     }
 }
 
 @PojoConfigDsl
-class DslModuleConfig internal constructor() : ModuleConfig {
-    override var name: String = super.name
+class DslModuleConfig internal constructor(override val name: String) : ModuleConfig {
     override var sources: Path = super.sources
+
+    init {
+        if (name.isBlank()) {
+            throw IllegalArgumentException("Module name cannot be blank")
+        }
+    }
 }
 
 @PojoConfigDsl

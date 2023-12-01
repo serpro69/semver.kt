@@ -130,15 +130,20 @@ class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
 class SemverKtPluginMonorepoConfig internal constructor() : MonorepoConfig {
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
-    fun module(block: SemverKtPluginModuleConfig.() -> Unit) {
-        modules.add(SemverKtPluginModuleConfig().apply(block))
+    fun module(name: String, block: SemverKtPluginModuleConfig.() -> Unit) {
+        modules.add(SemverKtPluginModuleConfig(name).apply(block))
     }
 }
 
 @PluginConfigDsl
-class SemverKtPluginModuleConfig internal constructor() : ModuleConfig {
-    override var name: String = super.name
+class SemverKtPluginModuleConfig internal constructor(override val name: String) : ModuleConfig {
     override var sources: Path = super.sources
+
+    init {
+        if (name.isBlank()) {
+            throw IllegalArgumentException("Module name cannot be blank")
+        }
+    }
 }
 
 @DslMarker
