@@ -10,6 +10,7 @@ import io.github.serpro69.semverkt.release.Increment.PATCH
 import io.github.serpro69.semverkt.release.Increment.PRE_RELEASE
 import io.github.serpro69.semverkt.release.SemverRelease
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
+import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.PreRelease
 import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.Plugin
@@ -17,6 +18,7 @@ import org.gradle.api.Project
 import org.gradle.api.initialization.Settings
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logging
+import kotlin.io.path.Path
 
 @Suppress("unused")
 class SemverKtPlugin : Plugin<Settings> {
@@ -75,6 +77,22 @@ class SemverKtPlugin : Plugin<Settings> {
             ?.let { Increment.getByName(it.toString()) }
             ?: NONE
 
+        val isMonorepo = config.monorepo.modules.isNotEmpty()
+        val module = config.monorepo.modules.firstOrNull { it.name == project.name }
+        val hasChanges by lazy {
+            if (project == project.rootProject) true // always apply version to root project
+            else if (isMonorepo && module != null) with(GitRepository(config)) {
+                val s = head().name
+                val e = headVersionTag()?.name ?: latestVersionTag()?.name ?: log().last().objectId.name
+                diff(s, e).any {
+                    logger.log(LogLevel.DEBUG, "${project.name} diff: $it")
+                    val srcPath = Path(module.name).resolve(module.sources).normalize()
+                    Path(it.oldPath).startsWith(srcPath) || Path(it.newPath).startsWith(srcPath)
+                }
+            }
+            else true // module not versioned separately
+        }
+
         return with(SemverRelease(config)) {
             // IF git HEAD points at a version, set and return it and don't do anything else
             currentVersion()?.let {
@@ -82,6 +100,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 return@with Triple(it, null, null)
             }
             // ELSE IF version is specified via gradle property, use that as nextVersion
+            // NB! this explicitly applies to all monorepo modules regardless of whether a module had changes or not
             val v = project.findProperty("version")?.toString()
             if (v != null // TODO is this needed? isn't it always true in gradle?
                 && v != config.version.placeholderVersion.toString()
@@ -94,7 +113,7 @@ class SemverKtPlugin : Plugin<Settings> {
             // ELSE figure out next version
             val latestVersion = latestVersion()
             logger.log(LogLevel.INFO, "Latest version: $latestVersion")
-            val increaseVersion = if (propPromoteRelease) NONE else with(nextIncrement()) {
+            val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(nextIncrement()) {
                 logger.log(LogLevel.DEBUG, "Next increment from property: $propIncrement")
                 logger.log(LogLevel.DEBUG, "Next increment from git commit: $this")
                 when (propIncrement) {
@@ -114,7 +133,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 }
             }
             logger.log(LogLevel.INFO, "Calculated version increment: $increaseVersion")
-            val nextVersion = if (propPromoteRelease) {
+            val nextVersion = if (!hasChanges) null else if (propPromoteRelease) {
                 with(promoteToRelease()) {
                     logger.log(LogLevel.INFO, "Promote $latestVersion to $this")
                     when {
