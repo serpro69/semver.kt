@@ -46,7 +46,7 @@ class SemverKtTestProject(
             """
             rootProject.name = "test-project"
 
-            ${if (multiModule) "include(\"foo\", \"bar\")" else ""}
+            ${if (multiModule) "include(\"foo\", \"bar\", \"baz\")" else ""}
             """.trimIndent()
         )
         else writePluginSettings(multiModule = multiModule, useSnapshots = useSnapshots, monorepo = monorepo)
@@ -54,7 +54,7 @@ class SemverKtTestProject(
         // Apply our plugin
         buildFile.writeBuildFile()
 
-        if (multiModule) listOf("foo", "bar").forEach { subModule ->
+        if (multiModule) listOf("foo", "bar", "baz").forEach { subModule ->
             projectDir.resolve(subModule).createDirectories().also {
                 it.resolve("build.gradle.kts").writeText("""
                 plugins {
@@ -104,7 +104,7 @@ class SemverKtTestProject(
                 }
             }
 
-            ${if (multiModule) "include(\"foo\", \"bar\")" else ""}
+            ${if (multiModule) "include(\"foo\", \"bar\", \"baz\")" else ""}
             """.trimIndent()
         )
     }
