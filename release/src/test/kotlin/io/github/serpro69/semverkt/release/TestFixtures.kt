@@ -27,12 +27,8 @@ val monorepoTestConfig = DslConfiguration {
     }
 
     monorepo {
-        module {
-            name = "foo"
-        }
-        module {
-            name = "bar"
-        }
+        module("foo") {}
+        module("bar") {}
     }
 }
 

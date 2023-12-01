@@ -1,10 +1,11 @@
 package io.github.serpro69.semverkt.release.configuration
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.assertThrows
+import kotlin.io.path.Path
 
 class DslConfigurationTest : DescribeSpec({
 
@@ -21,15 +22,11 @@ class DslConfigurationTest : DescribeSpec({
                 }
             }
             monorepo {
-                module {
-                    name = "foo"
+                module("foo") {
+                    sources = Path("src")
                 }
-                module {
-                    name = "bar"
-                }
-                module {
-                    name = "baz"
-                }
+                module("bar") {}
+                module("baz") {}
             }
         }
 
@@ -43,6 +40,16 @@ class DslConfigurationTest : DescribeSpec({
         it("should return default property values") {
             c.git.repo.remoteName shouldBe "origin"
             c.git.tag.useBranches shouldBe false
+        }
+
+        it("should throw exception for empty module name") {
+            assertThrows<IllegalArgumentException> {
+                DslConfiguration {
+                    monorepo {
+                        module("") {}
+                    }
+                }
+            }
         }
     }
 })

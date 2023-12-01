@@ -21,12 +21,13 @@ interface MonorepoConfig{
 /**
  * Configuration of a single module in a multi-module mono-repo.
  *
- * @property name    module name
- * @property sources path to the main module sources
+ * @property name    module directory name (e.g. `core` for `./core` submodule in the root of the mono-repo)
+ * @property sources path to track changes for the module, relative to the module dir [name].
+ * Defaults to module directory.
  */
 interface ModuleConfig {
-    val name: String get() = ""
-    val sources: Path get() = Path("src/main")
+    val name: String
+    val sources: Path get() = Path(".")
 
     fun jsonString(): String {
         return """

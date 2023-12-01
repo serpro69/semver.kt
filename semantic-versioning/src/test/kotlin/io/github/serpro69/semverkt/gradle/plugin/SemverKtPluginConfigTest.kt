@@ -1,11 +1,14 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.release.Increment
+import io.github.serpro69.semverkt.release.configuration.DslConfiguration
 import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.assertThrows
+import java.lang.IllegalArgumentException
 import kotlin.io.path.Path
 
 class SemverKtPluginConfigTest : DescribeSpec({
@@ -30,8 +33,8 @@ class SemverKtPluginConfigTest : DescribeSpec({
                 }
                 monorepo {
                     modules.add(ModuleConfig("foo"))
-                    module {
-                        name = "bar"
+                    module("bar") {
+                        sources = Path("src/main/kotlin")
                     }
                 }
             }
@@ -52,6 +55,15 @@ class SemverKtPluginConfigTest : DescribeSpec({
                 config.git.repo.directory shouldBe Path(".")
                 config.version.preReleaseId shouldBe "rc"
                 config.version.placeholderVersion shouldBe Semver("0.0.0")
+            }
+            it("should throw exception for empty module name") {
+                assertThrows<IllegalArgumentException> {
+                    with(SemverKtPluginConfig(null)) {
+                        monorepo {
+                            module("") {}
+                        }
+                    }
+                }
             }
         }
     }

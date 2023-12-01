@@ -96,8 +96,7 @@ class SemverKtTestProject(
                     """
                     // different ways to add module configuration
                     |modules.add(ModuleConfig("foo", Paths.get(".")))
-                    |module {
-                    |    name = "bar"
+                    |module("bar") {
                     |    sources = Paths.get(".")
                     |}
                     """.trimMargin("|")
