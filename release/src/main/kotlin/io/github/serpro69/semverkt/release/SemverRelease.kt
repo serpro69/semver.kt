@@ -3,7 +3,6 @@ package io.github.serpro69.semverkt.release
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
-import io.github.serpro69.semverkt.release.configuration.MonorepoConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.release.repo.Commit
 import io.github.serpro69.semverkt.release.repo.GitRepository

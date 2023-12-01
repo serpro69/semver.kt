@@ -21,6 +21,9 @@ interface VersionConfig {
     val initialPreRelease: Int get() = 1
     val snapshotSuffix: String get() = "SNAPSHOT"
 
+    /**
+     * Returns a json string representation of this [VersionConfig] instance.
+     */
     fun jsonString(): String {
         return """
             "version": { "initialVersion": "$initialVersion", "placeholderVersion": "$placeholderVersion", "defaultIncrement": "$defaultIncrement", "preReleaseId": "$preReleaseId", "initialPreRelease": "$initialPreRelease", "snapshotSuffix": "$snapshotSuffix" }

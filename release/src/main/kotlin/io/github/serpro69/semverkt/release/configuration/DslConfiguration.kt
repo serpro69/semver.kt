@@ -53,6 +53,7 @@ class DslModuleConfig internal constructor(override val name: String) : ModuleCo
     }
 }
 
+@Suppress("unused")
 @PojoConfigDsl
 class PojoVersionConfig internal constructor() : VersionConfig {
     override var initialVersion: Semver = super.initialVersion

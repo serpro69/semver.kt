@@ -16,6 +16,9 @@ interface GitMessageConfig {
     val preRelease: String get() = "[pre release]"
     val ignoreCase: Boolean get() = false
 
+    /**
+     * Returns a json string representation of this [GitMessageConfig] instance.
+     */
     fun jsonString(): String {
         return """
             "message": { "major": "$major", "minor": "$minor", "patch": "$patch", "preRelease": "$preRelease", "ignoreCase": "$ignoreCase" }

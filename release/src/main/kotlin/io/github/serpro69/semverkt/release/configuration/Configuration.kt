@@ -3,13 +3,18 @@ package io.github.serpro69.semverkt.release.configuration
 /**
  * Provides access properties for automated releases configuration.
  *
- * @property git git configuration
+ * @property git      git configuration
+ * @property version  version configuration
+ * @property monorepo monorepo configuration
  */
 interface Configuration {
     val git: GitConfig
     val version: VersionConfig
     val monorepo: MonorepoConfig
 
+    /**
+     * Returns a json string representation of this [Configuration] instance.
+     */
     fun jsonString(): String {
         return """
             { ${git.jsonString()}, ${version.jsonString()}, ${monorepo.jsonString()} }

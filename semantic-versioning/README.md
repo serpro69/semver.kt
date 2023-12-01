@@ -42,7 +42,7 @@ subprojects {
 
 This is usually enough to start using the plugin. Assuming that you already have tags that are (or contain) semantic versions, the plugin will search for all nearest ancestor-tags, select the latest<sup>1</sup> of them as the base version, and increment the component with the least precedence. The nearest ancestor-tags are those tags with a path between them and the `HEAD` commit, without any intervening tags. This is the default behavior of the plugin.
 
-If you need the `TagTask` class in your Gradle build script, for example, for a construct like `tasks.withType(TagTask) { it.dependsOn publish }`, or when you want to define additional tag tasks, you can add the plugin's classes to the build script classpath by simply doing `plugins { id 'io.github.serpro69.gradle-semantic-build-versioning' version '3.0.4' apply false }`.
+If you need the `TagTask` class in your Gradle build script, for example, for a construct like `tasks.withType(TagTask) { it.dependsOn publish }`, or when you want to define additional tag tasks, you can add the plugin's classes to the build script classpath by simply doing `plugins { id 'io.github.serpro69.semantic-versioning' version '$version' apply false }`.
 
 <sup>1</sup> Latest based on ordering-rules defined in the semantic-version specification, **not latest by date**.
 
@@ -50,7 +50,52 @@ If you need the `TagTask` class in your Gradle build script, for example, for a 
 
 ### Json Configuration
 
-TODO
+The full config file looks like this:
+
+```json
+{
+  "git": {
+    "repo": {
+      "directory": ".",
+      "remoteName": "origin"
+    },
+    "tag": {
+      "prefix": "v",
+      "separator": "",
+      "useBranches": "false"
+    },
+    "message": {
+      "major": "major",
+      "minor": "minor",
+      "patch": "patch",
+      "preRelease": "pre release",
+      "ignoreCase": "true"
+    }
+  },
+  "version": {
+    "initialVersion": "0.1.0",
+    "placeholderVersion": "0.0.0",
+    "defaultIncrement": "minor",
+    "preReleaseId": "rc",
+    "initialPreRelease": "1",
+    "snapshotSuffix": "SNAPSHOT"
+  },
+  "monorepo": [
+    {
+      "name": "foo",
+      "sources": "src/main"
+    },
+    {
+      "name": "bar",
+      "sources": "."
+    }
+  ]
+}
+```
+
+Refer to [Configuration](../release/src/main/kotlin/io/github/serpro69/semverkt/release/configuration/Configuration.kt) class for kdocs on each available property.
+
+- [ ] **TODO**: add kdocs and link them instead of referring to the file
 
 ### `semantic-versioning` Extension
 
@@ -72,17 +117,21 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
         defaultIncrement = Increment.MINOR
         preReleaseId = "rc"
     }
+    monorepo {
+        module("foo") {}
+        module("bar") {}
+    }
 }
 ```
 
 ### Gradle Properties
 
-Some options can also be overridden via gradle properties, namely the plugin makes use of the following properties:
+The plugin makes use of the following properties:
 
 - `promoteRelease` - boolean type property, promotes current pre-release to a release version
 - `preRelease` - boolean type property, creates a new pre-release version from the current release
 - `increment` - string type property, sets increment for the next version
-  - setting increment via gradle property take precedence over json and plugin-extension configurations
+  - setting increment via gradle property take precedence over commit-based increments which can be configured via json and plugin-extension configurations
   - accepted values are (case-insensitive):
     - `major`
     - `minor`
