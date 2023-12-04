@@ -683,7 +683,7 @@ class SemverKtPluginFT : DescribeSpec({
                 """.trimIndent().trim()
             }
 
-            context("monorepo project") {
+            context("monorepo project${if (dryRun) " and dryRun" else ""}") {
                 it("should set next version via commit${if (dryRun) " and dryRun" else ""}") {
                     val project = SemverKtTestProject(multiModule = true, monorepo = true)
                     // Arrange
@@ -1013,6 +1013,29 @@ class SemverKtPluginFT : DescribeSpec({
                 size shouldBe 1
                 first().name shouldBe "refs/tags/v0.1.0"
                 last().name shouldBe "refs/tags/v0.1.0"
+            }
+        }
+    }
+
+    describe("repository with uncommitted changes") {
+        listOf(true, false).forEach { dryRun ->
+            it("should return error when trying to release new version${if (dryRun) " and dryRun" else ""}") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[minor]").call()
+                    project.projectDir.resolve("text.txt").writeText("Hello, World!")
+                }
+                // Act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
+                val result = if (dryRun) Builder.build(project = project, args = args)
+                else Builder.buildAndFail(project = project, args = args)
+                // Assert
+                result.task(":tag")?.outcome shouldBe if (dryRun) TaskOutcome.SUCCESS else TaskOutcome.FAILED
+                if (!dryRun) result.output shouldContain "Release with uncommitted changes is not allowed"
             }
         }
     }

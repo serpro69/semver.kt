@@ -5,6 +5,7 @@ import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.gradle.api.GradleException
 import org.gradle.api.logging.LogLevel.DEBUG
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.logging.Logging
@@ -59,6 +60,8 @@ abstract class TagTask : SemverReleaseTask() {
         if (!dryRun.get()) run {
             // check if tag exists, don't try to create a duplicate
             val tagExists = GitRepository(config).use { repo ->
+                // check if repo is clean
+                if(!repo.isClean()) { throw GradleException("Release with uncommitted changes is not allowed") }
                 repo.tags().any {
                     Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer
                 }
