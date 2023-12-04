@@ -13,6 +13,9 @@ import io.kotest.core.test.TestResult
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.eclipse.jgit.api.Git
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createFile
+import kotlin.io.path.writeText
 
 class RepositoryTest : DescribeSpec() {
 
@@ -97,6 +100,37 @@ class RepositoryTest : DescribeSpec() {
                         diff.first().oldPath shouldBe "testfile.txt"
                         diff.last().oldPath shouldBe "testfile2.txt"
                     }
+                }
+            }
+            context("isClean") {
+                it("should return true with no uncommitted changes in the repo") {
+                    git().use { git ->
+                        repo.config.git.repo.directory.resolve("foo").createDirectories().also { p ->
+                                p.resolve("test.txt").createFile().writeText("hello world")
+                                git.add().addFilepattern(".").call()
+                                git.commit().setMessage("test commit").call()
+                                p.resolve("untracked.text").createFile()
+                            }
+                    }
+                    repo.isClean() shouldBe true
+                }
+                it("should return false with uncommitted staged changes") {
+                    git().use {
+                        repo.config.git.repo.directory.resolve("test.txt").createFile().writeText("hello world")
+                        it.add().addFilepattern("test.txt").call()
+                    }
+                    repo.isClean() shouldBe false
+                }
+                it("should return false with uncommitted and unstaged changes") {
+                    git().use {
+                        // arrange
+                        repo.config.git.repo.directory.resolve("test.txt").createFile().writeText("hello world")
+                        it.add().addFilepattern("test.txt").call()
+                        it.commit().setMessage("test").call()
+                        // change file
+                        repo.config.git.repo.directory.resolve("test.txt").writeText("change file contents")
+                    }
+                    repo.isClean() shouldBe false
                 }
             }
         }

@@ -61,6 +61,15 @@ class GitRepository(override val config: Configuration) : Repository {
     }
 
     /**
+     * Whether the [GitRepository] status is clean.
+     *
+     * @return `true` if repo has no uncommitted changes, and `false` otherwise.
+     */
+    override val isClean: () -> Boolean = {
+        !git.status().call().hasUncommittedChanges()
+    }
+
+    /**
      * Returns a log of [Commit]s from HEAD and [untilTag] ref, with an optional [predicate] to filter out the commits.
      */
     override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {

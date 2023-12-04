@@ -38,6 +38,11 @@ interface Repository : AutoCloseable {
     val headVersionTag: () -> Ref?
 
     /**
+     * Returns `true` if no differences exist in the repository, and `false` otherwise
+     */
+    val isClean: () -> Boolean
+
+    /**
      * Returns a list of [Commit]s in this repository,
      * with an optional [predicate] to filter the commits.
      *
