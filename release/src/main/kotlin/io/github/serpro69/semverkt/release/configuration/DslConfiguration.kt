@@ -89,6 +89,7 @@ class PojoGitRepoConfig internal constructor() : GitRepoConfig {
 
     override var directory: Path = super.directory
     override var remoteName: String = super.remoteName
+    override var cleanRule: CleanRule = super.cleanRule
 }
 
 @PojoConfigDsl

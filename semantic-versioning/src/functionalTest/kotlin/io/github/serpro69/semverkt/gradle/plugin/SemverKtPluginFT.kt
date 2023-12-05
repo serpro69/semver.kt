@@ -2,6 +2,7 @@ package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.gradle.plugin.fixture.SemverKtTestProject
 import io.github.serpro69.semverkt.gradle.plugin.gradle.Builder
+import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
 import io.github.serpro69.semverkt.release.configuration.PojoConfiguration
@@ -1018,8 +1019,34 @@ class SemverKtPluginFT : DescribeSpec({
     }
 
     describe("repository with uncommitted changes") {
+        val p: (cl: CleanRule) -> SemverKtTestProject = { cl ->
+            SemverKtTestProject(configure = { _ ->
+                val repo: GitRepoConfig = object : GitRepoConfig {
+                    override val cleanRule: CleanRule = cl
+                }
+                PojoConfiguration(gitRepoConfig = repo)
+            })
+        }
         listOf(true, false).forEach { dryRun ->
-            it("should return error when trying to release new version${if (dryRun) " and dryRun" else ""}") {
+            it("should return error when trying to release new version${if (dryRun) " and dryRun" else ""} with any difference between working tree and HEAD") {
+                val project = p(CleanRule.ALL)
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[minor]").call()
+                    project.projectDir.resolve("untracked.txt").createFile().writeText("Hello, World!")
+                }
+                // Act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
+                val result = if (dryRun) Builder.build(project = project, args = args)
+                else Builder.buildAndFail(project = project, args = args)
+                // Assert
+                result.task(":tag")?.outcome shouldBe if (dryRun) TaskOutcome.SUCCESS else TaskOutcome.FAILED
+                if (!dryRun) result.output shouldContain "Release with non-clean repository is not allowed"
+            }
+            it("should return error when trying to release new version${if (dryRun) " and dryRun" else ""} with changes to tracked files") {
                 val project = SemverKtTestProject()
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -1036,6 +1063,24 @@ class SemverKtPluginFT : DescribeSpec({
                 // Assert
                 result.task(":tag")?.outcome shouldBe if (dryRun) TaskOutcome.SUCCESS else TaskOutcome.FAILED
                 if (!dryRun) result.output shouldContain "Release with uncommitted changes is not allowed"
+            }
+            it("should allow releasing a new version${if (dryRun) " and dryRun" else ""} with disabled clean rule") {
+                val project = p(CleanRule.NONE)
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[minor]").call()
+                    project.projectDir.resolve("text.txt").writeText("Hello, World!")
+                    project.projectDir.resolve("untracked.txt").createFile().writeText("Hello, World!")
+                }
+                // Act
+                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
+                val result = Builder.build(project = project, args = args)
+                // Assert
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                result.output shouldNotContain "Release with uncommitted changes is not allowed"
             }
         }
     }

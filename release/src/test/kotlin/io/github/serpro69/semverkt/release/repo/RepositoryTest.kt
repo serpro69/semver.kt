@@ -23,8 +23,7 @@ class RepositoryTest : DescribeSpec() {
     private val git = { Git.open(testConfiguration.git.repo.directory.toFile()) }
 
     init {
-        describe("A git repository") {
-
+        describe("GitRepository") {
             context("log") {
                 it("should contain a list of versions") {
                     val expected = listOf(
@@ -103,16 +102,26 @@ class RepositoryTest : DescribeSpec() {
                 }
             }
             context("isClean") {
-                it("should return true with no uncommitted changes in the repo") {
+                it("should return true with no differences between HEAD and index") {
                     git().use { git ->
                         repo.config.git.repo.directory.resolve("foo").createDirectories().also { p ->
                                 p.resolve("test.txt").createFile().writeText("hello world")
                                 git.add().addFilepattern(".").call()
                                 git.commit().setMessage("test commit").call()
-                                p.resolve("untracked.text").createFile()
                             }
                     }
                     repo.isClean() shouldBe true
+                }
+                it("should return false with untracked files") {
+                    git().use { git ->
+                        repo.config.git.repo.directory.resolve("foo").createDirectories().also { p ->
+                            p.resolve("test.txt").createFile().writeText("hello world")
+                            git.add().addFilepattern(".").call()
+                            git.commit().setMessage("test commit").call()
+                            p.resolve("untracked.text").createFile()
+                        }
+                    }
+                    repo.isClean() shouldBe false
                 }
                 it("should return false with uncommitted staged changes") {
                     git().use {
@@ -131,6 +140,37 @@ class RepositoryTest : DescribeSpec() {
                         repo.config.git.repo.directory.resolve("test.txt").writeText("change file contents")
                     }
                     repo.isClean() shouldBe false
+                }
+            }
+            context("hasUncommittedChanges") {
+                it("should return true with no uncommitted changes") {
+                    git().use { git ->
+                        repo.config.git.repo.directory.resolve("foo").createDirectories().also { p ->
+                            p.resolve("test.txt").createFile().writeText("hello world")
+                            git.add().addFilepattern(".").call()
+                            git.commit().setMessage("test commit").call()
+                            p.resolve("untracked.text").createFile()
+                        }
+                    }
+                    repo.hasUncommittedChanges() shouldBe false
+                }
+                it("should return false with uncommitted staged changes") {
+                    git().use {
+                        repo.config.git.repo.directory.resolve("test.txt").createFile().writeText("hello world")
+                        it.add().addFilepattern("test.txt").call()
+                    }
+                    repo.hasUncommittedChanges() shouldBe true
+                }
+                it("should return false with uncommitted and unstaged changes") {
+                    git().use {
+                        // arrange
+                        repo.config.git.repo.directory.resolve("test.txt").createFile().writeText("hello world")
+                        it.add().addFilepattern("test.txt").call()
+                        it.commit().setMessage("test").call()
+                        // change file
+                        repo.config.git.repo.directory.resolve("test.txt").writeText("change file contents")
+                    }
+                    repo.hasUncommittedChanges() shouldBe true
                 }
             }
         }
