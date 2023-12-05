@@ -11,8 +11,9 @@ class DefaultConfigurationTest : DescribeSpec({
         val dc = DefaultConfiguration()
 
         it("should return default property values") {
-                dc.git.repo.remoteName shouldBe "origin"
-                dc.git.tag.useBranches shouldBe false
+            dc.git.repo.remoteName shouldBe "origin"
+            dc.git.repo.cleanRule shouldBe CleanRule.TRACKED
+            dc.git.tag.useBranches shouldBe false
         }
 
         it("should throw an exception if mandatory property is not provided") {

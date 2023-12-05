@@ -1,6 +1,7 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.release.Increment
+import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitConfig
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
@@ -25,6 +26,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
             repo {
                 directory = settings?.settingsDir?.toPath() ?: config.git.repo.directory
                 remoteName = config.git.repo.remoteName
+                cleanRule = config.git.repo.cleanRule
             }
             message {
                 major = config.git.message.major
@@ -105,6 +107,7 @@ class SemverKtPluginGitRepoConfig internal constructor(settings: Settings?) : Gi
     // use settings dir as default path for plugin config
     override var directory: Path = settings?.settingsDir?.toPath() ?: super.directory
     override var remoteName: String = super.remoteName
+    override var cleanRule: CleanRule = super.cleanRule
 }
 
 @PluginConfigDsl

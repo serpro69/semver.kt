@@ -61,12 +61,17 @@ class GitRepository(override val config: Configuration) : Repository {
     }
 
     /**
-     * Whether the [GitRepository] status is clean.
+     * Whether this [GitRepository] status is clean.
      *
-     * @return `true` if repo has no uncommitted changes, and `false` otherwise.
+     * @return `true` if no differences exist between the working-tree, the index, and the current HEAD,
+     * and `false` if differences do exist
      */
     override val isClean: () -> Boolean = {
-        !git.status().call().hasUncommittedChanges()
+        git.status().call().isClean
+    }
+
+    override val hasUncommittedChanges: () -> Boolean = {
+        git.status().call().hasUncommittedChanges()
     }
 
     /**

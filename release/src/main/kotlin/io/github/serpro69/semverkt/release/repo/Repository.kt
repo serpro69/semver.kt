@@ -43,6 +43,11 @@ interface Repository : AutoCloseable {
     val isClean: () -> Boolean
 
     /**
+     * Returns `true` if any tracked file is changed, and `false` otherwise.
+     */
+    val hasUncommittedChanges: () -> Boolean
+
+    /**
      * Returns a list of [Commit]s in this repository,
      * with an optional [predicate] to filter the commits.
      *

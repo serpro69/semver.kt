@@ -72,6 +72,7 @@ abstract class ConfigurationProvider internal constructor(private val autoConfig
     private val gitRepoConfig = object : GitRepoConfig {
         override val directory: Path = autoConfig.propertyOrNull("git.repo.directory") ?: super.directory
         override val remoteName: String = autoConfig.propertyOrNull("git.repo.remoteName") ?: super.remoteName
+        override val cleanRule: CleanRule = CleanRule.getByName(autoConfig.propertyOrNull<String>("git.repo.cleanRule") ?: super.cleanRule.name)
     }
 
     private val gitTagConfig = object : GitTagConfig {

@@ -21,13 +21,14 @@ class JsonConfigurationTest : DescribeSpec({
         val jc = JsonConfiguration(json)
 
         it("should return overridden property values") {
-                jc.git.tag.prefix shouldBe "foo"
-                jc.git.tag.separator shouldBe "bar"
+            jc.git.tag.prefix shouldBe "foo"
+            jc.git.tag.separator shouldBe "bar"
         }
 
         it("should return default property values") {
-                jc.git.repo.remoteName shouldBe "origin"
-                jc.git.tag.useBranches shouldBe false
+            jc.git.repo.remoteName shouldBe "origin"
+            jc.git.repo.cleanRule shouldBe CleanRule.TRACKED
+            jc.git.tag.useBranches shouldBe false
         }
 
         it("should throw an exception if mandatory property is not provided") {

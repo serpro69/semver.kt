@@ -16,13 +16,14 @@ class PropertiesConfigurationTest : DescribeSpec({
         val pc = PropertiesConfiguration(properties)
 
         it("should return overridden property values") {
-                pc.git.tag.prefix shouldBe "foo"
-                pc.git.tag.separator shouldBe "bar"
+            pc.git.tag.prefix shouldBe "foo"
+            pc.git.tag.separator shouldBe "bar"
         }
 
         it("should return default property values") {
-                pc.git.repo.remoteName shouldBe "origin"
-                pc.git.tag.useBranches shouldBe false
+            pc.git.repo.remoteName shouldBe "origin"
+            pc.git.repo.cleanRule shouldBe CleanRule.TRACKED
+            pc.git.tag.useBranches shouldBe false
         }
 
         it("should throw an exception if mandatory property is not provided") {

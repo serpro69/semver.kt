@@ -39,6 +39,7 @@ class DslConfigurationTest : DescribeSpec({
 
         it("should return default property values") {
             c.git.repo.remoteName shouldBe "origin"
+            c.git.repo.cleanRule shouldBe CleanRule.TRACKED
             c.git.tag.useBranches shouldBe false
         }
 

@@ -1,8 +1,8 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
 import io.github.serpro69.semverkt.release.Increment
-import io.github.serpro69.semverkt.release.configuration.DslConfiguration
 import io.github.serpro69.semverkt.release.configuration.ModuleConfig
+import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.DescribeSpec
@@ -53,6 +53,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
                 config.git.tag.separator shouldBe ""
                 config.git.message.major shouldBe "[major]"
                 config.git.repo.directory shouldBe Path(".")
+                config.git.repo.cleanRule shouldBe CleanRule.TRACKED
                 config.version.preReleaseId shouldBe "rc"
                 config.version.placeholderVersion shouldBe Semver("0.0.0")
             }
