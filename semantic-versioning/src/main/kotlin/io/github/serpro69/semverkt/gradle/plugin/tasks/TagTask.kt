@@ -78,10 +78,10 @@ abstract class TagTask : SemverReleaseTask() {
                     .findGitDir(project.projectDir)
                     .build()
                     .use {
-                        logger.log(DEBUG, "Set tag to: v$nextVer")
-                        Git(it).use { git -> git.setTag("v$nextVer") }
+                        logger.log(DEBUG, "Set tag to: ${config.git.tag.prefix}$nextVer")
+                        Git(it).use { git -> git.setTag("${config.git.tag.prefix}$nextVer") }
                     }
-            } else logger.log(LIFECYCLE, "Tag v$nextVer already exists in project")
+            } else logger.log(LIFECYCLE, "Tag ${config.git.tag.prefix}$nextVer already exists in project")
         }
     }
 }
