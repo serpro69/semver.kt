@@ -62,6 +62,8 @@ For example, if the latest version is `1.0.0`, and one of the commits since then
 
 Version precedence follows semver rules (`[major]` -> `[minor]` -> `[patch]` -> `[pre release]`), and if several commits contain a release keyword, then the highest precedence keyword will be used. For example, if there were 3 commits between latest version and current HEAD, and one of those commits contains `[minor]` keyword and another contains `[major]` keyword, the next version will be bumped with the major increment.
 
+By default, releasing with uncommitted changes is not allowed and will fail the `:tag` task. This can be overridden by setting `git.repo.cleanRule` configuration property to `none`. The default rule will only consider tracked changes, and will allow releases with untracked files in the repository. To override this and only allow releases of "clean" repository, set the `cleanRule` property to `all` (See [Configuration](#configuration) section for more details.)
+
 #### Releasing via gradle properties
 
 TODO
@@ -77,7 +79,8 @@ The full config file looks like this:
   "git": {
     "repo": {
       "directory": ".",
-      "remoteName": "origin"
+      "remoteName": "origin",
+      "cleanRule": "tracked"
     },
     "tag": {
       "prefix": "v",
