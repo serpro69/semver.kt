@@ -45,7 +45,7 @@ subprojects {
         testImplementation("io.github.serpro69:kotlin-faker:1.15.0")
 
         if (subProject.name in listOf("release", "semantic-versioning")) {
-            val jgitVer = "5.13.0.202109080827-r"
+            val jgitVer = "5.13.2.202306221912-r"
             implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
             implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
         }
