@@ -8,7 +8,7 @@ pluginManagement {
 }
 
 plugins {
-    id("io.github.serpro69.semantic-versioning") version "0.6.0"
+    id("io.github.serpro69.semantic-versioning") version "0.7.0"
 }
 
 rootProject.name = "semver.kt"
@@ -25,5 +25,10 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
             preRelease = "[rc]"
             ignoreCase = true
         }
+    }
+    monorepo {
+      module("release") {}
+      module("semantic-versioning") {}
+      module("spec") {}
     }
 }

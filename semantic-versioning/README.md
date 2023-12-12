@@ -22,7 +22,11 @@ _**Note**: The gradle documentation specifies that the version property is an `O
 
 ### Installation
 
-The latest version of this plugin can be found on [semantic-versioning gradle plugin](https://plugins.gradle.org/plugin/io.github.serpro69.semantic-versioning) page. Using the plugin is quite simple:
+The latest version of this plugin can be found on [semantic-versioning gradle plugin](https://plugins.gradle.org/plugin/io.github.serpro69.semantic-versioning) page.
+
+***NB! While gradle makes a new release of a plugin available instantly, maven central takes some time to sync, and hence a new version of the plugin might not always work right away and report missing dependencies on the other submodules in this project.***
+
+Using the plugin is quite simple:
 
 **In `settings.gradle.kts`**
 
