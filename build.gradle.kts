@@ -21,7 +21,6 @@ group = "io.github.serpro69"
 
 subprojects {
     group = parent?.group?.toString() ?: "io.github.serpro69"
-    version = rootProject.version
     val subProject = this@subprojects
     val projectArtifactId = "${rootProject.name}-${subProject.name}"
     val isGradlePlugin = subProject.name == "semantic-versioning"

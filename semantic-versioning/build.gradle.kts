@@ -1,3 +1,5 @@
+import io.github.serpro69.semverkt.spec.Semver
+
 plugins {
     `java-gradle-plugin`
     id("com.gradle.plugin-publish") version "1.2.1"
@@ -25,11 +27,25 @@ configurations {
     getByName("functionalTestRuntimeOnly") { extendsFrom(testRuntimeOnly.get()) }
 }
 
+val release = project.rootProject.subprojects.first { it.name == "release" }
+    ?: throw GradleException("release project not found")
+
 dependencies {
     val integrationTestImplementation by configurations
     val functionalTestImplementation by configurations
     compileOnly(gradleApi())
-    api(project(":release"))
+    /* :release and :semantic-versioning are versioned separately
+     * during development versions will always equal (both are set to a version placeholder via gradle.properties),
+     * but during publishing they might not (depending on changes to a given module)
+     * hence we check the versions equality and either set a dependency on a published :spec artifact
+     * or a project-type dependency on the submodule
+     */
+    if (Semver(project.version.toString()) != (Semver(release.version.toString()))) {
+        // use latest version before next major
+        api("io.github.serpro69:semver.kt-release:[0.7.0,1.0.0)")
+    } else {
+        api(project(":release"))
+    }
     testCompileOnly(gradleTestKit())
     integrationTestImplementation(project)
     functionalTestImplementation(project)
