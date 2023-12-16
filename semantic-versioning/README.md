@@ -1,6 +1,6 @@
 # `io.github.serpro69.semantic-versioning:$version`
 
-[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.serpro69.semantic-versioning)](https://plugins.gradle.org/plugin/io.github.serpro69.semantic-versioning)
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.serpro69.semantic-versioning?style=for-the-badge)](https://plugins.gradle.org/plugin/io.github.serpro69.semantic-versioning)
 
 ## Intro
 

@@ -6,7 +6,7 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     java
-    kotlin("jvm") version "1.9.10" apply false
+    kotlin("jvm") version "1.9.20" apply false
     id("org.jetbrains.dokka") version "1.9.10"
     `maven-publish`
     signing
