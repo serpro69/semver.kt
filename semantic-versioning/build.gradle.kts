@@ -1,3 +1,4 @@
+import com.gradle.publish.PublishTask
 import io.github.serpro69.semverkt.spec.Semver
 
 plugins {
@@ -88,9 +89,24 @@ publishing {
     }
 }
 
+tasks.withType<PublishTask>().configureEach {
+    val predicate = provider {
+        version.toString() != "0.0.0"
+            && group == "Plugin Portal"
+    }
+    onlyIf("New release") { predicate.get() }
+}
+
 // workaround for https://github.com/gradle-nexus/publish-plugin/issues/84
 tasks.withType<PublishToMavenRepository>().configureEach {
-    onlyIf {
-        !repository.name.contains("sonatype", ignoreCase = true)
+    val predicate = provider {
+        version.toString() == "0.0.0"
+            && repository.name == "localPluginRepo"
     }
+    onlyIf("In development") { predicate.get() }
+}
+
+tasks.withType<PublishToMavenLocal>().configureEach {
+    val predicate = provider { version.toString() == "0.0.0" }
+    onlyIf("In development") { predicate.get() }
 }
