@@ -7,8 +7,6 @@ import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.gradle.api.GradleException
-import org.gradle.api.logging.LogLevel.DEBUG
-import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Internal
@@ -35,25 +33,25 @@ abstract class TagTask : SemverReleaseTask() {
     fun tag() {
         // check if tag already set, if so tell plugin it's UP-TO-DATE
         val (current, latest, next) = Triple(currentVersion.orNull, latestVersion.orNull, nextVersion.orNull)
-        logger.log(DEBUG, "latestVersion: $latest")
-        logger.log(DEBUG, "nextVersion: $next")
+        logger.debug("latestVersion: {}", latest)
+        logger.debug("nextVersion: {}", next)
         when {
             // current version points at HEAD - don't do anything
-            current != null -> logger.log(LIFECYCLE, "Current version: $current")
+            current != null -> logger.lifecycle("Current version: {}", current)
             next != null && next.toString().endsWith(config.get().version.snapshotSuffix) -> {
-                logger.log(LIFECYCLE, "Snapshot version, not doing anything")
+                logger.lifecycle("Snapshot version, not doing anything")
             }
             // release new version
             (next != null && latest != null) && (next > latest) -> {
-                logger.log(LIFECYCLE, "Calculated next version: $next")
+                logger.lifecycle("Calculated next version: {}", next)
                 setTag(next, config.get())
             }
             // release first version
             next != null && latest == null -> {
-                logger.log(LIFECYCLE, "Calculated next version: $next")
+                logger.lifecycle("Calculated next version: {}", next)
                 setTag(next, config.get())
             }
-            else -> logger.log(LIFECYCLE, "Not doing anything")
+            else -> logger.lifecycle("Not doing anything")
         }
     }
 
@@ -72,16 +70,16 @@ abstract class TagTask : SemverReleaseTask() {
                 }
             }
             if (!tagExists) {
-                logger.log(DEBUG, "Open repo at: $this")
+                logger.debug("Open repo at: {}", this)
                 FileRepositoryBuilder()
                     .setWorkTree(project.projectDir)
                     .findGitDir(project.projectDir)
                     .build()
                     .use {
-                        logger.log(DEBUG, "Set tag to: ${config.git.tag.prefix}$nextVer")
+                        logger.debug("Set tag to: {}{}", config.git.tag.prefix, nextVer)
                         Git(it).use { git -> git.setTag("${config.git.tag.prefix}$nextVer") }
                     }
-            } else logger.log(LIFECYCLE, "Tag ${config.git.tag.prefix}$nextVer already exists in project")
+            } else logger.lifecycle("Tag {}{} already exists in project", config.git.tag.prefix, nextVer)
         }
     }
 }

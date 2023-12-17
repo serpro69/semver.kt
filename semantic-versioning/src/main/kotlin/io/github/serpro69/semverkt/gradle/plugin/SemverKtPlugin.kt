@@ -16,7 +16,6 @@ import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.initialization.Settings
-import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logging
 import kotlin.io.path.Path
 
@@ -27,7 +26,7 @@ class SemverKtPlugin : Plugin<Settings> {
     override fun apply(settings: Settings) {
         val config: SemverKtPluginConfig = settings.settingsDir.resolve("semantic-versioning.json").let {
             if (it.exists()) {
-                logger.log(LogLevel.DEBUG, "Using semantic-versioning.json for plugin configuration...")
+                logger.debug("Using semantic-versioning.json for plugin configuration...")
                 return@let SemverKtPluginConfig(JsonConfiguration(it), settings)
             }
             SemverKtPluginConfig(settings)
@@ -35,17 +34,18 @@ class SemverKtPlugin : Plugin<Settings> {
         // override configuration via settings extension
         settings.extensions.create("semantic-versioning", SemverPluginExtension::class.java, config)
 
-        logger.log(LogLevel.DEBUG, "Using configuration: ${config.jsonString()}")
+        logger.debug("Using configuration: {}", config.jsonString())
 
         // configure all projects with semver
         settings.gradle.allprojects { project ->
             configureProject(project, config)
         }
 
-        logger.log(LogLevel.INFO, "Finish applying plugin...")
+        logger.info("Finish applying plugin...")
     }
 
     private fun configureProject(project: Project, config: SemverKtPluginConfig) {
+        logger.info("Configure {}", project.name)
         val (currentVersion, latestVersion, nextVersion) = setVersion(project, config)
 
         project.tasks.register("tag", TagTask::class.java) {
@@ -85,7 +85,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 val s = head().name
                 val e = headVersionTag()?.name ?: latestVersionTag()?.name ?: log().last().objectId.name
                 diff(s, e).any {
-                    logger.log(LogLevel.DEBUG, "${project.name} diff: $it")
+                    logger.debug("{} diff: {}", project.name, it)
                     val srcPath = Path(module.name).resolve(module.sources).normalize()
                     Path(it.oldPath).startsWith(srcPath) || Path(it.newPath).startsWith(srcPath)
                 }
@@ -112,10 +112,10 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             // ELSE figure out next version
             val latestVersion = latestVersion()
-            logger.log(LogLevel.INFO, "Latest version: $latestVersion")
+            logger.info("Latest version: {}", latestVersion)
             val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(nextIncrement()) {
-                logger.log(LogLevel.DEBUG, "Next increment from property: $propIncrement")
-                logger.log(LogLevel.DEBUG, "Next increment from git commit: $this")
+                logger.debug("Next increment from property: {}", propIncrement)
+                logger.debug("Next increment from git commit: {}", this)
                 when (propIncrement) {
                     // 1. check allowed values for gradle-property based increment
                     //    - DEFAULT is not used with 'increment' property
@@ -132,10 +132,10 @@ class SemverKtPlugin : Plugin<Settings> {
                     else -> this
                 }
             }
-            logger.log(LogLevel.INFO, "Calculated version increment: $increaseVersion")
+            logger.info("Calculated version increment: {}", increaseVersion)
             val nextVersion = if (!hasChanges) null else if (propPromoteRelease) {
                 with(promoteToRelease()) {
-                    logger.log(LogLevel.INFO, "Promote $latestVersion to $this")
+                    logger.info("Promote {} to {}", latestVersion, this)
                     when {
                         propRelease -> this
                         config.version.useSnapshots -> this?.copy(
@@ -148,7 +148,7 @@ class SemverKtPlugin : Plugin<Settings> {
             } else if (propPreRelease) {
                 val inc = if (increaseVersion in listOf(DEFAULT, NONE)) DEFAULT else increaseVersion
                 with(createPreRelease(inc)) {
-                    logger.log(LogLevel.INFO, "Create pre-release $this from $latestVersion")
+                    logger.info("Create pre-release {} from {}", this, latestVersion)
                     when {
                         propRelease -> this
                         else -> null
@@ -156,15 +156,15 @@ class SemverKtPlugin : Plugin<Settings> {
                 }
             } else when (increaseVersion) {
                 MAJOR, MINOR, PATCH -> {
-                    logger.log(LogLevel.INFO, "Create release...")
+                    logger.info("Create release...")
                     release(increaseVersion)
                 }
                 PRE_RELEASE -> {
                     latestVersion?.preRelease?.let {
-                        logger.log(LogLevel.INFO, "Next pre-release...")
+                        logger.info("Next pre-release...")
                         release(increaseVersion)
                     } ?: run {
-                        logger.log(LogLevel.INFO, "Create default pre-release...")
+                        logger.info("Create default pre-release...")
                         createPreRelease(DEFAULT)
                     }
                 }
@@ -184,7 +184,7 @@ class SemverKtPlugin : Plugin<Settings> {
                     else -> null
                 }
             }
-            logger.log(LogLevel.INFO, "Next version: $nextVersion")
+            logger.info("Next version: {}", nextVersion)
             // set snapshot version explicitly because comparison with latestVersion might fail
             // depending on the snapshot suffix
             //  - because X.Y.Z-SNAPSHOT is considered a pre-release from semver perspective
@@ -198,9 +198,9 @@ class SemverKtPlugin : Plugin<Settings> {
             val setInitial by lazy { latestVersion == null }
             if (nextVersion != null && (setSnapshot || setNext || setInitial)) {
                 project.version = nextVersion
-                logger.log(LogLevel.DEBUG, "Set project.version: ${(project.version)}")
-            } else logger.log(LogLevel.DEBUG, "Not doing anything...")
-            logger.log(LogLevel.INFO, "Done...")
+                logger.debug("Set project.version: {}", project.version)
+            } else logger.debug("Not doing anything...")
+            logger.info("Done...")
             Triple(null, latestVersion, nextVersion)
         }
     }
