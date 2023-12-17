@@ -30,7 +30,7 @@ test: ## Runs tests for the project
 .PHONY: local
 local: _check_java ## Publishes artifacts to local repos
 	# publish to local maven
-	./gradlew publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository -Pversion=0.0.0
+	./gradlew clean publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository -Pversion='0.0.0-dev'
 
 .PHONY: release
 release: _check_java test ## Publishes the next release

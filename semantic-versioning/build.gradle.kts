@@ -91,7 +91,7 @@ publishing {
 
 tasks.withType<PublishTask>().configureEach {
     val predicate = provider {
-        version.toString() != "0.0.0"
+        !version.toString().startsWith("0.0.0")
             && group == "Plugin Portal"
     }
     onlyIf("New release") { predicate.get() }
@@ -100,13 +100,13 @@ tasks.withType<PublishTask>().configureEach {
 // workaround for https://github.com/gradle-nexus/publish-plugin/issues/84
 tasks.withType<PublishToMavenRepository>().configureEach {
     val predicate = provider {
-        version.toString() == "0.0.0"
+        version.toString().startsWith("0.0.0")
             && repository.name == "localPluginRepo"
     }
     onlyIf("In development") { predicate.get() }
 }
 
 tasks.withType<PublishToMavenLocal>().configureEach {
-    val predicate = provider { version.toString() == "0.0.0" }
+    val predicate = provider { version.toString().startsWith("0.0.0") }
     onlyIf("In development") { predicate.get() }
 }

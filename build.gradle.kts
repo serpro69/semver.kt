@@ -220,18 +220,18 @@ subprojects {
         }
 
         signing {
-            if (!version.toString().endsWith("SNAPSHOT")) {
+            if (!version.toString().endsWith("SNAPSHOT") && !version.toString().startsWith("0.0.0")) {
                 sign(publishing.publications[publicationName])
             }
         }
 
         tasks.withType<PublishToMavenRepository>().configureEach {
-            val predicate = provider { version.toString() != "0.0.0" }
+            val predicate = provider { !version.toString().startsWith("0.0.0") }
             onlyIf("New release") { predicate.get() }
         }
 
         tasks.withType<PublishToMavenLocal>().configureEach {
-            val predicate = provider { version.toString() == "0.0.0" }
+            val predicate = provider { version.toString().startsWith("0.0.0") }
             onlyIf("In development") { predicate.get() }
         }
     }

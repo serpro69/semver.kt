@@ -240,7 +240,7 @@ If running tests with gradle runner is not possible (I, for one, couldn't yet fi
 
 ### Manual Testing
 
-To publish plugin and dependencies locally, run `./gradlew publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository`, which will publish dependencies to local maven directory (e.g. `~/.m2/repository`), and the plugin to `./build/local-plugin-repo`.
+To publish plugin and dependencies locally, run `./gradlew publishToMavenLocal publishAllPublicationsToLocalPluginRepoRepository` (or use the `make local`), which will publish dependencies to local maven directory (e.g. `~/.m2/repository`), and the plugin to `./build/local-plugin-repo`.
 
 Once that's done, one can set up gradle to fetch the plugin from local sources by updating `settings.gradle.kts`:
 
@@ -257,7 +257,7 @@ pluginManagement {
 }
 
 plugins {
-    id("io.github.serpro69.semantic-versioning") version "0.0.0"
+    id("io.github.serpro69.semantic-versioning") version "0.0.0-dev"
 }
 
 rootProject.name = "test"
