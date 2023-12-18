@@ -8,7 +8,7 @@ pluginManagement {
 }
 
 plugins {
-    id("io.github.serpro69.semantic-versioning") version "0.7.0"
+    id("io.github.serpro69.semantic-versioning") version "0.7.1"
 }
 
 rootProject.name = "semver.kt"
