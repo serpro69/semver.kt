@@ -235,7 +235,7 @@ class SemverReleaseTest : DescribeSpec() {
                 }
                 it("initial version with pre-release should be created") {
                     val tempDir = Files.createTempDirectory("semver-test")
-                    Git.init().setGitDir(tempDir.toFile()).call().use {
+                    Git.init().setDirectory(tempDir.toFile()).call().use {
                         it.addCommit("Test commit")
                     }
                     val props = Properties().apply {
@@ -265,7 +265,7 @@ class SemverReleaseTest : DescribeSpec() {
                 }
                 it("should return null if no versions exist in the project") {
                     val tempDir = Files.createTempDirectory("semver-test")
-                    Git.init().setGitDir(tempDir.toFile()).call().use {
+                    Git.init().setDirectory(tempDir.toFile()).call().use {
                         it.addCommit("Test commit")
                     }
                     val props = Properties().apply {
@@ -295,7 +295,7 @@ class SemverReleaseTest : DescribeSpec() {
             }
             it("should be possible to release the version manually when no versions exist") {
                 val tempDir = Files.createTempDirectory("semver-test")
-                Git.init().setGitDir(tempDir.toFile()).call().use {
+                Git.init().setDirectory(tempDir.toFile()).call().use {
                     it.addCommit("Test commit")
                 }
                 val props = Properties().apply { this["git.repo.directory"] = tempDir }
