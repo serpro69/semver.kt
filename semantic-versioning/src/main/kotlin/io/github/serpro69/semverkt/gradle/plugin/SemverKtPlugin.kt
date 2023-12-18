@@ -81,10 +81,12 @@ class SemverKtPlugin : Plugin<Settings> {
         val module = config.monorepo.modules.firstOrNull { it.name == project.name }
         val hasChanges by lazy {
             if (project == project.rootProject) true // always apply version to root project
-            else if (isMonorepo && module != null) with(GitRepository(config)) {
-                val s = head().name
-                val e = headVersionTag()?.name ?: latestVersionTag()?.name ?: log().last().objectId.name
-                diff(s, e).any {
+            else if (isMonorepo && module != null) GitRepository(config).use { repo ->
+                val s = repo.head().name
+                val e = repo.headVersionTag()?.name
+                    ?: repo.latestVersionTag()?.name
+                    ?: repo.log().last().objectId.name
+                repo.diff(s, e).any {
                     logger.debug("{} diff: {}", project.name, it)
                     val srcPath = Path(module.name).resolve(module.sources).normalize()
                     Path(it.oldPath).startsWith(srcPath) || Path(it.newPath).startsWith(srcPath)
@@ -93,11 +95,11 @@ class SemverKtPlugin : Plugin<Settings> {
             else true // module not versioned separately
         }
 
-        return with(SemverRelease(config)) {
+        return SemverRelease(config).use { svr ->
             // IF git HEAD points at a version, set and return it and don't do anything else
-            currentVersion()?.let {
+            svr.currentVersion()?.let {
                 project.version = it
-                return@with Triple(it, null, null)
+                return@use Triple(it, null, null)
             }
             // ELSE IF version is specified via gradle property, use that as nextVersion
             // NB! this explicitly applies to all monorepo modules regardless of whether a module had changes or not
@@ -108,12 +110,12 @@ class SemverKtPlugin : Plugin<Settings> {
                 && Semver.isValid(v)
             ) {
                 project.version = Semver(v)
-                return@with Triple(null, null, Semver(v))
+                return@use Triple(null, null, Semver(v))
             }
             // ELSE figure out next version
-            val latestVersion = latestVersion()
+            val latestVersion = svr.latestVersion()
             logger.info("Latest version: {}", latestVersion)
-            val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(nextIncrement()) {
+            val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(svr.nextIncrement()) {
                 logger.debug("Next increment from property: {}", propIncrement)
                 logger.debug("Next increment from git commit: {}", this)
                 when (propIncrement) {
@@ -134,7 +136,7 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             logger.info("Calculated version increment: {}", increaseVersion)
             val nextVersion = if (!hasChanges) null else if (propPromoteRelease) {
-                with(promoteToRelease()) {
+                with(svr.promoteToRelease()) {
                     logger.info("Promote {} to {}", latestVersion, this)
                     when {
                         propRelease -> this
@@ -147,7 +149,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 }
             } else if (propPreRelease) {
                 val inc = if (increaseVersion in listOf(DEFAULT, NONE)) DEFAULT else increaseVersion
-                with(createPreRelease(inc)) {
+                with(svr.createPreRelease(inc)) {
                     logger.info("Create pre-release {} from {}", this, latestVersion)
                     when {
                         propRelease -> this
@@ -157,20 +159,20 @@ class SemverKtPlugin : Plugin<Settings> {
             } else when (increaseVersion) {
                 MAJOR, MINOR, PATCH -> {
                     logger.info("Create release...")
-                    release(increaseVersion)
+                    svr.release(increaseVersion)
                 }
                 PRE_RELEASE -> {
                     latestVersion?.preRelease?.let {
                         logger.info("Next pre-release...")
-                        release(increaseVersion)
+                        svr.release(increaseVersion)
                     } ?: run {
                         logger.info("Create default pre-release...")
-                        createPreRelease(DEFAULT)
+                        svr.createPreRelease(DEFAULT)
                     }
                 }
                 DEFAULT, NONE -> when {
                     // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
-                    propRelease -> release(config.version.defaultIncrement)
+                    propRelease -> svr.release(config.version.defaultIncrement)
                     // if -Prelease is NOT set then create snapshot version if snapshots are enabled in configuration
                     config.version.useSnapshots -> {
                         val inc = when (propIncrement) {
@@ -179,7 +181,7 @@ class SemverKtPlugin : Plugin<Settings> {
                             !in listOf(DEFAULT, NONE) -> propIncrement
                             else -> config.version.defaultIncrement
                         }
-                        snapshot(inc)
+                        svr.snapshot(inc)
                     }
                     else -> null
                 }

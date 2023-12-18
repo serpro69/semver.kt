@@ -3,7 +3,6 @@ package io.github.serpro69.semverkt.release.repo
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
-import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 
 /**
