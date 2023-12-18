@@ -546,7 +546,7 @@ class SemverKtPluginFT : DescribeSpec({
 
     describe("compatible gradle version") {
         // gradle 8.x
-        (0..4).forEach { minorVer ->
+        (0..5).forEach { minorVer ->
             context("gradle 8.$minorVer") {
                 it("should be compatible") {
                     val project = SemverKtTestProject()

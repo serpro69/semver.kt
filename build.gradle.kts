@@ -44,26 +44,26 @@ subprojects {
         testImplementation("io.github.serpro69:kotlin-faker:1.15.0")
 
         if (subProject.name in listOf("release", "semantic-versioning")) {
-            val jgitVer = "5.13.2.202306221912-r"
+            val jgitVer = "6.8.0.202311291450-r"
             implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
             implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
         }
     }
 
     configure<JavaPluginExtension> {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     tasks.withType<JavaCompile> {
         options.encoding = "UTF-8"
-        sourceCompatibility = "1.8"
-        targetCompatibility = "1.8"
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
 
     tasks.withType<KotlinCompile> {
         kotlinOptions {
-            jvmTarget = "1.8"
+            jvmTarget = "17"
         }
     }
 

@@ -35,3 +35,9 @@ In addition, I want to expand on the idea of avoiding hardcoded versions in buil
 ## Usage
 
 Each of the modules can be used separately either as a library by declaring a dependency or as a gradle plugin. For module-specific usage details see modules' respective README files.
+
+### Requirements
+
+- java == 17 (for `:spec` and `:release` modules)
+- kotlin == 1.9 (for `:spec` and `:release` modules)
+- gradle >= 8.0 (for `:semantic-versioning` module)
