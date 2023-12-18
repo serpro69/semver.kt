@@ -2,7 +2,6 @@ package io.github.serpro69.semverkt.release
 
 import io.github.serpro69.kfaker.faker
 import io.github.serpro69.semverkt.release.configuration.DslConfiguration
-import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git

@@ -21,7 +21,7 @@ class GitRepositoryTest : DescribeSpec({
                 it["git.repo.directory"] = dir
             }
             val testConfiguration = PropertiesConfiguration(testProperties)
-            val ex = shouldThrow<IOException> { GitRepository(testConfiguration).tags() }
+            val ex = shouldThrow<IOException> { GitRepository(testConfiguration).use { it.tags() } }
             ex.message shouldBe "Can't open $dir as git repository"
             ex.cause shouldBe RepositoryNotFoundException(dir.absolutePathString())
         }

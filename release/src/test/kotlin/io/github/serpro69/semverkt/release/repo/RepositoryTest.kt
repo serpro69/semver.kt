@@ -32,15 +32,17 @@ class RepositoryTest : DescribeSpec() {
                         Semver("0.2.0"),
                         Semver("0.1.0")
                     )
-                    repo.log()
-                        .mapNotNull { it.tag }
-                        .map { semver(testConfiguration.git.tag)(it) } shouldBe expected
+                    repo.use {
+                        it.log()
+                            .mapNotNull { it.tag }
+                            .map { semver(testConfiguration.git.tag)(it) } shouldBe expected
+                    }
                 }
                 it("should return last version by tag") {
-                    repo.latestVersionTag()?.simpleTagName shouldBe "v0.4.0"
+                    repo.use { it.latestVersionTag()?.simpleTagName } shouldBe "v0.4.0"
                 }
                 it("should return a log of commits after the last version") {
-                    val commits = repo.log(repo.latestVersionTag())
+                    val commits = repo.use { it.log(repo.latestVersionTag()) }
                     assertSoftly {
                         commits.size shouldBe 2
                         commits.first().message.title shouldBe "Commit #6"
@@ -49,10 +51,10 @@ class RepositoryTest : DescribeSpec() {
                     }
                 }
                 it("should return full log of commits if untilTag is null") {
-                    repo.log(untilTag = null) shouldContainExactly repo.log()
+                    repo.use {it .log(untilTag = null) } shouldContainExactly repo.use { it.log() }
                 }
                 it("should filter commits by predicate") {
-                    val commits = repo.log { it.title == "Commit #6" }
+                    val commits = repo.use { r -> r.log { it.title == "Commit #6" } }
                     assertSoftly {
                         commits.size shouldBe 1
                         commits.first().message.title shouldBe "Commit #6"
@@ -61,7 +63,7 @@ class RepositoryTest : DescribeSpec() {
             }
             context("last version") {
                 it("should return last version - ordered") {
-                    repo.latestVersionTag()?.simpleTagName shouldBe "v0.4.0"
+                    repo.use { it.latestVersionTag()?.simpleTagName } shouldBe "v0.4.0"
                 }
                 it("should return last version - unordered") {
                     git().use {
@@ -69,21 +71,21 @@ class RepositoryTest : DescribeSpec() {
                         it.addRelease(3, Semver("2.0.0"))
                         it.addRelease(3, Semver("1.0.0"))
                     }
-                    repo.latestVersionTag()?.simpleTagName shouldBe "v3.0.0"
+                    repo.use { it.latestVersionTag()?.simpleTagName } shouldBe "v3.0.0"
                 }
             }
             context("HEAD version") {
                 it("should return annotated tag version at HEAD") {
                     git().use { it.addRelease(1, Semver("1.0.0"), annotated = true) }
-                    repo.headVersionTag()?.simpleTagName shouldBe "v1.0.0"
+                    repo.use { it.headVersionTag()?.simpleTagName } shouldBe "v1.0.0"
                 }
                 it("should return tag version at HEAD") {
                     git().use { it.addRelease(1, Semver("1.0.0"), annotated = false) }
-                    repo.headVersionTag()?.simpleTagName shouldBe "v1.0.0"
+                    repo.use { it.headVersionTag()?.simpleTagName } shouldBe "v1.0.0"
                 }
                 it("should return null if HEAD has no versions") {
                     git().use { it.addCommit("Test commit without release") }
-                    repo.headVersionTag() shouldBe null
+                    repo.use { it.headVersionTag() } shouldBe null
                 }
             }
             context("diff") {
@@ -93,7 +95,7 @@ class RepositoryTest : DescribeSpec() {
                         it.addCommit("Commit #7", fileName = "testfile")
                         it.addCommit("Commit #8", fileName = "testfile2")
                     }
-                    val diff = repo.diff(repo.head().name, repo.latestVersionTag()?.name!!)
+                    val diff = repo.use { it.diff(it.head().name, it.latestVersionTag()?.name!!) }
                     assertSoftly {
                         diff.size shouldBe 2
                         diff.first().oldPath shouldBe "testfile.txt"
@@ -110,7 +112,7 @@ class RepositoryTest : DescribeSpec() {
                                 git.commit().setMessage("test commit").call()
                             }
                     }
-                    repo.isClean() shouldBe true
+                    repo.use { it.isClean() } shouldBe true
                 }
                 it("should return false with untracked files") {
                     git().use { git ->
@@ -121,14 +123,14 @@ class RepositoryTest : DescribeSpec() {
                             p.resolve("untracked.text").createFile()
                         }
                     }
-                    repo.isClean() shouldBe false
+                    repo.use { it.isClean() } shouldBe false
                 }
                 it("should return false with uncommitted staged changes") {
                     git().use {
                         repo.config.git.repo.directory.resolve("test.txt").createFile().writeText("hello world")
                         it.add().addFilepattern("test.txt").call()
                     }
-                    repo.isClean() shouldBe false
+                    repo.use { it.isClean() } shouldBe false
                 }
                 it("should return false with uncommitted and unstaged changes") {
                     git().use {
@@ -139,7 +141,7 @@ class RepositoryTest : DescribeSpec() {
                         // change file
                         repo.config.git.repo.directory.resolve("test.txt").writeText("change file contents")
                     }
-                    repo.isClean() shouldBe false
+                    repo.use { it.isClean() } shouldBe false
                 }
             }
             context("hasUncommittedChanges") {
@@ -152,14 +154,14 @@ class RepositoryTest : DescribeSpec() {
                             p.resolve("untracked.text").createFile()
                         }
                     }
-                    repo.hasUncommittedChanges() shouldBe false
+                    repo.use { it.hasUncommittedChanges() } shouldBe false
                 }
                 it("should return false with uncommitted staged changes") {
                     git().use {
                         repo.config.git.repo.directory.resolve("test.txt").createFile().writeText("hello world")
                         it.add().addFilepattern("test.txt").call()
                     }
-                    repo.hasUncommittedChanges() shouldBe true
+                    repo.use { it.hasUncommittedChanges() } shouldBe true
                 }
                 it("should return false with uncommitted and unstaged changes") {
                     git().use {
@@ -170,7 +172,7 @@ class RepositoryTest : DescribeSpec() {
                         // change file
                         repo.config.git.repo.directory.resolve("test.txt").writeText("change file contents")
                     }
-                    repo.hasUncommittedChanges() shouldBe true
+                    repo.use { it.hasUncommittedChanges() } shouldBe true
                 }
             }
         }
@@ -187,5 +189,9 @@ class RepositoryTest : DescribeSpec() {
     override suspend fun afterTest(testCase: TestCase, result: TestResult) {
         repo.close()
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
+    }
+
+    override fun afterSpec(f: suspend (Spec) -> Unit) {
+        repo.close()
     }
 }

@@ -29,6 +29,11 @@ class ExtensionsTest : DescribeSpec() {
     }
 
     override suspend fun afterEach(testCase: TestCase, result: TestResult) {
+        repo.close()
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
+    }
+
+    override fun afterSpec(f: suspend (Spec) -> Unit) {
+        repo.close()
     }
 }
