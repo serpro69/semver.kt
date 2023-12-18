@@ -56,14 +56,17 @@ abstract class TagTask : SemverReleaseTask() {
     }
 
     private fun setTag(nextVer: Semver, config: SemverKtPluginConfig) {
-        if (!dryRun.get()) run {
+        if (nextVer.toString().endsWith(config.version.snapshotSuffix)) {
+            logger.lifecycle("Can't create a tag for a snapshot version")
+        } else if (!dryRun.get()) run {
             // check if tag exists, don't try to create a duplicate
             val tagExists = GitRepository(config).use { repo ->
                 // check if repo is clean
                 when (config.git.repo.cleanRule) {
                     CleanRule.ALL -> if (!repo.isClean()) throw GradleException("Release with non-clean repository is not allowed")
                     CleanRule.TRACKED -> if (repo.hasUncommittedChanges()) throw GradleException("Release with uncommitted changes is not allowed")
-                    CleanRule.NONE -> { /* noop */ }
+                    CleanRule.NONE -> { /* noop */
+                    }
                 }
                 repo.tags().any {
                     Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer
