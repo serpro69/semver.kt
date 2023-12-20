@@ -1,12 +1,13 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.util.*
 import org.gradle.api.tasks.testing.TestResult.ResultType
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.util.*
+import org.jetbrains.kotlin.config.KotlinCompilerVersion.VERSION as KOTLIN_VERSION
 
 plugins {
     java
-    kotlin("jvm") version "1.9.20" apply false
+    kotlin("jvm") version "1.9.21" apply false
     id("org.jetbrains.dokka") version "1.9.10"
     `maven-publish`
     signing
@@ -18,6 +19,17 @@ repositories {
 }
 
 group = "io.github.serpro69"
+
+allprojects {
+    configurations.matching { it.name != "detekt" }.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
+                useVersion(KOTLIN_VERSION)
+                because("All Kotlin modules should use the same version, and compiler uses $KOTLIN_VERSION")
+            }
+        }
+    }
+}
 
 subprojects {
     group = parent?.group?.toString() ?: "io.github.serpro69"
