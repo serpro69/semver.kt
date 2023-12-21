@@ -1,5 +1,10 @@
 package io.github.serpro69.semverkt.release
 
+import io.github.serpro69.semverkt.release.Increment.DEFAULT
+import io.github.serpro69.semverkt.release.Increment.MAJOR
+import io.github.serpro69.semverkt.release.Increment.MINOR
+import io.github.serpro69.semverkt.release.Increment.PATCH
+import io.github.serpro69.semverkt.release.Increment.PRE_RELEASE
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 
 /**
@@ -17,10 +22,9 @@ enum class Increment {
 
     companion object {
         fun getByName(name: String): Increment {
-            return entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
+            return enumValues<Increment>().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
         }
     }
 
     override fun toString(): String = name.lowercase()
 }
-

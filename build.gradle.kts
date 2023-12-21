@@ -24,8 +24,13 @@ allprojects {
     configurations.matching { it.name != "detekt" }.all {
         resolutionStrategy.eachDependency {
             if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
-                useVersion(KOTLIN_VERSION)
-                because("All Kotlin modules should use the same version, and compiler uses $KOTLIN_VERSION")
+                if (attributes.getAttribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE)?.toString() == "7.2") {
+                    useVersion("1.8.22")
+                    because("All Kotlin modules should use the same version, and gradle 7.2 supports up to 1.8.22")
+                } else if (attributes.getAttribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE)?.toString() == "8.0") {
+                    useVersion(KOTLIN_VERSION)
+                    because("All Kotlin modules should use the same version, and compiler uses $KOTLIN_VERSION")
+                }
             }
         }
     }
@@ -49,17 +54,42 @@ subprojects {
         plugin("signing")
     }
 
-    dependencies {
-        implementation(kotlin("stdlib-jdk8"))
-        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.7.2")
-        testImplementation("io.kotest:kotest-assertions-core-jvm:5.7.2")
-        testImplementation("io.github.serpro69:kotlin-faker:1.15.0")
+    java {
+        registerFeature("gradle7") {
+            usingSourceSet(sourceSets.main.get())
+        }
+    }
 
+    dependencies {
+        val gradle7Implementation by configurations
+        implementation(kotlin("stdlib-jdk8"))
+        gradle7Implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8") {
+            version {
+                strictly("1.8.22")
+            }
+        }
+        gradle7Implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7") {
+            version {
+                strictly("1.8.22")
+            }
+        }
+        gradle7Implementation("org.jetbrains.kotlin:kotlin-stdlib") {
+            version {
+                strictly("1.8.22")
+            }
+        }
         if (subProject.name in listOf("release", "semantic-versioning")) {
             val jgitVer = "6.8.0.202311291450-r"
             implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
             implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
+            gradle7Implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
+            gradle7Implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
         }
+
+        // test
+        testImplementation("io.kotest:kotest-runner-junit5-jvm:5.7.2")
+        testImplementation("io.kotest:kotest-assertions-core-jvm:5.7.2")
+        testImplementation("io.github.serpro69:kotlin-faker:1.15.0")
     }
 
     configure<JavaPluginExtension> {
