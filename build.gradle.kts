@@ -20,22 +20,6 @@ repositories {
 
 group = "io.github.serpro69"
 
-allprojects {
-    configurations.matching { it.name != "detekt" }.all {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
-                if (attributes.getAttribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE)?.toString() == "7.2") {
-                    useVersion("1.8.22")
-                    because("All Kotlin modules should use the same version, and gradle 7.2 supports up to 1.8.22")
-                } else if (attributes.getAttribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE)?.toString() == "8.0") {
-                    useVersion(KOTLIN_VERSION)
-                    because("All Kotlin modules should use the same version, and compiler uses $KOTLIN_VERSION")
-                }
-            }
-        }
-    }
-}
-
 subprojects {
     group = parent?.group?.toString() ?: "io.github.serpro69"
     val subProject = this@subprojects
@@ -57,6 +41,44 @@ subprojects {
     java {
         registerFeature("gradle7") {
             usingSourceSet(sourceSets.main.get())
+            val p = this@subprojects
+            capability(p.group.toString(), p.name, p.version.toString())
+        }
+    }
+
+    configurations {
+        matching { it.name != "detekt" && !it.name.contains("gradle7") }.all {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
+                    useVersion(KOTLIN_VERSION)
+                    because("All Kotlin modules should use the same version, and compiler uses $KOTLIN_VERSION")
+                }
+            }
+        }
+        matching { it.name != "detekt" && it.name.contains("gradle7") }.all {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
+                    useVersion("1.8.22") // must be same as gradle7 feature dependency version for kotlin
+                    because("All Kotlin modules should use the same version, and gradle 7.2 supports up to 1.8.22")
+                }
+            }
+        }
+        configureEach {
+            if (isCanBeConsumed && name.startsWith("gradle7")) {
+                attributes {
+                    attribute(
+                        GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
+                        objects.named("7.2")
+                    )
+                }
+            } else if (isCanBeConsumed) { // default support is for gradle 8.+
+                attributes {
+                    attribute(
+                        GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
+                        objects.named("8.0")
+                    )
+                }
+            }
         }
     }
 

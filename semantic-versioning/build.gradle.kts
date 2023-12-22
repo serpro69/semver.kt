@@ -31,29 +31,14 @@ configurations {
 val release = project.rootProject.subprojects.first { it.name == "release" }
     ?: throw GradleException("release project not found")
 
-configurations.configureEach {
-    if (isCanBeConsumed && name.startsWith("gradle7")) {
-        attributes {
-            attribute(
-                GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
-                objects.named("7.2")
-            )
-        }
-    } else if (isCanBeConsumed) { // default support is for gradle 8.+
-        attributes {
-            attribute(
-                GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
-                objects.named("8.0")
-            )
-        }
-    }
-}
-
 dependencies {
+    // extra configurations
     val gradle7Api by configurations
     val gradle7CompileOnly by configurations
     val integrationTestImplementation by configurations
     val functionalTestImplementation by configurations
+
+    // dependencies declared for default and gradle7 feature variants
     compileOnly(gradleApi())
     gradle7CompileOnly(gradleApi())
 
@@ -66,18 +51,10 @@ dependencies {
     if (Semver(project.version.toString()) != (Semver(release.version.toString()))) {
         // use latest version before next major
         api("io.github.serpro69:semver.kt-release:[0.7.0,1.0.0)")
-        gradle7Api("io.github.serpro69:semver.kt-release:[0.7.0,1.0.0)") {
-            capabilities {
-                requireCapability("${project.group}:release-gradle7")
-            }
-        }
+        gradle7Api("io.github.serpro69:semver.kt-release:[0.7.0,1.0.0)")
     } else {
         api(project(":release"))
-        gradle7Api(project(":release")) {
-            capabilities {
-                requireCapability("${project.group}:release-gradle7")
-            }
-        }
+        gradle7Api(project(":release"))
     }
 
     // test
