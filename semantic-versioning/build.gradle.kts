@@ -121,3 +121,11 @@ tasks.withType<PublishToMavenLocal>().configureEach {
     val predicate = provider { version.toString().startsWith("0.0.0") }
     onlyIf("In development") { predicate.get() }
 }
+
+tasks.withType<Sign>().configureEach {
+    val predicate = provider {
+        !version.toString().endsWith("SNAPSHOT")
+            && !version.toString().startsWith("0.0.0")
+    }
+    onlyIf("New release") { predicate.get() }
+}

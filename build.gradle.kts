@@ -3,7 +3,6 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
-import org.jetbrains.kotlin.config.KotlinCompilerVersion.VERSION as KOTLIN_VERSION
 
 plugins {
     java
@@ -18,13 +17,14 @@ repositories {
     mavenCentral()
 }
 
-group = "io.github.serpro69"
+group = "io.github.serpro69.semver-kt"
 
 subprojects {
-    group = parent?.group?.toString() ?: "io.github.serpro69"
     val subProject = this@subprojects
-    val projectArtifactId = "${rootProject.name}-${subProject.name}"
+    val projectArtifactId = subProject.name
     val isGradlePlugin = subProject.name == "semantic-versioning"
+    // override group to get rid of the 'semver-kt' prefix for plugin since it's not bringing any value to the plugin
+    group = if (isGradlePlugin) "io.github.serpro69" else rootProject.group.toString()
 
     repositories {
         mavenCentral()
@@ -41,50 +41,33 @@ subprojects {
     java {
         registerFeature("gradle7") {
             usingSourceSet(sourceSets.main.get())
-            val p = this@subprojects
-            capability(p.group.toString(), p.name, p.version.toString())
+            capability(subProject.group.toString(), subProject.name, subProject.version.toString())
         }
     }
 
-    configurations {
-        matching { it.name != "detekt" && !it.name.contains("gradle7") }.all {
-            resolutionStrategy.eachDependency {
-                if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
-                    useVersion(KOTLIN_VERSION)
-                    because("All Kotlin modules should use the same version, and compiler uses $KOTLIN_VERSION")
-                }
+    configurations.configureEach {
+        if (isCanBeConsumed && name.startsWith("gradle7")) {
+            attributes {
+                attribute(
+                    GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
+                    objects.named("7.2")
+                )
             }
-        }
-        matching { it.name != "detekt" && it.name.contains("gradle7") }.all {
-            resolutionStrategy.eachDependency {
-                if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin")) {
-                    useVersion("1.8.22") // must be same as gradle7 feature dependency version for kotlin
-                    because("All Kotlin modules should use the same version, and gradle 7.2 supports up to 1.8.22")
-                }
-            }
-        }
-        configureEach {
-            if (isCanBeConsumed && name.startsWith("gradle7")) {
-                attributes {
-                    attribute(
-                        GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
-                        objects.named("7.2")
-                    )
-                }
-            } else if (isCanBeConsumed) { // default support is for gradle 8.+
-                attributes {
-                    attribute(
-                        GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
-                        objects.named("8.0")
-                    )
-                }
+        } else if (isCanBeConsumed) { // default support is for gradle 8.+
+            attributes {
+                attribute(
+                    GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
+                    objects.named("8.0")
+                )
             }
         }
     }
 
     dependencies {
         val gradle7Implementation by configurations
+
         implementation(kotlin("stdlib-jdk8"))
+        // declare all kotlin-jdk libs explicitly to avoid version conflicts
         gradle7Implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8") {
             version {
                 strictly("1.8.22")
@@ -284,9 +267,15 @@ subprojects {
         }
 
         signing {
-            if (!version.toString().endsWith("SNAPSHOT") && !version.toString().startsWith("0.0.0")) {
-                sign(publishing.publications[publicationName])
-            }
+            sign(publishing.publications[publicationName])
+        }
+
+        tasks.withType<Sign>().configureEach {
+            val predicate = provider {
+                    !version.toString().endsWith("SNAPSHOT")
+                        && !version.toString().startsWith("0.0.0")
+                }
+            onlyIf("New release") { predicate.get() }
         }
 
         tasks.withType<PublishToMavenRepository>().configureEach {
