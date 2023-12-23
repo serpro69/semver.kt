@@ -15,7 +15,7 @@ dependencies {
      */
     if (Semver(project.version.toString()) != (Semver(spec.version.toString()))) {
         // use latest version before next major
-        api("io.github.serpro69:semver.kt-spec:[0.7.0,1.0.0)")
+        api("io.github.serpro69:semver.kt-spec:[0.9.0,1.0.0)")
     } else {
         api(project(":spec"))
     }
