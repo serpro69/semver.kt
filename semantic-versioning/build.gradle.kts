@@ -1,4 +1,5 @@
 import com.gradle.publish.PublishTask
+import io.github.serpro69.semverkt.spec.Semver
 
 plugins {
     `java-gradle-plugin`
@@ -51,7 +52,12 @@ dependencies {
      * hence we check the versions equality and either set a dependency on a published :spec artifact
      * or a project-type dependency on the submodule
      */
+    if (Semver(project.version.toString()) != (Semver(release.version.toString()))) {
+        // use latest version before next major
+        api("io.github.serpro69:semver.kt-release:[0.7.0,1.0.0)")
+    } else {
         api(project(":release"))
+    }
     testCompileOnly(gradleTestKit())
     integrationTestImplementation(project)
     functionalTestImplementation(project)
