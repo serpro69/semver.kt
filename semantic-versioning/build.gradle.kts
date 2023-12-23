@@ -27,6 +27,17 @@ configurations {
     getByName("functionalTestRuntimeOnly") { extendsFrom(testRuntimeOnly.get()) }
 }
 
+configurations.configureEach {
+    if (isCanBeConsumed) {
+        attributes {
+            attribute(
+                GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE,
+                objects.named("7.5")
+            )
+        }
+    }
+}
+
 val release = project.rootProject.subprojects.first { it.name == "release" }
     ?: throw GradleException("release project not found")
 
