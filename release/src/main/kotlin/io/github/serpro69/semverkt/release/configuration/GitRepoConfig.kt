@@ -44,7 +44,8 @@ enum class CleanRule {
 
     companion object {
         fun getByName(name: String): CleanRule {
-            return entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
+            @Suppress("EnumValuesSoftDeprecate")
+            return values().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
         }
     }
 

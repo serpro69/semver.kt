@@ -1,6 +1,7 @@
 import org.gradle.api.tasks.testing.TestResult.ResultType
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
 import org.jetbrains.kotlin.config.KotlinCompilerVersion.VERSION as KOTLIN_VERSION
@@ -56,26 +57,27 @@ subprojects {
         testImplementation("io.github.serpro69:kotlin-faker:1.15.0")
 
         if (subProject.name in listOf("release", "semantic-versioning")) {
-            val jgitVer = "6.8.0.202311291450-r"
+//            val jgitVer = "6.8.0.202311291450-r"
+            val jgitVer = "5.13.2.202306221912-r"
             implementation("org.eclipse.jgit:org.eclipse.jgit:$jgitVer")
             implementation("org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:$jgitVer")
         }
     }
 
-    configure<JavaPluginExtension> {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
     tasks.withType<JavaCompile> {
         options.encoding = "UTF-8"
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+    }
+
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(8))
+        }
     }
 
     tasks.withType<KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "17"
+        compilerOptions {
+            // support gradle 7.5+
+            languageVersion.set(KotlinVersion.KOTLIN_1_6)
         }
     }
 
