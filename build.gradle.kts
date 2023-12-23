@@ -1,6 +1,7 @@
 import org.gradle.api.tasks.testing.TestResult.ResultType
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
@@ -240,7 +241,10 @@ subprojects {
         }
 
         tasks.withType<PublishToMavenRepository>().configureEach {
-            val predicate = provider { !version.toString().startsWith("0.0.0") }
+            val predicate = provider {
+                !version.toString().endsWith("SNAPSHOT")
+                    && !version.toString().startsWith("0.0.0")
+            }
             onlyIf("New release") { predicate.get() }
         }
 
@@ -248,6 +252,22 @@ subprojects {
             val predicate = provider { version.toString().startsWith("0.0.0") }
             onlyIf("In development") { predicate.get() }
         }
+    }
+
+    tasks.withType<DokkaTask>().configureEach {
+        val predicate = provider {
+            !version.toString().endsWith("SNAPSHOT")
+                && !version.toString().startsWith("0.0.0")
+        }
+        onlyIf("New release") { predicate.get() }
+    }
+
+    tasks.withType<Sign>().configureEach {
+        val predicate = provider {
+            !version.toString().endsWith("SNAPSHOT")
+                && !version.toString().startsWith("0.0.0")
+        }
+        onlyIf("New release") { predicate.get() }
     }
 
     tasks {
