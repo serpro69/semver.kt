@@ -38,6 +38,6 @@ Each of the modules can be used separately either as a library by declaring a de
 
 ### Requirements
 
-- java == 17 (for `:spec` and `:release` modules)
-- kotlin == 1.9 (for `:spec` and `:release` modules)
-- gradle >= 8.0 (for `:semantic-versioning` module)
+- java >= 8
+- kotlin >= 1.6
+- gradle >= 7.5 (for `:semantic-versioning` plugin)

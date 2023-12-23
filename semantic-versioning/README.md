@@ -18,7 +18,7 @@ _**Note**: The gradle documentation specifies that the version property is an `O
 
 ### Requirements
 
-- gradle 8.0+
+- gradle 7.5+
 
 ### Installation
 
