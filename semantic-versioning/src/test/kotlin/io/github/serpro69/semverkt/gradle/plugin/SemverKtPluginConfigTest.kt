@@ -36,6 +36,11 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     module("bar") {
                         sources = Path("src/main/kotlin")
                     }
+                    module("baz") {
+                        tag {
+                            prefix = "baz-v"
+                        }
+                    }
                 }
             }
             it("should override default configuration") {
@@ -45,8 +50,14 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     config.git.repo.remoteName shouldBe "not origin"
                     config.version.initialVersion shouldBe Semver("1.2.3")
                     config.version.defaultIncrement shouldBe Increment.NONE
-                    config.monorepo.modules.size shouldBe 2
-                    config.monorepo.modules.map { it.name } shouldBe listOf("foo", "bar")
+                    config.monorepo.modules.size shouldBe 3
+                    config.monorepo.modules.map { it.name } shouldBe listOf("foo", "bar", "baz")
+                    val foo = config.monorepo.modules.first { it.name == "foo" }
+                    val bar = config.monorepo.modules.first { it.name == "bar" }
+                    val baz = config.monorepo.modules.first { it.name == "baz" }
+                    foo.tag shouldBe null
+                    bar.tag shouldBe null
+                    baz.tag?.prefix shouldBe "baz-v"
                 }
             }
             it("should have default configuration intact") {
@@ -56,6 +67,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
                 config.git.repo.cleanRule shouldBe CleanRule.TRACKED
                 config.version.preReleaseId shouldBe "rc"
                 config.version.placeholderVersion shouldBe Semver("0.0.0")
+                config.monorepo.modules.first { it.name == "baz" }.tag?.separator shouldBe ""
             }
             it("should throw exception for empty module name") {
                 assertThrows<IllegalArgumentException> {

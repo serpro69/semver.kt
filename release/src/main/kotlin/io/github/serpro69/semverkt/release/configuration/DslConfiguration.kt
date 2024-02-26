@@ -6,6 +6,58 @@ import java.nio.file.Path
 
 /**
  * Provides access to default [Configuration] properties with optional overrides through DSL syntax
+ *
+ * If [git] is called before [monorepo] and the latter configures [PojoGitTagConfig] via `tag` function,
+ * all non-overwritten properties of [PojoGitTagConfig] will have the same values as [git] `tag` configuration.
+ *
+ * For example:
+ *
+ * ```kotlin
+ * git {
+ *     tag {
+ *         prefix = "p"
+ *         separator = "sep"
+ *     }
+ * }
+ * monorepo {
+ *     module("foo") {
+ *         tag {
+ *             prefix = "foo-p"
+ *         }
+ *     }
+ * }
+ * ```
+ *
+ * The "foo" module will have the following configuration:
+ * ```json
+ * { "name": "foo", "sources": ".", "tag": { "prefix": "foo-p", "separator": "sep", "useBranches": "false" } }
+ * ```
+ *
+ * However, if `git` config is applied after `monorepo`,
+ * then `monorepo.tag` configuration will contain the [GitTagConfig] defaults for any non-overwritten configs:
+ *
+ * ```kotlin
+ * monorepo {
+ *     module("foo") {
+ *         tag {
+ *             prefix = "foo-p"
+ *         }
+ *     }
+ * }
+ * git {
+ *     tag {
+ *         prefix = "p"
+ *         separator = "sep"
+ *     }
+ * }
+ * ```
+ *
+ * In this case, the "foo" module will have the following configuration:
+ * ```json
+ * { "name": "foo", "sources": ".", "tag": { "prefix": "foo-p", "separator": "", "useBranches": "false" } }
+ * ```
+ *
+ * _Note the `tag.separator` is empty string, which is the default in [GitTagConfig]`_
  */
 @PojoConfigDsl
 class DslConfiguration internal constructor() : Configuration {
@@ -14,7 +66,7 @@ class DslConfiguration internal constructor() : Configuration {
         private set
     override var version = PojoVersionConfig()
         private set
-    override var monorepo = PojoMonorepoConfig()
+    override var monorepo = PojoMonorepoConfig(git.tag)
         private set
 
     fun git(block: PojoGitConfig.() -> Unit): Configuration {
@@ -34,22 +86,41 @@ class DslConfiguration internal constructor() : Configuration {
 }
 
 @PojoConfigDsl
-class PojoMonorepoConfig internal constructor() : MonorepoConfig {
+class PojoMonorepoConfig internal constructor(private val tag: PojoGitTagConfig) : MonorepoConfig {
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
     fun module(name: String, block: DslModuleConfig.() -> Unit) {
-        modules.add(DslModuleConfig(name).apply(block))
+        // use a copy of the tag config so that we don't overwrite "git.tag" configuration with the module's specifics
+        modules.add(DslModuleConfig(name, tag.copy()).apply(block))
     }
 }
 
 @PojoConfigDsl
-class DslModuleConfig internal constructor(override val name: String) : ModuleConfig {
+class DslModuleConfig internal constructor(
+    override val name: String,
+    private val gitTag: PojoGitTagConfig,
+) : ModuleConfig {
     override var sources: Path = super.sources
+
+    // use null as default value like in super, no need to return default configs for this prop if they haven't changed
+    // but make it modifiable via dsl and a "secondary" property in constructor
+    override var tag: PojoGitTagConfig? = null
+        private set
 
     init {
         if (name.isBlank()) {
             throw IllegalArgumentException("Module name cannot be blank")
         }
+    }
+
+    /**
+     * Applies the [block] function to the [tag] of this [ModuleConfig] instance
+     */
+    fun tag(block: PojoGitTagConfig.() -> Unit) {
+        // apply configuration to "secondary" property
+        gitTag.apply(block)
+        // then modify tag config, so it's applied only when calling the dsl function for it
+        tag = gitTag
     }
 }
 
@@ -98,6 +169,12 @@ class PojoGitTagConfig internal constructor() : GitTagConfig {
     override var prefix: String = super.prefix
     override var separator: String = super.separator
     override var useBranches: Boolean = super.useBranches
+
+    internal fun copy(): PojoGitTagConfig = PojoGitTagConfig().apply {
+        this@apply.prefix = this@PojoGitTagConfig.prefix
+        this@apply.separator = this@PojoGitTagConfig.separator
+        this@apply.useBranches = this@PojoGitTagConfig.useBranches
+    }
 }
 
 @PojoConfigDsl
