@@ -19,7 +19,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
 
     override val git = SemverKtPluginGitConfig(settings)
     override val version = SemverKtPluginVersionConfig()
-    override val monorepo = SemverKtPluginMonorepoConfig()
+    override val monorepo = SemverKtPluginMonorepoConfig(git.tag)
 
     constructor(config: Configuration, settings: Settings? = null) : this(settings) {
         git {
@@ -116,6 +116,12 @@ class SemverKtPluginGitTagConfig internal constructor() : GitTagConfig {
     override var prefix: String = super.prefix
     override var separator: String = super.separator
     override var useBranches: Boolean = super.useBranches
+
+    internal fun copy() = SemverKtPluginGitTagConfig().apply {
+        this@apply.prefix = this@SemverKtPluginGitTagConfig.prefix
+        this@apply.separator = this@SemverKtPluginGitTagConfig.separator
+        this@apply.useBranches = this@SemverKtPluginGitTagConfig.useBranches
+    }
 }
 
 @PluginConfigDsl
@@ -130,22 +136,41 @@ class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
 
 @Suppress("unused")
 @PluginConfigDsl
-class SemverKtPluginMonorepoConfig internal constructor() : MonorepoConfig {
+class SemverKtPluginMonorepoConfig internal constructor(private val tag: SemverKtPluginGitTagConfig) : MonorepoConfig {
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
     fun module(name: String, block: SemverKtPluginModuleConfig.() -> Unit) {
-        modules.add(SemverKtPluginModuleConfig(name).apply(block))
+        // use a copy of the tag config so that we don't overwrite "git.tag" configuration with the module's specifics
+        modules.add(SemverKtPluginModuleConfig(name, tag.copy()).apply(block))
     }
 }
 
 @PluginConfigDsl
-class SemverKtPluginModuleConfig internal constructor(override val name: String) : ModuleConfig {
+class SemverKtPluginModuleConfig internal constructor(
+    override val name: String,
+    private val gitTag: SemverKtPluginGitTagConfig,
+) : ModuleConfig {
     override var sources: Path = super.sources
+
+    // use super as default, no need to return default configs for this prop if they haven't changed
+    // but make it modifiable via dsl and a "secondary" property in constructor
+    override var tag: GitTagConfig? = super.tag
+        private set
 
     init {
         if (name.isBlank()) {
             throw IllegalArgumentException("Module name cannot be blank")
         }
+    }
+
+    /**
+     * Applies the [block] function to the [tag] of this [SemverKtPluginModuleConfig] instance
+     */
+    fun tag(block: SemverKtPluginGitTagConfig.() -> Unit) {
+        // apply configuration to "secondary" property
+        gitTag.apply(block)
+        // then modify tag config, so it's applied only when calling the dsl function for it
+        tag = gitTag
     }
 }
 
