@@ -21,7 +21,7 @@ class JsonConfigurationTest : DescribeSpec({
         val jc = JsonConfiguration(json)
 
         it("should return overridden property values") {
-            jc.git.tag.prefix shouldBe "foo"
+            jc.git.tag.prefix shouldBe TagPrefix("foo")
             jc.git.tag.separator shouldBe "bar"
         }
 

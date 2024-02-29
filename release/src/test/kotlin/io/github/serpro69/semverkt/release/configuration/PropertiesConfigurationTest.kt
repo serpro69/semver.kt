@@ -16,7 +16,7 @@ class PropertiesConfigurationTest : DescribeSpec({
         val pc = PropertiesConfiguration(properties)
 
         it("should return overridden property values") {
-            pc.git.tag.prefix shouldBe "foo"
+            pc.git.tag.prefix shouldBe TagPrefix("foo")
             pc.git.tag.separator shouldBe "bar"
         }
 

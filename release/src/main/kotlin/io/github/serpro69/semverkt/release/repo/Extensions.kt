@@ -1,6 +1,6 @@
 package io.github.serpro69.semverkt.release.repo
 
-import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.release.ext.tail
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.lib.Ref
@@ -8,8 +8,8 @@ import org.eclipse.jgit.revwalk.RevCommit
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-internal val semver: (GitTagConfig) -> (Ref) -> Semver = { config ->
-    { ref -> Semver(ref.simpleTagName.replace(config.prefix, "")) }
+internal val semver: (prefix: TagPrefix) -> (Ref) -> Semver = {
+    { ref -> Semver(ref.simpleTagName.replace(it.toString(), "")) }
 }
 
 internal val Ref.simpleTagName: String

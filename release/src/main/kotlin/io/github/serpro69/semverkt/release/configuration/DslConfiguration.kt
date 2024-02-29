@@ -166,7 +166,7 @@ class PojoGitRepoConfig internal constructor() : GitRepoConfig {
 @PojoConfigDsl
 class PojoGitTagConfig internal constructor() : GitTagConfig {
 
-    override var prefix: String = super.prefix
+    override var prefix: TagPrefix = super.prefix
     override var separator: String = super.separator
     override var useBranches: Boolean = super.useBranches
 

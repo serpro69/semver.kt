@@ -1,6 +1,7 @@
 package io.github.serpro69.semverkt.release.repo
 
 import io.github.serpro69.semverkt.release.configuration.Configuration
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
@@ -21,20 +22,26 @@ interface Repository : AutoCloseable {
 
     /**
      * Returns a list of tag [Ref]s from this repository.
+     *
+     * @param prefix an optional prefix to filter tags by.
      */
-    val tags: () -> List<Ref>
+    fun tags(prefix: TagPrefix? = null): List<Ref>
 
     /**
      * Returns the latest tag from this repository.
      *
      * The implementor should decide (and document) what the "LATEST" means and how it is calculated.
+     *
+     * @param prefix an optional prefix for the tag
      */
-    val latestVersionTag: () -> Ref?
+    fun latestVersionTag(prefix: TagPrefix? = null): Ref?
 
     /**
      * Returns tag pointing at HEAD of this repository.
+     *
+     * @param prefix an optional prefix for the tag
      */
-    val headVersionTag: () -> Ref?
+    fun headVersionTag(prefix: TagPrefix? = null): Ref?
 
     /**
      * Returns `true` if no differences exist in the repository, and `false` otherwise
@@ -52,21 +59,26 @@ interface Repository : AutoCloseable {
      *
      * If both [start] and [end] are provided, uses the range `since..until` for the git log.
      *
-     * @param start the commit to start git log graph traversal from
-     * @param end same as `--not start` or `start^`
+     * @param start     the commit to start git log graph traversal from
+     * @param end       same as `--not start` or `start^`
+     * @param tagPrefix an optional tag prefix to filter by
      */
     fun log(
         start: ObjectId? = null,
         end: ObjectId? = null,
-        predicate: (RevCommit) -> Boolean = { true }
+        tagPrefix: TagPrefix? = null,
+        predicate: (RevCommit) -> Boolean = { true },
     ): List<Commit>
 
     /**
      * Returns a list of [Commit]s in this repository,
      * with an optional [predicate] to filter the commits.
+     *
+     * @param tagPrefix an optional tag prefix to filter by
      */
     fun log(
         untilTag: Ref?,
+        tagPrefix: TagPrefix? = null,
         predicate: (RevCommit) -> Boolean = { true }
     ): List<Commit>
 

@@ -18,7 +18,7 @@ class DslConfigurationTest : DescribeSpec({
                     repo {
                     }
                     tag {
-                        prefix = "p"
+                        prefix = TagPrefix("p")
                         separator = "sep"
                     }
                 }
@@ -26,7 +26,7 @@ class DslConfigurationTest : DescribeSpec({
                     module("foo") {
                         sources = Path("src")
                         tag {
-                            prefix = "foo-v"
+                            prefix = TagPrefix("foo-v")
                         }
                     }
                     module("bar") {}
@@ -35,13 +35,13 @@ class DslConfigurationTest : DescribeSpec({
             }
 
             it("should return overridden property values") {
-                c.git.tag.prefix shouldBe "p"
+                c.git.tag.prefix shouldBe TagPrefix("p")
                 c.git.tag.separator shouldBe "sep"
                 c.monorepo.modules shouldHaveSize 3
                 c.monorepo.modules.map { it.name } shouldContainExactly listOf("foo", "bar", "baz")
                 with(c.monorepo.modules.first { it.name == "foo" }) {
                     // overwritten for module
-                    tag?.prefix shouldBe "foo-v"
+                    tag?.prefix shouldBe TagPrefix("foo-v")
                     // overwritten for git config, so should be applied to module also
                     tag?.separator shouldBe "sep"
                     // use default
@@ -64,7 +64,7 @@ class DslConfigurationTest : DescribeSpec({
                     module("foo") {
                         sources = Path("src")
                         tag {
-                            prefix = "foo-v"
+                            prefix = TagPrefix("foo-v")
                         }
                     }
                     module("bar") {}
@@ -74,20 +74,20 @@ class DslConfigurationTest : DescribeSpec({
                     repo {
                     }
                     tag {
-                        prefix = "p"
+                        prefix = TagPrefix("p")
                         separator = "sep"
                     }
                 }
             }
 
             it("should return overridden property values") {
-                c.git.tag.prefix shouldBe "p"
+                c.git.tag.prefix shouldBe TagPrefix("p")
                 c.git.tag.separator shouldBe "sep"
                 c.monorepo.modules shouldHaveSize 3
                 c.monorepo.modules.map { it.name } shouldContainExactly listOf("foo", "bar", "baz")
                 with(c.monorepo.modules.first { it.name == "foo" }) {
                     // overwritten for module
-                    tag?.prefix shouldBe "foo-v"
+                    tag?.prefix shouldBe TagPrefix("foo-v")
                     // git is applied after monorepo, so we have a "global default" here
                     tag?.separator shouldBe ""
                     // use default

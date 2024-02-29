@@ -74,6 +74,7 @@ class SemverKtTestProject(
             """
             import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
             import io.github.serpro69.semverkt.release.configuration.ModuleConfig
+            import io.github.serpro69.semverkt.release.configuration.Prefix
             import java.nio.file.Paths
 
             plugins {
