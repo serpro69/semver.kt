@@ -9,6 +9,7 @@ import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.MonorepoConfig
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.initialization.Settings
@@ -113,7 +114,7 @@ class SemverKtPluginGitRepoConfig internal constructor(settings: Settings?) : Gi
 @PluginConfigDsl
 class SemverKtPluginGitTagConfig internal constructor() : GitTagConfig {
 
-    override var prefix: String = super.prefix
+    override var prefix: TagPrefix = super.prefix
     override var separator: String = super.separator
     override var useBranches: Boolean = super.useBranches
 

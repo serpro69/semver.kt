@@ -2,7 +2,10 @@ package io.github.serpro69.semverkt.release.repo
 
 import io.github.serpro69.semverkt.release.addCommit
 import io.github.serpro69.semverkt.release.addRelease
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
+import io.github.serpro69.semverkt.release.monorepoTestConfig
 import io.github.serpro69.semverkt.release.testConfiguration
+import io.github.serpro69.semverkt.release.testMonoRepo
 import io.github.serpro69.semverkt.release.testRepo
 import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
@@ -19,8 +22,11 @@ import kotlin.io.path.writeText
 
 class RepositoryTest : DescribeSpec() {
 
-    private val repo: Repository = GitRepository(testConfiguration)
+    private val repo = GitRepository(testConfiguration)
     private val git = { Git.open(testConfiguration.git.repo.directory.toFile()) }
+    private val monoRepo = GitRepository(monorepoTestConfig)
+    private val monoGit = { Git.open(monorepoTestConfig.git.repo.directory.toFile()) }
+    private val monoFooTagConfig = requireNotNull(monorepoTestConfig.monorepo.modules.first { it.name == "foo"}.tag)
 
     init {
         describe("GitRepository") {
@@ -32,14 +38,28 @@ class RepositoryTest : DescribeSpec() {
                         Semver("0.2.0"),
                         Semver("0.1.0")
                     )
-                    repo.use {
-                        it.log()
+                    repo.use { r ->
+                        r.log()
                             .mapNotNull { it.tag }
-                            .map { semver(testConfiguration.git.tag)(it) } shouldBe expected
+                            .map { semver(testConfiguration.git.tag.prefix)(it) } shouldBe expected
+                    }
+                }
+                it("should contain a list of versions with a custom prefix of a submodule") {
+                    val expected = listOf(
+                        Semver("0.2.0"),
+                        Semver("0.1.0"),
+                    )
+                    monoRepo.use { r ->
+                        r.log(tagPrefix = TagPrefix("foo-v"))
+                            .mapNotNull { it.tag }
+                            .map { semver(monoFooTagConfig.prefix)(it) } shouldBe expected
                     }
                 }
                 it("should return last version by tag") {
                     repo.use { it.latestVersionTag()?.simpleTagName } shouldBe "v0.4.0"
+                }
+                it("should return last version by tag with a custom prefix") {
+                    monoRepo.use { it.latestVersionTag(TagPrefix("foo-v"))?.simpleTagName } shouldBe "foo-v0.2.0"
                 }
                 it("should return a log of commits after the last version") {
                     val commits = repo.use { it.log(repo.latestVersionTag()) }
@@ -51,7 +71,7 @@ class RepositoryTest : DescribeSpec() {
                     }
                 }
                 it("should return full log of commits if untilTag is null") {
-                    repo.use {it .log(untilTag = null) } shouldContainExactly repo.use { it.log() }
+                    repo.use { it.log(untilTag = null) } shouldContainExactly repo.use { it.log() }
                 }
                 it("should filter commits by predicate") {
                     val commits = repo.use { r -> r.log { it.title == "Commit #6" } }
@@ -180,18 +200,22 @@ class RepositoryTest : DescribeSpec() {
 
     override suspend fun beforeSpec(spec: Spec) {
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
+        monorepoTestConfig.git.repo.directory.toFile().deleteRecursively()
     }
 
     override suspend fun beforeTest(testCase: TestCase) {
         testRepo()
+        testMonoRepo()
     }
 
     override suspend fun afterTest(testCase: TestCase, result: TestResult) {
         repo.close()
+        monoRepo.close()
         testConfiguration.git.repo.directory.toFile().deleteRecursively()
     }
 
     override fun afterSpec(f: suspend (Spec) -> Unit) {
         repo.close()
+        monoRepo.close()
     }
 }

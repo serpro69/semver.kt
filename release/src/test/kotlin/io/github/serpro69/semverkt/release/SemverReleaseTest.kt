@@ -312,6 +312,15 @@ class SemverReleaseTest : DescribeSpec() {
                 semverRelease(repo).use { it.release(Semver("0.3.0")) } shouldBe null
             }
         }
+
+        describe("monorepo project with custom-tagged submodule") {
+            it("should release submodule version") {
+//                semverReleaseMonorepo(monoRepo, "foo").release(Increment.MINOR) shouldBe Semver("0.3.0")
+            }
+            it("should release normal version") {
+//                semverReleaseMonorepo(monoRepo, null).release(Increment.MINOR) shouldBe Semver("0.5.0")
+            }
+        }
     }
 
     override suspend fun beforeSpec(spec: Spec) {

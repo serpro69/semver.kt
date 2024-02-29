@@ -3,6 +3,7 @@ package io.github.serpro69.semverkt.gradle.plugin
 import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.CleanRule
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.DescribeSpec
@@ -18,7 +19,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
             val config = with(SemverKtPluginConfig(null)) {
                 git {
                     tag {
-                        prefix = "test"
+                        prefix = TagPrefix("test")
                     }
                     message {
                         ignoreCase = true
@@ -38,14 +39,14 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     }
                     module("baz") {
                         tag {
-                            prefix = "baz-v"
+                            prefix = TagPrefix("baz-v")
                         }
                     }
                 }
             }
             it("should override default configuration") {
                 assertSoftly {
-                    config.git.tag.prefix shouldBe "test"
+                    config.git.tag.prefix shouldBe TagPrefix("test")
                     config.git.message.ignoreCase shouldBe true
                     config.git.repo.remoteName shouldBe "not origin"
                     config.version.initialVersion shouldBe Semver("1.2.3")
@@ -57,7 +58,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     val baz = config.monorepo.modules.first { it.name == "baz" }
                     foo.tag shouldBe null
                     bar.tag shouldBe null
-                    baz.tag?.prefix shouldBe "baz-v"
+                    baz.tag?.prefix shouldBe TagPrefix("baz-v")
                 }
             }
             it("should have default configuration intact") {

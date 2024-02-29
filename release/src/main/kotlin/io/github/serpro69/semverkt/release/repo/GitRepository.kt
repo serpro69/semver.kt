@@ -2,6 +2,7 @@ package io.github.serpro69.semverkt.release.repo
 
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Constants
@@ -23,41 +24,49 @@ class GitRepository(override val config: Configuration) : Repository {
             throw IOException("Can't open $repoDir as git repository", e)
         }
     }
+    private val sv: (TagPrefix?) -> (Ref) -> Semver = { semver(it ?: config.git.tag.prefix) }
 
     override val head: () -> ObjectId = { git.repository.resolve(Constants.HEAD) }
 
     /**
      * Returns a list of (potentially peeled) tag [Ref]s from this repository,
-     * filtered by the [GitTagConfig.prefix]
+     * optionally filtered by the git tag [prefix] string.
+     *
+     * If [prefix] is `null`, [GitTagConfig.prefix] will be used instead.
      */
-    override val tags: () -> List<Ref> = {
-        git.tagList().call()
+    override fun tags(prefix: TagPrefix?): List<Ref> {
+        val p = prefix ?: config.git.tag.prefix
+        return git.tagList().call()
             .filter {
-                it.name.startsWith("refs/tags/${config.git.tag.prefix}")
-                    && Semver.isValid(it.simpleTagName.substringAfter(config.git.tag.prefix))
+                it.name.startsWith("refs/tags/$p")
+                    && Semver.isValid(it.simpleTagName.substringAfter(p.toString()))
             }.map { it.peel() }
     }
 
-    override val headVersionTag: () -> Ref? = {
-        tags().firstOrNull { (it.peeledObjectId ?: it.objectId) == head().toObjectId() }
+    override fun headVersionTag(prefix: TagPrefix?): Ref? = tags(prefix).firstOrNull {
+        (it.peeledObjectId ?: it.objectId) == head().toObjectId()
     }
 
     /**
      * Returns the latest tag from this git repository.
      *
      * The tags are filtered by the [GitTagConfig.prefix],
+     * unless the [prefix] argument is NOT `null`,
      * and tags that don't start with the specified prefix are omitted.
      *
      * The tags are compared using [Semver.compareTo], and the tag with maximum version is returned.
      */
-    override val latestVersionTag: () -> Ref? = {
-        val tags = tags()
-        if (tags.isNotEmpty()) {
-            val comparator: (Ref, Ref) -> Int = { o1: Ref, o2: Ref ->
-                semver(config.git.tag)(o1).compareTo(semver(config.git.tag)(o2))
+    override fun latestVersionTag(prefix: TagPrefix?): Ref? {
+        val tags = tags(prefix)
+        return when {
+            tags.isNotEmpty() -> {
+                val comparator: (Ref, Ref) -> Int = { o1: Ref, o2: Ref ->
+                    sv(prefix)(o1).compareTo(sv(prefix)(o2))
+                }
+                tags.maxOfWith(comparator) { it }
             }
-            tags.maxOfWith(comparator) { it }
-        } else null
+            else -> null
+        }
     }
 
     /**
@@ -76,20 +85,24 @@ class GitRepository(override val config: Configuration) : Repository {
 
     /**
      * Returns a log of [Commit]s from HEAD and [untilTag] ref, with an optional [predicate] to filter out the commits.
+     *
+     * @param tagPrefix an optional tag prefix to filter by
      */
-    override fun log(untilTag: Ref?, predicate: (RevCommit) -> Boolean): List<Commit> {
+    override fun log(untilTag: Ref?, tagPrefix: TagPrefix?, predicate: (RevCommit) -> Boolean): List<Commit> {
         val objectId = untilTag?.let { it.peel().peeledObjectId ?: it.objectId }
-        return log(end = objectId, predicate = predicate)
+        return log(end = objectId, tagPrefix = tagPrefix, predicate = predicate)
     }
 
     override fun log(
         start: ObjectId?,
         end: ObjectId?,
+        tagPrefix: TagPrefix?,
         predicate: (RevCommit) -> Boolean,
     ): List<Commit> {
+        val tags = tags(tagPrefix)
         val commits: List<Commit> = log(start = start, end = end).fold(mutableListOf()) { acc, commit ->
             if (predicate(commit)) {
-                val tag = tags().lastOrNull { ref ->
+                val tag = tags.lastOrNull { ref ->
                     val tagId: ObjectId = ref.peeledObjectId ?: ref.objectId
                     commit.id == tagId
                 }

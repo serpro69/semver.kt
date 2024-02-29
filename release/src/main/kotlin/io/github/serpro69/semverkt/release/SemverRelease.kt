@@ -11,6 +11,7 @@ import io.github.serpro69.semverkt.release.repo.Repository
 import io.github.serpro69.semverkt.release.repo.semver
 import io.github.serpro69.semverkt.spec.PreRelease
 import io.github.serpro69.semverkt.spec.Semver
+import org.eclipse.jgit.lib.Ref
 
 /**
  * Provides functions for semantic releases of a project [Repository].
@@ -21,18 +22,22 @@ import io.github.serpro69.semverkt.spec.Semver
 class SemverRelease : AutoCloseable {
     private val repo: Repository
     private val config: Configuration
+    private val sv: (Ref) -> Semver
 
     val currentVersion: () -> Semver?
     val latestVersion: () -> Semver?
+//    val currentSubmoduleVersion: (name: String) -> Semver?
+//    val latestSubmoduleVersion: (name: String) -> Semver?
 
     /**
      * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.
      */
     constructor(configuration: Configuration) {
-        repo = GitRepository(configuration)
         config = configuration
-        currentVersion = { repo.headVersionTag()?.let { semver(configuration.git.tag)(it) } }
-        latestVersion = { repo.latestVersionTag()?.let { semver(configuration.git.tag)(it) } }
+        repo = GitRepository(config)
+        sv = semver(config.git.tag.prefix)
+        currentVersion = { repo.headVersionTag()?.let { sv(it) } }
+        latestVersion = { repo.latestVersionTag()?.let { sv(it) } }
     }
 
     /**
@@ -41,8 +46,9 @@ class SemverRelease : AutoCloseable {
     constructor(repository: Repository) {
         repo = repository
         config = repo.config
-        currentVersion = { repo.headVersionTag()?.let { semver(config.git.tag)(it) } }
-        latestVersion = { repo.latestVersionTag()?.let { semver(config.git.tag)(it) } }
+        sv = semver(config.git.tag.prefix)
+        currentVersion = { repo.headVersionTag()?.let { sv(it) } }
+        latestVersion = { repo.latestVersionTag()?.let { sv(it) } }
     }
 
     override fun close() {
@@ -53,9 +59,12 @@ class SemverRelease : AutoCloseable {
      * Returns the [version] IF it's moreThan [latestVersion] AND not already present in the [repo],
      * ELSE returns `null`.
      */
-    fun release(version: Semver): Semver? {
-        val moreThanLatest = latestVersion()?.let { version > it } ?: true
-        val exists by lazy { repo.tags().map { semver(config.git.tag)(it) }.any { it == version } }
+    @JvmOverloads
+    fun release(version: Semver, submodule: String? = null): Semver? {
+        val moreThanLatest = submodule?.let {
+            null
+        } ?: latestVersion()?.let { version > it } ?: true
+        val exists by lazy { repo.tags().map { sv(it) }.any { it == version } }
         return if (moreThanLatest && !exists) version else null
     }
 
@@ -64,14 +73,16 @@ class SemverRelease : AutoCloseable {
      *
      * See also [SemverRelease.increment] for the rules that are used when releasing the versions.
      */
-    fun release(increment: Increment): Semver = increment(increment, true)
+    @JvmOverloads
+    fun release(increment: Increment, submodule: String? = null): Semver = increment(increment, true, submodule)
 
     /**
      * Returns the next snapshot version after the [latestVersion] based on the [increment].
      *
      * See also [SemverRelease.increment] for the rules that are used when creating version snapshots.
      */
-    fun snapshot(increment: Increment): Semver = increment(increment, false)
+    @JvmOverloads
+    fun snapshot(increment: Increment, submodule: String? = null): Semver = increment(increment, false, submodule)
 
     /**
      * Increment the [latestVersion] to the next [Semver] using the [increment].
@@ -97,9 +108,11 @@ class SemverRelease : AutoCloseable {
      * @param increment the version component to increment
      * @param release   if `false` appends [VersionConfig.snapshotSuffix] to the final version
      */
+    @JvmOverloads
     fun increment(
         increment: Increment,
         release: Boolean = (increment != Increment.DEFAULT),
+        submodule: String? = null,
     ): Semver {
         val nextVersion = latestVersion()?.let {
             when (increment) {
@@ -142,7 +155,8 @@ class SemverRelease : AutoCloseable {
      *   and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number,
      * ELSE the [latestVersion] is returned.
      */
-    fun createPreRelease(increment: Increment): Semver {
+    @JvmOverloads
+    fun createPreRelease(increment: Increment, submodule: String? = null): Semver {
         val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
         return with(latestVersion()) {
             this?.preRelease?.let {
@@ -162,7 +176,9 @@ class SemverRelease : AutoCloseable {
         }
     }
 
-    private fun Semver.isSnapshot(): Boolean = toString().endsWith("-${config.version.snapshotSuffix}")
+    private fun Semver.isSnapshot(submodule: String? = null): Boolean {
+        return toString().endsWith("-${config.version.snapshotSuffix}")
+    }
 
     /**
      * Promotes a pre-release version to a release version.
@@ -171,7 +187,8 @@ class SemverRelease : AutoCloseable {
      * THEN a copy of the [latestVersion] is returned as a normal version (with the pre-release component stripped),
      * ELSE the [latestVersion] version is returned.
      */
-    fun promoteToRelease(): Semver? {
+    @JvmOverloads
+    fun promoteToRelease(submodule: String? = null): Semver? {
         return with(latestVersion()) {
             this?.preRelease?.let { copy(preRelease = null, buildMetadata = null) } ?: this
         }
@@ -194,7 +211,8 @@ class SemverRelease : AutoCloseable {
      * - [GitMessageConfig.patch]
      * - [GitMessageConfig.preRelease]
      */
-    fun nextIncrement(): Increment {
+    @JvmOverloads
+    fun nextIncrement(submodule: String? = null): Increment {
         val head = repo.head()
         val latestTag = repo.latestVersionTag()
         val tagObjectId = latestTag?.peeledObjectId ?: latestTag?.objectId
