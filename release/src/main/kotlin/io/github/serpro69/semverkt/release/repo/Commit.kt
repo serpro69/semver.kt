@@ -17,7 +17,48 @@ data class Commit(
     val message: Message,
     val dateTime: LocalDateTime,
     val tag: Ref?,
-)
+) {
+
+    /*
+     * Override equals because [tag] comparison can sometimes return `false` even if they're "technically" the same tag.
+     * This is because they're not immutable.
+     *
+     * For example, if we first peel the tag, and then compare it to self in the same [Repository] instance,
+     * then the default equals implementation would return `false`
+     *
+     * We want to avoid such behavior because we need a "logical" comparison of tags.
+     */
+    override fun equals(other: Any?): Boolean {
+        return when (other) {
+            null -> false
+            !is Commit -> false
+            else -> {
+                objectId.equals(other.objectId) &&
+                    message == other.message &&
+                    dateTime.isEqual(other.dateTime) &&
+                    tag?.let {
+                        when (other.tag) {
+                            null -> false
+                            else -> it.name == other.tag.name &&
+                                it.simpleTagName == other.tag.simpleTagName &&
+                                it.objectId.equals(other.tag.objectId) &&
+                                it.isPeeled == other.tag.isPeeled &&
+                                (it.peeledObjectId?.equals(other.tag.peeledObjectId) ?: true) &&
+                                it.isSymbolic == other.tag.isSymbolic
+                        }
+                    } ?: true
+            }
+        }
+    }
+
+    override fun hashCode(): Int {
+        var result = objectId.hashCode()
+        result = 31 * result + message.hashCode()
+        result = 31 * result + dateTime.hashCode()
+        result = 31 * result + (tag?.hashCode() ?: 0)
+        return result
+    }
+}
 
 /**
  * Represents a commit message.
