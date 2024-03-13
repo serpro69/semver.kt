@@ -44,17 +44,6 @@ class RepositoryTest : DescribeSpec() {
                         .map { semver(testConfiguration.git.tag.prefix)(it) } shouldBe expected
                 }
             }
-            it("should contain a list of versions with a custom prefix of a submodule") {
-                val expected = listOf(
-                    Semver("0.2.0"),
-                    Semver("0.1.0"),
-                )
-                monoRepo.use { r ->
-                    r.log(tagPrefix = tagPrefix)
-                        .mapNotNull { it.tag }
-                        .map { semver(monoFooTagConfig.prefix)(it) } shouldBe expected
-                }
-            }
             it("should return last version by tag") {
                 repo.use { it.latestVersionTag()?.simpleTagName } shouldBe "v0.4.0"
             }

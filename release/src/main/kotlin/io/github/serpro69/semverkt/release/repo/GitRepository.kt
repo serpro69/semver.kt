@@ -99,26 +99,11 @@ class GitRepository(override val config: Configuration) : Repository {
         tagPrefix: TagPrefix?,
         predicate: (RevCommit) -> Boolean,
     ): List<Commit> {
-        val tags = tags(tagPrefix)
-        val commits: List<Commit> = log(start = start, end = end).fold(mutableListOf()) { acc, commit ->
-            if (predicate(commit)) {
-                val tag = tags.lastOrNull { ref ->
-                    val tagId: ObjectId = ref.peeledObjectId ?: ref.objectId
-                    commit.id == tagId
-                }
-                val c = Commit(
-                    objectId = commit.id,
-                    message = commit.message,
-                    dateTime = commit.dateTime,
-                    tag = tag
-                )
-                acc.add(c)
-            }
-
-            acc
-        }
-
-        return commits
+        val tags = tags(tagPrefix).associateBy { it.peeledObjectId ?: it.objectId }
+        return log(start = start, end = end)
+            .filter(predicate)
+            .map { c -> Commit(c.id, c.message, c.dateTime, tags[c.id]) }
+            .toList()
     }
 
     override fun close() {
