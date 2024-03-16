@@ -85,8 +85,8 @@ class PropertiesConfiguration : ConfigurationProvider {
     }
 
     /**
-     * This function is not supported in [PropertiesConfiguration] provider and will always default to `null`,
+     * This function is not supported in [PropertiesConfiguration] provider and will always default to an empty list,
      * returning the property value of the super class for list-typed properties.
      */
-    override fun <T : Any> listOrNull(name: String): List<T>? = null
+    override fun listOfModules(name: String): List<ModuleConfig> = emptyList()
 }

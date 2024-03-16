@@ -93,7 +93,7 @@ abstract class ConfigurationProvider : Configuration {
 
     final override val monorepo: MonorepoConfig by lazy {
         object : MonorepoConfig {
-            override val modules: List<ModuleConfig> = listOrNull("monorepo.modules") ?: super.modules
+            override val modules: List<ModuleConfig> = listOfModules("monorepo").ifEmpty { super.modules }
         }
     }
 
@@ -167,8 +167,8 @@ abstract class ConfigurationProvider : Configuration {
     open fun tagPrefixOrNull(name: String): TagPrefix? = null
 
     /**
-     * Returns a property value of [List] type of [T] element by the property name [name],
-     * or `null` if the property is not found.
+     * Returns a [List] of [ModuleConfig]s from the property [name],
+     * or emptyList if the property is not found in the configuration.
      */
-    open fun <T: Any> listOrNull(name: String): List<T>? = null
+    open fun listOfModules(name: String): List<ModuleConfig> = emptyList()
 }

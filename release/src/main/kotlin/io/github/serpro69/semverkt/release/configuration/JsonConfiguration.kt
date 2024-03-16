@@ -2,6 +2,7 @@ package io.github.serpro69.semverkt.release.configuration
 
 import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.spec.Semver
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.nio.file.Path
@@ -31,7 +32,9 @@ class JsonConfiguration : ConfigurationProvider {
         json = JSONObject(jsonFile.readText())
     }
 
-    override fun stringOrNull(name: String): String? = getValueByPath(json, name)?.toString()
+    private fun stringOrNull(json: JSONObject, name: String): String? = getValueByPath(json, name)?.toString()
+
+    override fun stringOrNull(name: String): String? = stringOrNull(json, name)
 
     override fun intOrNull(name: String): Int? {
         return when (val prop = getValueByPath(json, name)) {
@@ -40,12 +43,14 @@ class JsonConfiguration : ConfigurationProvider {
         }
     }
 
-    override fun booleanOrNull(name: String): Boolean? {
+    private fun booleanOrNull(json: JSONObject, name: String): Boolean? {
         return when (val prop = getValueByPath(json, name)) {
             is Boolean -> prop
             else -> prop?.toString()?.toBoolean()
         }
     }
+
+    override fun booleanOrNull(name: String): Boolean? = booleanOrNull(json, name)
 
     override fun incrementOrNull(name: String): Increment? {
         return when (val prop = getValueByPath(json, name)) {
@@ -73,17 +78,47 @@ class JsonConfiguration : ConfigurationProvider {
         }
     }
 
-    override fun pathOrNull(name: String): Path? {
+    private fun pathOrNull(json: JSONObject, name: String): Path? {
         return when (val prop = getValueByPath(json, name)) {
             is Path -> prop
             else -> prop?.toString()?.let { Path(it) }
         }
     }
 
-    override fun tagPrefixOrNull(name: String): TagPrefix? {
+    override fun pathOrNull(name: String): Path? = pathOrNull(json, name)
+
+    private fun tagPrefixOrNull(json: JSONObject, name: String): TagPrefix? {
         return when (val prop = getValueByPath(json, name)) {
             is TagPrefix -> prop
             else -> prop?.toString()?.let { TagPrefix(it) }
+        }
+    }
+
+    override fun tagPrefixOrNull(name: String): TagPrefix? = tagPrefixOrNull(json, name)
+
+    override fun listOfModules(name: String): List<ModuleConfig> {
+        val array = getValueByPath(json, "monorepo") ?: return emptyList()
+        if (array !is JSONArray) throw IllegalArgumentException("Object with '$name' name is not a json array")
+        return array.map {
+            val j = JSONObject(it.toString())
+            object : ModuleConfig {
+                override val path: String = requireNotNull(j.optString("path")) { "Module path can't be null" }
+                override val sources: Path = pathOrNull(j, "sources") ?: super.sources
+                override val tag: GitTagConfig? = j.opt("tag")?.let { t ->
+                    val tag = JSONObject(t.toString())
+                    object : GitTagConfig {
+                        override val prefix: TagPrefix = tagPrefixOrNull(tag, "prefix") ?: super.prefix
+                        override val separator: String = stringOrNull(tag, "separator") ?: super.separator
+                        override val useBranches: Boolean = booleanOrNull(tag, "useBranches") ?: super.useBranches
+                    }
+                }
+
+                init {
+                    if (path.isBlank()) {
+                        throw IllegalArgumentException("Module path cannot be blank")
+                    }
+                }
+            }
         }
     }
 
