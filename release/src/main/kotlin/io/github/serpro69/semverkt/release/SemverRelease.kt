@@ -17,8 +17,8 @@ import org.eclipse.jgit.lib.Ref
 /**
  * Provides functions for semantic releases of a project [Repository].
  *
- * @property currentVersion the current version in a given repository, optionally for a given [ModuleConfig.path]
- * @property latestVersion the last version in a given repository
+ * @property currentVersion the current version in a given repository, optionally for a given [ModuleConfig]
+ * @property latestVersion the last version in a given repository, optionally for a given [ModuleConfig]
  */
 class SemverRelease : AutoCloseable {
     private val repo: Repository
