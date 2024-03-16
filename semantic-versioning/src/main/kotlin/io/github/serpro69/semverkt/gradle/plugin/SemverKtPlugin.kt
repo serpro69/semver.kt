@@ -34,7 +34,7 @@ class SemverKtPlugin : Plugin<Settings> {
         // override configuration via settings extension
         settings.extensions.create("semantic-versioning", SemverPluginExtension::class.java, config)
 
-        logger.debug("Using configuration: {}", config.jsonString())
+//        logger.info("Using configuration: {}", config.jsonString())
 
         // configure all projects with semver
         settings.gradle.allprojects { project ->
@@ -46,11 +46,17 @@ class SemverKtPlugin : Plugin<Settings> {
 
     private fun configureProject(project: Project, config: SemverKtPluginConfig) {
         logger.info("Configure {}", project.name)
+        logger.info("Using configuration: {}", config.jsonString())
         val (currentVersion, latestVersion, nextVersion) = setVersion(project, config)
-
+        val moduleConfig = when (project.path) {
+            project.rootProject.path -> null
+            else -> config.monorepo.modules.firstOrNull { m -> m.path == project.path }
+        }
+        logger.info("{} project module config: {}", project.name,  moduleConfig?.jsonString())
         project.tasks.register("tag", TagTask::class.java) {
             it.description = "Create a tag for the next version"
             it.config.set(config)
+            it.moduleConfig.set(moduleConfig)
             it.dryRun.set(project.hasProperty("dryRun"))
             // set versions
             it.currentVersion.set(currentVersion)
@@ -70,6 +76,8 @@ class SemverKtPlugin : Plugin<Settings> {
      * IF `currentVersion` exists, both `latestVersion` and `nextVersion` will always return as `null`
      */
     private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
+        logger.info("Set version for {}", project.name)
+        logger.info("Using configuration: {}", config.jsonString())
         val propRelease = project.hasProperty("release")
         val propPromoteRelease = project.hasProperty("promoteRelease")
         val propPreRelease = project.hasProperty("preRelease")
@@ -78,7 +86,8 @@ class SemverKtPlugin : Plugin<Settings> {
             ?: NONE
 
         val isMonorepo = config.monorepo.modules.isNotEmpty()
-        val module = config.monorepo.modules.firstOrNull { it.name == project.name }
+        val module = config.monorepo.modules.firstOrNull { it.path == project.name }
+        logger.info("Module config: {}", module?.jsonString())
         val hasChanges by lazy {
             if (project == project.rootProject) true // always apply version to root project
             else if (isMonorepo && module != null) GitRepository(config).use { repo ->
@@ -88,7 +97,7 @@ class SemverKtPlugin : Plugin<Settings> {
                     ?: repo.log().last().objectId.name
                 repo.diff(s, e).any {
                     logger.debug("{} diff: {}", project.name, it)
-                    val srcPath = Path(module.name).resolve(module.sources).normalize()
+                    val srcPath = Path(module.path).resolve(module.sources).normalize()
                     Path(it.oldPath).startsWith(srcPath) || Path(it.newPath).startsWith(srcPath)
                 }
             }

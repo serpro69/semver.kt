@@ -38,8 +38,8 @@ class DslConfigurationTest : DescribeSpec({
                 c.git.tag.prefix shouldBe TagPrefix("p")
                 c.git.tag.separator shouldBe "sep"
                 c.monorepo.modules shouldHaveSize 3
-                c.monorepo.modules.map { it.name } shouldContainExactly listOf("foo", "bar", "baz")
-                with(c.monorepo.modules.first { it.name == "foo" }) {
+                c.monorepo.modules.map { it.path } shouldContainExactly listOf("foo", "bar", "baz")
+                with(c.monorepo.modules.first { it.path == "foo" }) {
                     // overwritten for module
                     tag?.prefix shouldBe TagPrefix("foo-v")
                     // overwritten for git config, so should be applied to module also
@@ -47,8 +47,8 @@ class DslConfigurationTest : DescribeSpec({
                     // use default
                     tag?.useBranches shouldBe false
                 }
-                with(c.monorepo.modules.first { it.name == "bar" }) { tag shouldBe null }
-                with(c.monorepo.modules.first { it.name == "baz" }) { tag shouldBe null }
+                with(c.monorepo.modules.first { it.path == "bar" }) { tag shouldBe null }
+                with(c.monorepo.modules.first { it.path == "baz" }) { tag shouldBe null }
             }
 
             it("should return default property values") {
@@ -84,8 +84,8 @@ class DslConfigurationTest : DescribeSpec({
                 c.git.tag.prefix shouldBe TagPrefix("p")
                 c.git.tag.separator shouldBe "sep"
                 c.monorepo.modules shouldHaveSize 3
-                c.monorepo.modules.map { it.name } shouldContainExactly listOf("foo", "bar", "baz")
-                with(c.monorepo.modules.first { it.name == "foo" }) {
+                c.monorepo.modules.map { it.path } shouldContainExactly listOf("foo", "bar", "baz")
+                with(c.monorepo.modules.first { it.path == "foo" }) {
                     // overwritten for module
                     tag?.prefix shouldBe TagPrefix("foo-v")
                     // git is applied after monorepo, so we have a "global default" here
@@ -93,8 +93,8 @@ class DslConfigurationTest : DescribeSpec({
                     // use default
                     tag?.useBranches shouldBe false
                 }
-                with(c.monorepo.modules.first { it.name == "bar" }) { tag shouldBe null }
-                with(c.monorepo.modules.first { it.name == "baz" }) { tag shouldBe null }
+                with(c.monorepo.modules.first { it.path == "bar" }) { tag shouldBe null }
+                with(c.monorepo.modules.first { it.path == "baz" }) { tag shouldBe null }
             }
 
             it("should return default property values") {

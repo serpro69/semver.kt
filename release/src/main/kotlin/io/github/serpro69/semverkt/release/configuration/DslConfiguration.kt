@@ -89,15 +89,15 @@ class DslConfiguration internal constructor() : Configuration {
 class PojoMonorepoConfig internal constructor(private val tag: PojoGitTagConfig) : MonorepoConfig {
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
-    fun module(name: String, block: DslModuleConfig.() -> Unit) {
+    fun module(path: String, block: DslModuleConfig.() -> Unit) {
         // use a copy of the tag config so that we don't overwrite "git.tag" configuration with the module's specifics
-        modules.add(DslModuleConfig(name, tag.copy()).apply(block))
+        modules.add(DslModuleConfig(path, tag.copy()).apply(block))
     }
 }
 
 @PojoConfigDsl
 class DslModuleConfig internal constructor(
-    override val name: String,
+    override val path: String,
     private val gitTag: PojoGitTagConfig,
 ) : ModuleConfig {
     override var sources: Path = super.sources
@@ -108,8 +108,8 @@ class DslModuleConfig internal constructor(
         private set
 
     init {
-        if (name.isBlank()) {
-            throw IllegalArgumentException("Module name cannot be blank")
+        if (path.isBlank()) {
+            throw IllegalArgumentException("Module path cannot be blank")
         }
     }
 

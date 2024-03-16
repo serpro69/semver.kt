@@ -21,13 +21,17 @@ interface MonorepoConfig {
 /**
  * Configuration of a single module in a multi-module mono-repo.
  *
- * @property name       module directory name (e.g. `core` for `./core` submodule in the root of the mono-repo)
- * @property sources    path to track changes for the module, relative to the module dir [name].
+ * @property path       a fully-qualified project path. The implementation must decide and document what the 'path' means.
+ * For example, in case of gradle, it would mean a fully-qualified gradle module path.
+ * So for `./core` module in the root of a gradle mono-repo, this would be `:core`,
+ * and for `./foo/bar` module in a gradle mono-repo, this would be `:foo:bar`.
+ *                      module directory name (e.g. `core` for `./core` submodule in the root of the mono-repo)
+ * @property sources    path to track changes for the module, relative to the module [path].
  * Defaults to module directory.
  * @property tag        git tag configuration for the module.
  */
 interface ModuleConfig {
-    val name: String
+    val path: String
     val sources: Path get() = Path(".")
     val tag: GitTagConfig? get() = null
 
@@ -35,8 +39,8 @@ interface ModuleConfig {
      * Returns a json string representation of this [ModuleConfig] instance.
      */
     fun jsonString(): String {
-        return tag?.let { """{ "name": "$name", "sources": "$sources", ${it.jsonString()} }""" }
-            ?: """{ "name": "$name", "sources": "$sources" }"""
+        return tag?.let { """{ "path": "$path", "sources": "$sources", ${it.jsonString()} }""" }
+            ?: """{ "path": "$path", "sources": "$sources" }"""
     }
 }
 
@@ -44,7 +48,7 @@ interface ModuleConfig {
  * Creates a [ModuleConfig] instance with the given [name] and optional [sources].
  */
 fun ModuleConfig(name: String, sources: Path? = null, tag: GitTagConfig? = null): ModuleConfig = object : ModuleConfig {
-    override val name: String = name
+    override val path: String = name
     override val sources: Path = sources ?: super.sources
     override val tag: GitTagConfig? = tag ?: super.tag
 }

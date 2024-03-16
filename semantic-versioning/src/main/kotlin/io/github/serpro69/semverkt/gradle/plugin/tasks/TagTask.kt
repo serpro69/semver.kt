@@ -2,6 +2,7 @@ package io.github.serpro69.semverkt.gradle.plugin.tasks
 
 import io.github.serpro69.semverkt.gradle.plugin.SemverKtPluginConfig
 import io.github.serpro69.semverkt.release.configuration.CleanRule
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
@@ -20,6 +21,9 @@ abstract class TagTask : SemverReleaseTask() {
 
     @get:Internal
     internal abstract val config: Property<SemverKtPluginConfig>
+
+    @get:Internal
+    internal abstract val moduleConfig: Property<ModuleConfig>
 
     init {
         // check if tag already set, if so tell plugin it's UP-TO-DATE
@@ -44,18 +48,21 @@ abstract class TagTask : SemverReleaseTask() {
             // release new version
             (next != null && latest != null) && (next > latest) -> {
                 logger.lifecycle("Calculated next version: {}", next)
-                setTag(next, config.get())
+                setTag(next, config.get(), moduleConfig.orNull)
             }
             // release first version
             next != null && latest == null -> {
                 logger.lifecycle("Calculated next version: {}", next)
-                setTag(next, config.get())
+                setTag(next, config.get(), moduleConfig.orNull)
             }
             else -> logger.lifecycle("Not doing anything")
         }
     }
 
-    private fun setTag(nextVer: Semver, config: SemverKtPluginConfig) {
+    private fun setTag(nextVer: Semver, config: SemverKtPluginConfig, moduleConfig: ModuleConfig?) {
+        val prefix = moduleConfig?.tag?.prefix ?: config.git.tag.prefix
+        logger.lifecycle("Next version: $nextVer")
+        logger.lifecycle("Prefix: $prefix")
         if (nextVer.toString().endsWith(config.version.snapshotSuffix)) {
             logger.lifecycle("Can't create a tag for a snapshot version")
         } else if (!dryRun.get()) run {
@@ -69,7 +76,7 @@ abstract class TagTask : SemverReleaseTask() {
                     }
                 }
                 repo.tags().any {
-                    Semver(it.name.replace(Regex("""^refs/tags/${config.git.tag.prefix}"""), "")) == nextVer
+                    Semver(it.name.replace(Regex("""^refs/tags/${prefix}"""), "")) == nextVer
                 }
             }
             if (!tagExists) {
@@ -79,10 +86,10 @@ abstract class TagTask : SemverReleaseTask() {
                     .findGitDir(project.projectDir)
                     .build()
                     .use {
-                        logger.debug("Set tag to: {}{}", config.git.tag.prefix, nextVer)
-                        Git(it).use { git -> git.setTag("${config.git.tag.prefix}$nextVer") }
+                        logger.debug("Set tag to: {}{}", prefix, nextVer)
+                        Git(it).use { git -> git.setTag("${prefix}$nextVer") }
                     }
-            } else logger.lifecycle("Tag {}{} already exists in project", config.git.tag.prefix, nextVer)
+            } else logger.lifecycle("Tag {}{} already exists in project", prefix, nextVer)
         }
     }
 }

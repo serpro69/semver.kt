@@ -17,7 +17,6 @@ enum class Increment {
 
     companion object {
         fun getByName(name: String): Increment {
-            @Suppress("EnumValuesSoftDeprecate")
             return values().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: NONE
         }
     }

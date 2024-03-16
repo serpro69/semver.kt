@@ -26,7 +26,7 @@ class RepositoryTest : DescribeSpec() {
     private val git = { Git.open(testConfiguration.git.repo.directory.toFile()) }
     private val monoRepo = GitRepository(monorepoTestConfig)
     private val monoGit = { Git.open(monorepoTestConfig.git.repo.directory.toFile()) }
-    private val monoFooTagConfig = requireNotNull(monorepoTestConfig.monorepo.modules.first { it.name == "foo" }.tag)
+    private val monoFooTagConfig = requireNotNull(monorepoTestConfig.monorepo.modules.first { it.path == "foo" }.tag)
     private val tagPrefix = TagPrefix("foo-v")
 
     init {
