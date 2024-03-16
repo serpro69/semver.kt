@@ -19,5 +19,5 @@ dependencies {
     } else {
         api(project(":spec"))
     }
-    implementation("dev.nohus:AutoKonfig:1.1.0")
+    implementation("org.json:json:20240303")
 }

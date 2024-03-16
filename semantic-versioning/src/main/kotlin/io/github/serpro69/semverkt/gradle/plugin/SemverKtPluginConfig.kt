@@ -13,7 +13,10 @@ import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.spec.Semver
 import org.gradle.api.initialization.Settings
+import org.gradle.api.logging.Logging
 import java.nio.file.Path
+
+private val logger = Logging.getLogger("SemverKtPluginConfig")
 
 @PluginConfigDsl
 class SemverKtPluginConfig(settings: Settings?) : Configuration {
@@ -135,20 +138,21 @@ class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
     override var ignoreCase: Boolean = super.ignoreCase
 }
 
-@Suppress("unused")
 @PluginConfigDsl
 class SemverKtPluginMonorepoConfig internal constructor(private val tag: SemverKtPluginGitTagConfig) : MonorepoConfig {
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
     fun module(name: String, block: SemverKtPluginModuleConfig.() -> Unit) {
+        logger.lifecycle("Configure module $name")
         // use a copy of the tag config so that we don't overwrite "git.tag" configuration with the module's specifics
         modules.add(SemverKtPluginModuleConfig(name, tag.copy()).apply(block))
+        logger.lifecycle("Modules:\n ${modules.joinToString("\n ") { it.jsonString() }}")
     }
 }
 
 @PluginConfigDsl
 class SemverKtPluginModuleConfig internal constructor(
-    override val name: String,
+    override val path: String,
     private val gitTag: SemverKtPluginGitTagConfig,
 ) : ModuleConfig {
     override var sources: Path = super.sources
@@ -159,7 +163,7 @@ class SemverKtPluginModuleConfig internal constructor(
         private set
 
     init {
-        if (name.isBlank()) {
+        if (path.isBlank()) {
             throw IllegalArgumentException("Module name cannot be blank")
         }
     }

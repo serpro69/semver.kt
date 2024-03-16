@@ -26,8 +26,6 @@ class SemverRelease : AutoCloseable {
 
     val currentVersion: () -> Semver?
     val latestVersion: () -> Semver?
-//    val currentSubmoduleVersion: (name: String) -> Semver?
-//    val latestSubmoduleVersion: (name: String) -> Semver?
 
     /**
      * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.

@@ -14,7 +14,7 @@ import kotlin.io.path.createDirectories
 private val faker = faker { }
 
 private val testProperties = Properties().also {
-    it["git.repo.directory"] = Path("build/test/resources/test-repo")
+    it["git.repo.directory"] = "build/test/resources/test-repo"
 }
 
 val testConfiguration = PropertiesConfiguration(testProperties)
@@ -58,7 +58,7 @@ val testMonoRepo: () -> Git = {
         setDirectory(rootDir.createDirectories().toFile())
         val git = call()
         monorepoTestConfig.monorepo.modules.forEach {
-            val src = rootDir.resolve(it.name).resolve(it.sources).createDirectories()
+            val src = rootDir.resolve(it.path).resolve(it.sources).createDirectories()
             src.resolve("Main.kt").toFile().createNewFile()
         }
         git.also {
@@ -100,4 +100,3 @@ fun Git.addCommit(message: String, path: String = "", fileName: String = faker.r
     add().addFilepattern(".").call()
     return commit().setMessage(message).call()
 }
-
