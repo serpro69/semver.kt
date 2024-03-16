@@ -260,7 +260,7 @@ class SemverReleaseTest : DescribeSpec() {
                 it("should return current version if not on pre-release") {
                     git().use { it.addRelease(0, Semver("1.0.0")) }
                     semverRelease(repo).use {
-                        it.promoteToRelease() shouldBe it.latestVersion()
+                        it.promoteToRelease() shouldBe it.latestVersion(null)
                     }
                 }
                 it("should return null if no versions exist in the project") {

@@ -12,7 +12,7 @@ import kotlin.io.path.Path
  * Provides access to default [Configuration] properties with optional overrides through json.
  */
 class JsonConfiguration : ConfigurationProvider {
-    val json: JSONObject
+    private val json: JSONObject
 
     /**
      * Creates an instance of this [JsonConfiguration] from a [json] string.

@@ -3,6 +3,7 @@ package io.github.serpro69.semverkt.release
 import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.release.repo.Commit
 import io.github.serpro69.semverkt.release.repo.GitRepository
@@ -16,7 +17,7 @@ import org.eclipse.jgit.lib.Ref
 /**
  * Provides functions for semantic releases of a project [Repository].
  *
- * @property currentVersion the current version in a given repository
+ * @property currentVersion the current version in a given repository, optionally for a given [ModuleConfig.path]
  * @property latestVersion the last version in a given repository
  */
 class SemverRelease : AutoCloseable {
@@ -24,8 +25,8 @@ class SemverRelease : AutoCloseable {
     private val config: Configuration
     private val sv: (Ref) -> Semver
 
-    val currentVersion: () -> Semver?
-    val latestVersion: () -> Semver?
+    val currentVersion: (module: ModuleConfig?) -> Semver?
+    val latestVersion: (module: ModuleConfig?) -> Semver?
 
     /**
      * @constructor Creates an instance of [SemverRelease] with given [configuration] parameters.
@@ -34,8 +35,8 @@ class SemverRelease : AutoCloseable {
         config = configuration
         repo = GitRepository(config)
         sv = semver(config.git.tag.prefix)
-        currentVersion = { repo.headVersionTag()?.let { sv(it) } }
-        latestVersion = { repo.latestVersionTag()?.let { sv(it) } }
+        currentVersion = { m -> repo.headVersionTag(m?.tag?.prefix)?.let { sv(it) } }
+        latestVersion = { m -> repo.latestVersionTag(m?.tag?.prefix)?.let { sv(it) } }
     }
 
     /**
@@ -45,8 +46,8 @@ class SemverRelease : AutoCloseable {
         repo = repository
         config = repo.config
         sv = semver(config.git.tag.prefix)
-        currentVersion = { repo.headVersionTag()?.let { sv(it) } }
-        latestVersion = { repo.latestVersionTag()?.let { sv(it) } }
+        currentVersion = { m -> repo.headVersionTag(m?.tag?.prefix)?.let { sv(it) } }
+        latestVersion = { m -> repo.latestVersionTag(m?.tag?.prefix)?.let { sv(it) } }
     }
 
     override fun close() {
@@ -59,9 +60,10 @@ class SemverRelease : AutoCloseable {
      */
     @JvmOverloads
     fun release(version: Semver, submodule: String? = null): Semver? {
-        val moreThanLatest = submodule?.let {
-            null
-        } ?: latestVersion()?.let { version > it } ?: true
+        val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
+        val moreThanLatest = submodule?.let { null }
+            ?: latestVersion(moduleConfig)?.let { version > it }
+            ?: true
         val exists by lazy { repo.tags().map { sv(it) }.any { it == version } }
         return if (moreThanLatest && !exists) version else null
     }
@@ -112,7 +114,8 @@ class SemverRelease : AutoCloseable {
         release: Boolean = (increment != Increment.DEFAULT),
         submodule: String? = null,
     ): Semver {
-        val nextVersion = latestVersion()?.let {
+        val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
+        val nextVersion = latestVersion(moduleConfig)?.let {
             when (increment) {
                 Increment.MAJOR -> it.incrementMajor()
                 Increment.MINOR -> it.incrementMinor()
@@ -123,10 +126,10 @@ class SemverRelease : AutoCloseable {
                     }
                 }
                 Increment.DEFAULT -> {
-                    it.preRelease?.let { _ -> increment(Increment.PRE_RELEASE, release) }
-                        ?: increment(config.version.defaultIncrement, release)
+                    it.preRelease?.let { _ -> increment(Increment.PRE_RELEASE, release, submodule) }
+                        ?: increment(config.version.defaultIncrement, release, submodule)
                 }
-                Increment.NONE -> latestVersion()
+                Increment.NONE -> latestVersion(moduleConfig)
             }
         } ?: config.version.initialVersion
         return if (release || increment == Increment.PRE_RELEASE) nextVersion else nextVersion.withSnapshot()
@@ -156,7 +159,8 @@ class SemverRelease : AutoCloseable {
     @JvmOverloads
     fun createPreRelease(increment: Increment, submodule: String? = null): Semver {
         val preRelease = PreRelease("${config.version.preReleaseId}.${config.version.initialPreRelease}")
-        return with(latestVersion()) {
+        val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
+        return with(latestVersion(moduleConfig)) {
             this?.preRelease?.let {
                 if (this.isSnapshot() || increment in listOf(Increment.PRE_RELEASE, Increment.NONE)) this else {
                     val nextVer = if (increment == Increment.DEFAULT) {
@@ -187,7 +191,8 @@ class SemverRelease : AutoCloseable {
      */
     @JvmOverloads
     fun promoteToRelease(submodule: String? = null): Semver? {
-        return with(latestVersion()) {
+        val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
+        return with(latestVersion(moduleConfig)) {
             this?.preRelease?.let { copy(preRelease = null, buildMetadata = null) } ?: this
         }
     }
@@ -211,11 +216,15 @@ class SemverRelease : AutoCloseable {
      */
     @JvmOverloads
     fun nextIncrement(submodule: String? = null): Increment {
+        val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
+        val prefix = moduleConfig?.tag?.prefix ?: config.git.tag.prefix
         val head = repo.head()
-        val latestTag = repo.latestVersionTag()
+        val latestTag = repo.latestVersionTag(prefix)
         val tagObjectId = latestTag?.peeledObjectId ?: latestTag?.objectId
-        val isHeadOnTag by lazy { repo.tags().any { head == it.peeledObjectId || head == it.objectId } }
-        return if (head == tagObjectId || isHeadOnTag) Increment.NONE else repo.log(latestTag).nextIncrement()
+        val isHeadOnTag by lazy {
+            repo.tags(prefix).any { head == it.peeledObjectId || head == it.objectId }
+        }
+        return if (head == tagObjectId || isHeadOnTag) Increment.NONE else repo.log(untilTag = latestTag, tagPrefix = prefix).nextIncrement()
     }
 
     private fun List<Commit>.nextIncrement(): Increment {
