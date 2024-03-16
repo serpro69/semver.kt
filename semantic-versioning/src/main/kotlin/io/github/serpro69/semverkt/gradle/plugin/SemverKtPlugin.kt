@@ -77,7 +77,7 @@ class SemverKtPlugin : Plugin<Settings> {
      */
     private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
         logger.info("Set version for {}", project.name)
-        logger.info("Using configuration: {}", config.jsonString())
+        logger.debug("Using configuration: {}", config.jsonString())
         val propRelease = project.hasProperty("release")
         val propPromoteRelease = project.hasProperty("promoteRelease")
         val propPreRelease = project.hasProperty("preRelease")
@@ -86,27 +86,31 @@ class SemverKtPlugin : Plugin<Settings> {
             ?: NONE
 
         val isMonorepo = config.monorepo.modules.isNotEmpty()
-        val module = config.monorepo.modules.firstOrNull { it.path == project.name }
-        logger.info("Module config: {}", module?.jsonString())
+        val module = config.monorepo.modules.firstOrNull { it.path == project.path }
+        logger.debug("Module '{}' config: {}", module?.path, module?.jsonString())
         val hasChanges by lazy {
             if (project == project.rootProject) true // always apply version to root project
             else if (isMonorepo && module != null) GitRepository(config).use { repo ->
+                val prefix = module.tag?.prefix ?: config.git.tag.prefix
                 val s = repo.head().name
-                val e = repo.headVersionTag()?.name
-                    ?: repo.latestVersionTag()?.name
-                    ?: repo.log().last().objectId.name
+                val e = repo.headVersionTag(prefix)?.name
+                    ?: repo.latestVersionTag(prefix)?.name
+                    ?: repo.log(tagPrefix = prefix).last().objectId.name
                 repo.diff(s, e).any {
                     logger.debug("{} diff: {}", project.name, it)
-                    val srcPath = Path(module.path).resolve(module.sources).normalize()
+                    val srcPath = Path(project.projectDir.relativeTo(project.rootDir).path)
+                        .resolve(module.sources).normalize()
+                    logger.debug("Module path: {}", srcPath)
                     Path(it.oldPath).startsWith(srcPath) || Path(it.newPath).startsWith(srcPath)
                 }
             }
             else true // module not versioned separately
         }
+        logger.info("Module has changes: {}", hasChanges)
 
         return SemverRelease(config).use { svr ->
             // IF git HEAD points at a version, set and return it and don't do anything else
-            svr.currentVersion()?.let {
+            svr.currentVersion(module)?.let {
                 project.version = it
                 return@use Triple(it, null, null)
             }
@@ -122,9 +126,9 @@ class SemverKtPlugin : Plugin<Settings> {
                 return@use Triple(null, null, Semver(v))
             }
             // ELSE figure out next version
-            val latestVersion = svr.latestVersion()
+            val latestVersion = svr.latestVersion(module)
             logger.info("Latest version: {}", latestVersion)
-            val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(svr.nextIncrement()) {
+            val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(svr.nextIncrement(module?.path)) {
                 logger.debug("Next increment from property: {}", propIncrement)
                 logger.debug("Next increment from git commit: {}", this)
                 when (propIncrement) {
@@ -145,7 +149,7 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             logger.info("Calculated version increment: {}", increaseVersion)
             val nextVersion = if (!hasChanges) null else if (propPromoteRelease) {
-                with(svr.promoteToRelease()) {
+                with(svr.promoteToRelease(module?.path)) {
                     logger.info("Promote {} to {}", latestVersion, this)
                     when {
                         propRelease -> this
@@ -158,7 +162,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 }
             } else if (propPreRelease) {
                 val inc = if (increaseVersion in listOf(DEFAULT, NONE)) DEFAULT else increaseVersion
-                with(svr.createPreRelease(inc)) {
+                with(svr.createPreRelease(inc, module?.path)) {
                     logger.info("Create pre-release {} from {}", this, latestVersion)
                     when {
                         propRelease -> this
@@ -168,20 +172,20 @@ class SemverKtPlugin : Plugin<Settings> {
             } else when (increaseVersion) {
                 MAJOR, MINOR, PATCH -> {
                     logger.info("Create release...")
-                    svr.release(increaseVersion)
+                    svr.release(increaseVersion, module?.path)
                 }
                 PRE_RELEASE -> {
                     latestVersion?.preRelease?.let {
                         logger.info("Next pre-release...")
-                        svr.release(increaseVersion)
+                        svr.release(increaseVersion, module?.path)
                     } ?: run {
                         logger.info("Create default pre-release...")
-                        svr.createPreRelease(DEFAULT)
+                        svr.createPreRelease(DEFAULT, module?.path)
                     }
                 }
                 DEFAULT, NONE -> when {
                     // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
-                    propRelease -> svr.release(config.version.defaultIncrement)
+                    propRelease -> svr.release(config.version.defaultIncrement, module?.path)
                     // if -Prelease is NOT set then create snapshot version if snapshots are enabled in configuration
                     config.version.useSnapshots -> {
                         val inc = when (propIncrement) {
@@ -190,7 +194,7 @@ class SemverKtPlugin : Plugin<Settings> {
                             !in listOf(DEFAULT, NONE) -> propIncrement
                             else -> config.version.defaultIncrement
                         }
-                        svr.snapshot(inc)
+                        svr.snapshot(inc, module?.path)
                     }
                     else -> null
                 }

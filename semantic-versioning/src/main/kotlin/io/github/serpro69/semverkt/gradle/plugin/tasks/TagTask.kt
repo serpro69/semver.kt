@@ -75,9 +75,9 @@ abstract class TagTask : SemverReleaseTask() {
                     CleanRule.NONE -> { /* noop */
                     }
                 }
-                repo.tags().any {
-                    Semver(it.name.replace(Regex("""^refs/tags/${prefix}"""), "")) == nextVer
-                }
+                repo.tags()
+                    .filter { it.name.startsWith("refs/tags/$prefix") }
+                    .any { Semver(it.name.replace(Regex("""^refs/tags/$prefix"""), "")) == nextVer }
             }
             if (!tagExists) {
                 logger.debug("Open repo at: {}", this)
