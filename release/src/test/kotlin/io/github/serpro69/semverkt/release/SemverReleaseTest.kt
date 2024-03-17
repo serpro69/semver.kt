@@ -88,45 +88,69 @@ class SemverReleaseTest : TestFixtures({ test ->
                     git().use {
                         it.addRelease(0, v)
                         it.addCommit("Test commit")
+                        it.addRelease(0, v, submodule = submodule)
+                        it.addCommit("Test commit")
                     }
                     test.semverRelease(repo).use { it.release(Increment.MAJOR) } shouldBe Semver("2.0.0")
+                    test.semverRelease(repo).use { it.release(Increment.MAJOR, submodule) } shouldBe Semver("2.0.0")
                 }
+
                 it("increment major snapshot after $v") {
                     git().use {
                         it.addRelease(0, v)
                         it.addCommit("Test commit")
+                        it.addRelease(0, v, submodule = submodule)
+                        it.addCommit("Test commit")
                     }
                     test.semverRelease(repo).use { it.snapshot(Increment.MAJOR) } shouldBe Semver("2.0.0-SNAPSHOT")
+                    test.semverRelease(repo).use { it.snapshot(Increment.MAJOR, submodule) } shouldBe Semver("2.0.0-SNAPSHOT")
                 }
+
                 it("increment minor release after $v") {
                     git().use {
                         it.addRelease(0, v)
                         it.addCommit("Test commit")
+                        it.addRelease(0, v, submodule = submodule)
+                        it.addCommit("Test commit")
                     }
                     test.semverRelease(repo).use { it.release(Increment.MINOR) } shouldBe Semver("1.1.0")
+                    test.semverRelease(repo).use { it.release(Increment.MINOR, submodule) } shouldBe Semver("1.1.0")
                 }
+
                 it("increment minor snapshot after $v") {
                     git().use {
                         it.addRelease(0, v)
                         it.addCommit("Test commit")
+                        it.addRelease(0, v, submodule = submodule)
+                        it.addCommit("Test commit")
                     }
                     test.semverRelease(repo).use { it.snapshot(Increment.MINOR) } shouldBe Semver("1.1.0-SNAPSHOT")
+                    test.semverRelease(repo).use { it.snapshot(Increment.MINOR, submodule) } shouldBe Semver("1.1.0-SNAPSHOT")
                 }
+
                 it("increment patch release after $v") {
                     git().use {
                         it.addRelease(0, v)
                         it.addCommit("Test commit")
+                        it.addRelease(0, v, submodule = submodule)
+                        it.addCommit("Test commit")
                     }
                     test.semverRelease(repo).use { it.release(Increment.PATCH) } shouldBe Semver("1.0.1")
+                    test.semverRelease(repo).use { it.release(Increment.PATCH, submodule) } shouldBe Semver("1.0.1")
                 }
+
                 it("increment patch snapshot after $v") {
                     git().use {
                         it.addRelease(0, v)
                         it.addCommit("Test commit")
+                        it.addRelease(0, v, submodule = submodule)
+                        it.addCommit("Test commit")
                     }
                     test.semverRelease(repo).use { it.snapshot(Increment.PATCH) } shouldBe Semver("1.0.1-SNAPSHOT")
+                    test.semverRelease(repo).use { it.snapshot(Increment.PATCH, submodule) } shouldBe Semver("1.0.1-SNAPSHOT")
                 }
             }
+
             it("increment pre_release") {
                 git().use { git ->
                     test.semverRelease(repo).use {
@@ -142,6 +166,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                     }
                 }
             }
+
             it("increment pre_release snapshot") {
                 git().use { git ->
                     test.semverRelease(repo).use {
@@ -160,6 +185,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                     }
                 }
             }
+
             it("increment default release") {
                 git().use { git ->
                     test.semverRelease(repo).use {
@@ -172,6 +198,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                     }
                 }
             }
+
             it("increment default snapshot") {
                 git().use { git ->
                     test.semverRelease(repo).use {
@@ -197,6 +224,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                         it.createPreRelease(Increment.DEFAULT) shouldBe Semver("1.0.0-SNAPSHOT")
                     }
                 }
+
                 it("pre-release version should not change") {
                     git().use { it.addRelease(1, Semver("1.0.0-rc.3")) }
                     test.semverRelease(repo).use {
@@ -204,6 +232,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                         it.createPreRelease(Increment.NONE) shouldBe Semver("1.0.0-rc.3")
                     }
                 }
+
                 it("release version should not change") {
                     git().use {
                         it.addRelease(0, Semver("1.0.0"))
@@ -214,6 +243,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                         it.createPreRelease(Increment.NONE) shouldBe Semver("1.0.0")
                     }
                 }
+
                 it("first pre-release version should be created for the specified increment") {
                     git().use {
                         it.addRelease(0, Semver("1.0.0"))
@@ -226,6 +256,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                         it.createPreRelease(Increment.DEFAULT) shouldBe Semver("1.1.0-rc.1")
                     }
                 }
+
                 it("normal version should be bumped and first pre-release created") {
                     git().use {
                         it.addRelease(1, Semver("1.0.0-rc.1"))
@@ -240,6 +271,7 @@ class SemverReleaseTest : TestFixtures({ test ->
                         it.createPreRelease(Increment.DEFAULT) shouldBe Semver("1.1.0-rc.1")
                     }
                 }
+
                 it("initial version with pre-release should be created") {
                     val tempDir = Files.createTempDirectory("semver-test")
                     Git.init().setDirectory(tempDir.toFile()).call().use {
@@ -264,12 +296,14 @@ class SemverReleaseTest : TestFixtures({ test ->
                     git().use { it.addRelease(0, Semver("1.0.0-rc.1")) }
                     test.semverRelease(repo).use { it.promoteToRelease() } shouldBe Semver("1.0.0")
                 }
+
                 it("should return current version if not on pre-release") {
                     git().use { it.addRelease(0, Semver("1.0.0")) }
                     test.semverRelease(repo).use {
                         it.promoteToRelease() shouldBe it.latestVersion(null)
                     }
                 }
+
                 it("should return null if no versions exist in the project") {
                     val tempDir = Files.createTempDirectory("semver-test")
                     Git.init().setDirectory(tempDir.toFile()).call().use {
@@ -300,6 +334,7 @@ class SemverReleaseTest : TestFixtures({ test ->
             it("should be possible to release the version manually when versions exist") {
                 test.semverRelease(repo).use { it.release(Semver("1.0.0")) } shouldBe Semver("1.0.0")
             }
+
             it("should be possible to release the version manually when no versions exist") {
                 val tempDir = Files.createTempDirectory("semver-test")
                 Git.init().setDirectory(tempDir.toFile()).call().use {
@@ -311,10 +346,12 @@ class SemverReleaseTest : TestFixtures({ test ->
                 }
                 tempDir.toFile().deleteRecursively()
             }
+
             it("should return null if version is less than latest version") {
                 git().use { it.addRelease(0, Semver("2.0.0")) }
                 test.semverRelease(repo).use { it.release(Semver("1.0.0")) } shouldBe null
             }
+
             it("should return null if version already exists") {
                 test.semverRelease(repo).use { it.release(Semver("0.3.0")) } shouldBe null
             }
