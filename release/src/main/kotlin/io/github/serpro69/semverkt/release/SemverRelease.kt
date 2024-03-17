@@ -18,8 +18,11 @@ import org.eclipse.jgit.lib.Ref
 /**
  * Provides functions for semantic releases of a project [Repository].
  *
- * @property currentVersion the current version in a given repository, optionally for a given [ModuleConfig]
- * @property latestVersion the last version in a given repository, optionally for a given [ModuleConfig]
+ * @property currentVersion the current version in a this [repo],
+ * optionally for a given module configured via [ModuleConfig] in the [config] instance.
+ *
+ * @property latestVersion  the last version in this [repo],
+ * optionally for a given module configured via [ModuleConfig] in the [config] instance.
  */
 class SemverRelease : AutoCloseable {
     private val repo: Repository
@@ -62,14 +65,18 @@ class SemverRelease : AutoCloseable {
      *
      * Will return the version for a given [submodule] path, if specified,
      * and a matching submodule path is found in [Configuration.monorepo] config
+     *
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun release(version: Semver, submodule: String? = null): Semver? {
         val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
-        val moreThanLatest = submodule?.let { null }
-            ?: latestVersion(moduleConfig)?.let { version > it }
-            ?: true
-        val exists by lazy { repo.tags().map { sv(moduleConfig)(it) }.any { it == version } }
+        val moreThanLatest = latestVersion(moduleConfig)?.let { version > it } ?: true
+        val exists by lazy {
+            repo.tags(prefix(config, moduleConfig))
+                .map { sv(moduleConfig)(it) }
+                .any { it == version }
+        }
         return if (moreThanLatest && !exists) version else null
     }
 
@@ -80,6 +87,8 @@ class SemverRelease : AutoCloseable {
      *
      * Will return the version for a given [submodule] path, if specified,
      * and a matching submodule path is found in [Configuration.monorepo] config
+     *
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun release(increment: Increment, submodule: String? = null): Semver = increment(increment, true, submodule)
@@ -91,6 +100,8 @@ class SemverRelease : AutoCloseable {
      *
      * Will return the version for a given [submodule] path, if specified,
      * and a matching submodule path is found in [Configuration.monorepo] config
+     *
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun snapshot(increment: Increment, submodule: String? = null): Semver = increment(increment, false, submodule)
@@ -121,6 +132,7 @@ class SemverRelease : AutoCloseable {
      *
      * @param increment the version component to increment
      * @param release   if `false` appends [VersionConfig.snapshotSuffix] to the final version
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun increment(
@@ -172,6 +184,8 @@ class SemverRelease : AutoCloseable {
      * THEN increases the [latestVersion] to the next [increment]
      *   and appends the [PreRelease] to it with the [VersionConfig.initialPreRelease] number,
      * ELSE the [latestVersion] is returned.
+     *
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun createPreRelease(increment: Increment, submodule: String? = null): Semver {
@@ -208,6 +222,8 @@ class SemverRelease : AutoCloseable {
      * IF [latestVersion] is a pre-release version,
      * THEN a copy of the [latestVersion] is returned as a normal version (with the pre-release component stripped),
      * ELSE the [latestVersion] version is returned.
+     *
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun promoteToRelease(submodule: String? = null): Semver? {
@@ -236,21 +252,21 @@ class SemverRelease : AutoCloseable {
      * - [GitMessageConfig.minor]
      * - [GitMessageConfig.patch]
      * - [GitMessageConfig.preRelease]
+     *
+     * @param submodule optional monorepo submodule path declared in this [config] via [ModuleConfig.path]
      */
     @JvmOverloads
     fun nextIncrement(submodule: String? = null): Increment {
         val moduleConfig = config.monorepo.modules.firstOrNull { it.path == submodule }
-        val prefix = moduleConfig?.tag?.prefix ?: config.git.tag.prefix
+        val prefix = prefix(config, moduleConfig)
         val head = repo.head()
         val latestTag = repo.latestVersionTag(prefix)
         val tagObjectId = latestTag?.peeledObjectId ?: latestTag?.objectId
-        val isHeadOnTag by lazy {
-            repo.tags(prefix).any { head == it.peeledObjectId || head == it.objectId }
+        val isHeadOnTag by lazy { repo.tags(prefix).any { head == it.peeledObjectId || head == it.objectId } }
+        return when {
+            head == tagObjectId || isHeadOnTag -> Increment.NONE
+            else -> repo.log(untilTag = latestTag, tagPrefix = prefix).nextIncrement()
         }
-        return if (head == tagObjectId || isHeadOnTag) Increment.NONE else repo.log(
-            untilTag = latestTag,
-            tagPrefix = prefix
-        ).nextIncrement()
     }
 
     private fun List<Commit>.nextIncrement(): Increment {
