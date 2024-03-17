@@ -61,8 +61,7 @@ abstract class TagTask : SemverReleaseTask() {
 
     private fun setTag(nextVer: Semver, config: SemverKtPluginConfig, moduleConfig: ModuleConfig?) {
         val prefix = moduleConfig?.tag?.prefix ?: config.git.tag.prefix
-        logger.lifecycle("Next version: $nextVer")
-        logger.lifecycle("Prefix: $prefix")
+        logger.debug("Next version '{}' with prefix '{}'", nextVer, prefix)
         if (nextVer.toString().endsWith(config.version.snapshotSuffix)) {
             logger.lifecycle("Can't create a tag for a snapshot version")
         } else if (!dryRun.get()) run {

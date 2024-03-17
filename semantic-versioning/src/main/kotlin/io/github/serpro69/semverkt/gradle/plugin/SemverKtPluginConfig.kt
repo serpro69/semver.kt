@@ -143,10 +143,10 @@ class SemverKtPluginMonorepoConfig internal constructor(private val tag: SemverK
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
     fun module(name: String, block: SemverKtPluginModuleConfig.() -> Unit) {
-        logger.lifecycle("Configure module $name")
+        logger.debug("Configure module {}", name)
         // use a copy of the tag config so that we don't overwrite "git.tag" configuration with the module's specifics
         modules.add(SemverKtPluginModuleConfig(name, tag.copy()).apply(block))
-        logger.lifecycle("Modules:\n ${modules.joinToString("\n ") { it.jsonString() }}")
+        logger.debug("Project modules config:\n {}", modules.joinToString("\n ") { it.jsonString() })
     }
 }
 
