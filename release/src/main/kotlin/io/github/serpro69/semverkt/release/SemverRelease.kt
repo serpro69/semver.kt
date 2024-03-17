@@ -4,6 +4,7 @@ import io.github.serpro69.semverkt.release.configuration.Configuration
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitTagConfig
 import io.github.serpro69.semverkt.release.configuration.ModuleConfig
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.release.configuration.VersionConfig
 import io.github.serpro69.semverkt.release.repo.Commit
 import io.github.serpro69.semverkt.release.repo.GitRepository
@@ -23,7 +24,8 @@ import org.eclipse.jgit.lib.Ref
 class SemverRelease : AutoCloseable {
     private val repo: Repository
     private val config: Configuration
-    private val sv: (Ref) -> Semver
+    private val sv: (ModuleConfig?) -> (Ref) -> Semver
+    private val prefix: (Configuration, ModuleConfig?) -> TagPrefix = { c, m -> m?.tag?.prefix ?: c.git.tag.prefix }
 
     val currentVersion: (module: ModuleConfig?) -> Semver?
     val latestVersion: (module: ModuleConfig?) -> Semver?
@@ -34,9 +36,9 @@ class SemverRelease : AutoCloseable {
     constructor(configuration: Configuration) {
         config = configuration
         repo = GitRepository(config)
-        sv = semver(config.git.tag.prefix)
-        currentVersion = { m -> repo.headVersionTag(m?.tag?.prefix)?.let { sv(it) } }
-        latestVersion = { m -> repo.latestVersionTag(m?.tag?.prefix)?.let { sv(it) } }
+        sv = { m -> semver(prefix(config, m)) }
+        currentVersion = { m -> repo.headVersionTag(prefix(config, m))?.let { sv(m)(it) } }
+        latestVersion = { m -> repo.latestVersionTag(prefix(config, m))?.let { sv(m)(it) } }
     }
 
     /**
@@ -45,9 +47,9 @@ class SemverRelease : AutoCloseable {
     constructor(repository: Repository) {
         repo = repository
         config = repo.config
-        sv = semver(config.git.tag.prefix)
-        currentVersion = { m -> repo.headVersionTag(m?.tag?.prefix)?.let { sv(it) } }
-        latestVersion = { m -> repo.latestVersionTag(m?.tag?.prefix)?.let { sv(it) } }
+        sv = { m -> semver(prefix(config, m)) }
+        currentVersion = { m -> repo.headVersionTag(prefix(config, m))?.let { sv(m)(it) } }
+        latestVersion = { m -> repo.latestVersionTag(prefix(config, m))?.let { sv(m)(it) } }
     }
 
     override fun close() {
@@ -57,6 +59,9 @@ class SemverRelease : AutoCloseable {
     /**
      * Returns the [version] IF it's moreThan [latestVersion] AND not already present in the [repo],
      * ELSE returns `null`.
+     *
+     * Will return the version for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config
      */
     @JvmOverloads
     fun release(version: Semver, submodule: String? = null): Semver? {
@@ -64,7 +69,7 @@ class SemverRelease : AutoCloseable {
         val moreThanLatest = submodule?.let { null }
             ?: latestVersion(moduleConfig)?.let { version > it }
             ?: true
-        val exists by lazy { repo.tags().map { sv(it) }.any { it == version } }
+        val exists by lazy { repo.tags().map { sv(moduleConfig)(it) }.any { it == version } }
         return if (moreThanLatest && !exists) version else null
     }
 
@@ -72,6 +77,9 @@ class SemverRelease : AutoCloseable {
      * Returns the next release version after the [latestVersion] based on the [increment].
      *
      * See also [SemverRelease.increment] for the rules that are used when releasing the versions.
+     *
+     * Will return the version for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config
      */
     @JvmOverloads
     fun release(increment: Increment, submodule: String? = null): Semver = increment(increment, true, submodule)
@@ -80,12 +88,18 @@ class SemverRelease : AutoCloseable {
      * Returns the next snapshot version after the [latestVersion] based on the [increment].
      *
      * See also [SemverRelease.increment] for the rules that are used when creating version snapshots.
+     *
+     * Will return the version for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config
      */
     @JvmOverloads
     fun snapshot(increment: Increment, submodule: String? = null): Semver = increment(increment, false, submodule)
 
     /**
      * Increment the [latestVersion] to the next [Semver] using the [increment].
+     *
+     * Will increment the version for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config.
      *
      * The following rules apply when incrementing the [latestVersion]:
      *
@@ -138,6 +152,9 @@ class SemverRelease : AutoCloseable {
     /**
      * Creates a pre-release version with a given [increment], and returns as [Semver] instance.
      *
+     * Will create a pre-release version for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config.
+     *
      * The following rules apply when creating a new pre-release version:
      *
      * 1. **WHEN [latestVersion] is a pre-release version.**
@@ -178,12 +195,15 @@ class SemverRelease : AutoCloseable {
         }
     }
 
-    private fun Semver.isSnapshot(submodule: String? = null): Boolean {
+    private fun Semver.isSnapshot(): Boolean {
         return toString().endsWith("-${config.version.snapshotSuffix}")
     }
 
     /**
      * Promotes a pre-release version to a release version.
+     *
+     * Will promote a pre-release version for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config.
      *
      * IF [latestVersion] is a pre-release version,
      * THEN a copy of the [latestVersion] is returned as a normal version (with the pre-release component stripped),
@@ -199,6 +219,9 @@ class SemverRelease : AutoCloseable {
 
     /**
      * Returns the next [Increment] based on the [Repository.latestVersionTag].
+     *
+     * Will return the next [Increment] for a given [submodule] path, if specified,
+     * and a matching submodule path is found in [Configuration.monorepo] config.
      *
      * IF any of the commits contain a keyword for incrementing a specific version, as configured by [GitMessageConfig],
      * THEN that increment will be returned based on the precedence rules,
@@ -224,7 +247,10 @@ class SemverRelease : AutoCloseable {
         val isHeadOnTag by lazy {
             repo.tags(prefix).any { head == it.peeledObjectId || head == it.objectId }
         }
-        return if (head == tagObjectId || isHeadOnTag) Increment.NONE else repo.log(untilTag = latestTag, tagPrefix = prefix).nextIncrement()
+        return if (head == tagObjectId || isHeadOnTag) Increment.NONE else repo.log(
+            untilTag = latestTag,
+            tagPrefix = prefix
+        ).nextIncrement()
     }
 
     private fun List<Commit>.nextIncrement(): Increment {
