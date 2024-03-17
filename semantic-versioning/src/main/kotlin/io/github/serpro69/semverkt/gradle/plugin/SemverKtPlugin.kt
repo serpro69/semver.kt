@@ -34,7 +34,7 @@ class SemverKtPlugin : Plugin<Settings> {
         // override configuration via settings extension
         settings.extensions.create("semantic-versioning", SemverPluginExtension::class.java, config)
 
-//        logger.info("Using configuration: {}", config.jsonString())
+        logger.debug("Using configuration: {}", config.jsonString())
 
         // configure all projects with semver
         settings.gradle.allprojects { project ->
@@ -46,13 +46,13 @@ class SemverKtPlugin : Plugin<Settings> {
 
     private fun configureProject(project: Project, config: SemverKtPluginConfig) {
         logger.info("Configure {}", project.name)
-        logger.info("Using configuration: {}", config.jsonString())
+        logger.debug("Using configuration: {}", config.jsonString())
         val (currentVersion, latestVersion, nextVersion) = setVersion(project, config)
         val moduleConfig = when (project.path) {
             project.rootProject.path -> null
             else -> config.monorepo.modules.firstOrNull { m -> m.path == project.path }
         }
-        logger.info("{} project module config: {}", project.name,  moduleConfig?.jsonString())
+        logger.debug("{} project module config: {}", project.name,  moduleConfig?.jsonString())
         project.tasks.register("tag", TagTask::class.java) {
             it.description = "Create a tag for the next version"
             it.config.set(config)
@@ -106,7 +106,7 @@ class SemverKtPlugin : Plugin<Settings> {
             }
             else true // module not versioned separately
         }
-        logger.info("Module has changes: {}", hasChanges)
+        logger.debug("Module has changes: {}", hasChanges)
 
         return SemverRelease(config).use { svr ->
             // IF git HEAD points at a version, set and return it and don't do anything else
