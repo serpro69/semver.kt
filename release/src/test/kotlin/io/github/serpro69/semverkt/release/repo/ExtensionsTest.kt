@@ -1,39 +1,14 @@
 package io.github.serpro69.semverkt.release.repo
 
-import io.github.serpro69.semverkt.release.testConfiguration
-import io.github.serpro69.semverkt.release.testRepo
+import io.github.serpro69.semverkt.release.TestFixtures
 import io.github.serpro69.semverkt.spec.Semver
-import io.kotest.core.spec.Spec
-import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.core.test.TestCase
-import io.kotest.core.test.TestResult
 import io.kotest.matchers.shouldBe
 
-class ExtensionsTest : DescribeSpec() {
-    private val repo = GitRepository(testConfiguration)
+class ExtensionsTest : TestFixtures({ test: TestFixtures ->
 
-    init {
-        describe("repo extension functions") {
-            it("semver() fun") {
-                semver(testConfiguration.git.tag.prefix)(repo.latestVersionTag()!!) shouldBe Semver("0.4.0")
-            }
+    describe("repo extension functions") {
+        it("semver() fun") {
+            semver(test.testConfiguration.git.tag.prefix)(test.repo.latestVersionTag()!!) shouldBe Semver("0.4.0")
         }
     }
-
-    override suspend fun beforeSpec(spec: Spec) {
-        testConfiguration.git.repo.directory.toFile().deleteRecursively()
-    }
-
-    override suspend fun beforeEach(testCase: TestCase) {
-        testRepo()
-    }
-
-    override suspend fun afterEach(testCase: TestCase, result: TestResult) {
-        repo.close()
-        testConfiguration.git.repo.directory.toFile().deleteRecursively()
-    }
-
-    override fun afterSpec(f: suspend (Spec) -> Unit) {
-        repo.close()
-    }
-}
+})
