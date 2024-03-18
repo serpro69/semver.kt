@@ -90,12 +90,13 @@ subprojects {
             events = setOf(
                 TestLogEvent.FAILED,
                 TestLogEvent.SKIPPED,
-                TestLogEvent.STANDARD_OUT
+//                TestLogEvent.STANDARD_OUT
             )
             exceptionFormat = TestExceptionFormat.FULL
             showExceptions = true
             showCauses = true
             showStackTraces = true
+            displayGranularity = 2 // shorter test names
             // set options for log level DEBUG and INFO
             debug {
                 events = setOf(

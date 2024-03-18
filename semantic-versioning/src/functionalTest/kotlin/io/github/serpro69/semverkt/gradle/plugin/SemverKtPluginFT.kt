@@ -1,20 +1,29 @@
 package io.github.serpro69.semverkt.gradle.plugin
 
+import io.github.serpro69.kfaker.faker
+import io.github.serpro69.semverkt.gradle.plugin.fixture.AbstractProject
 import io.github.serpro69.semverkt.gradle.plugin.fixture.SemverKtTestProject
 import io.github.serpro69.semverkt.gradle.plugin.gradle.Builder
+import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.release.configuration.GitMessageConfig
 import io.github.serpro69.semverkt.release.configuration.GitRepoConfig
+import io.github.serpro69.semverkt.release.configuration.GitTagConfig
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.PojoConfiguration
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
+import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.core.names.DuplicateTestNameMode
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import org.eclipse.jgit.api.Git
+import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.util.GradleVersion
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.writeText
 
@@ -22,8 +31,6 @@ class SemverKtPluginFT : DescribeSpec({
 
     assertSoftly = true
     duplicateTestNameMode = DuplicateTestNameMode.Silent
-
-    val dr: (Boolean) -> String = { dryRun -> if (dryRun) " and dryRun" else "" }
 
     describe("versioning from commits") {
         listOf("major", "minor", "patch", "pre release").forEach { keyword ->
@@ -456,19 +463,19 @@ class SemverKtPluginFT : DescribeSpec({
     }
 
     describe("current git HEAD with a version") {
-        listOf(true, false).forEach { dryRun ->
-            it("should set version to current version with increment from commit message${dr(dryRun)}") {
+        listOf(true, false).forEach { tagViaCommit -> listOf(true, false).forEach { dryRun ->
+            it("should set version to current version with increment${testName(tagViaCommit, dryRun)}") {
                 val project = SemverKtTestProject()
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit\n[minor]").call()
+                    if (tagViaCommit) it.commit().setMessage("New commit\n[minor]").call()
+                    else it.commit().setMessage("New commit").call()
                     it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
                 }
                 // Act
-                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
-                val result = Builder.build(project = project, args = args)
+                val result = tag(project)(if (tagViaCommit) null else Increment.MINOR, dryRun)
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
@@ -476,7 +483,8 @@ class SemverKtPluginFT : DescribeSpec({
                 result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
                 result.output shouldNotContain "Calculated next version"
             }
-            it("should set version to current version with increment from gradle properties${dr(dryRun)}") {
+
+            it("!should set version to current version with increment${testName(tagViaCommit, dryRun)}") {
                 val project = SemverKtTestProject()
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -496,30 +504,33 @@ class SemverKtPluginFT : DescribeSpec({
                 result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
                 result.output shouldNotContain "Calculated next version"
             }
-        }
+        } }
     }
 
     describe("re-run 'tag' after releasing a version") {
-        listOf(true, false).forEach { dryRun ->
-            it("should return UP_TO_DATE with increment from commit${dr(dryRun)}") {
+        listOf(true, false).forEach { tagViaCommit -> listOf(true, false).forEach { dryRun ->
+            it("should return UP_TO_DATE with increment from commit${testName(tagViaCommit, dryRun)}") {
                 val project = SemverKtTestProject()
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     project.projectDir.resolve("text.txt").createFile().writeText("Hello")
                     it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit\n\n[minor]").call()
+                    if (tagViaCommit) it.commit().setMessage("New commit\n[minor]").call()
+                    else it.commit().setMessage("New commit").call()
                 }
-                Builder.build(project = project, args = arrayOf("tag")) // release a version
+                // release a version
+                tag(project)(if (tagViaCommit) null else Increment.MINOR, false)
                 // Act
-                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
-                val result = Builder.build(project = project, args = args)
+                // re-run :tag task after releasing a version
+                val result = tag(project)(if (tagViaCommit) null else Increment.MINOR, dryRun)
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
                 result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
                 result.output shouldContain "> Task :tag UP-TO-DATE"
                 result.output shouldNotContain "Calculated next version"
             }
-            it("should return UP_TO_DATE with increment from gradle properties${dr(dryRun)}") {
+
+            it("!should return UP_TO_DATE with increment from gradle properties${testName(tagViaCommit, dryRun)}") {
                 val project = SemverKtTestProject()
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -543,7 +554,7 @@ class SemverKtPluginFT : DescribeSpec({
                 result.output shouldContain "> Task :tag UP-TO-DATE"
                 result.output shouldNotContain "Calculated next version"
             }
-        }
+        } }
     }
 
     describe("compatible gradle version") {
@@ -639,42 +650,38 @@ class SemverKtPluginFT : DescribeSpec({
         }
     }
 
-    describe("f:multi-module project") {
-        listOf(true, false).forEach { dryRun ->
-            it("!should set next version via commit${dr(dryRun)}") {
+    describe("multi-module project") {
+        val modules = listOf("core", "foo", "bar", "baz")
+        listOf(true, false).forEach { tagViaCommit -> listOf(true, false).forEach { dryRun ->
+            it("should set next version${testName(tagViaCommit, dryRun)}") {
                 val project = SemverKtTestProject(multiModule = true, monorepo = false)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
                     it.tag().setName("v0.1.0").call() // set initial version
-                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                    it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit\n\n[minor]").call()
+                    commit(project, it)(null)
+                    if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                    else it.commit().setMessage("New commit").call()
                 }
                 // Act
-                val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
-                val result = Builder.build(project = project, args = args)
+                val result = tag(project)(if (!tagViaCommit) Increment.MINOR else null, dryRun)
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
-                """.trimIndent().trim()
+                val v = Semver("0.2.0")
+                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                result.output shouldContain expected(project.name, v, dryRun)
+                result.output shouldContain expected("core", v, dryRun)
+                result.output shouldContain expected("foo", v, dryRun)
+                result.output shouldContain expected("bar", v, dryRun)
+                result.output shouldContain expected("baz", v, dryRun)
+                if (!dryRun) {
+                    result.output shouldContain tagExists("core", v, dryRun)
+                    result.output shouldContain tagExists("foo", v, dryRun)
+                    result.output shouldContain tagExists("bar", v, dryRun)
+                    result.output shouldContain tagExists("baz", v, dryRun)
+                }
             }
 
-            it("!should set next version via gradle property${dr(dryRun)}") {
+            it("!should set next version via gradle property${testName(tagViaCommit, dryRun)}") {
                 val project = SemverKtTestProject(multiModule = true, monorepo = false)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -708,151 +715,171 @@ class SemverKtPluginFT : DescribeSpec({
                 """.trimIndent().trim()
             }
 
-            context("!monorepo project${dr(dryRun)}") {
-                it("should set next version via commit${dr(dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+            context("monorepo versioning${testName(tagViaCommit, dryRun)}") {
+                it("should set next version") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
-                        listOf("foo", "bar").forEach { module ->
-                            project.projectDir.resolve(module)
-                                .resolve("$module-text.txt")
-                                .createFile().writeText("Hello")
-                            it.add().addFilepattern(".").call()
-                        }
-                        it.commit().setMessage("New commit\n\n[minor]").call()
+                        listOf("foo", "bar").forEach { module -> commit(project, it)(module) }
+                        if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                        else it.commit().setMessage("New commit").call()
                     }
                     // Act
-                    val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
-                    val result = Builder.build(project = project, args = args)
+                    val result = tag(project)(if (!tagViaCommit) Increment.MINOR else null, dryRun)
                     // Assert
+                    val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
-                    """.trimIndent().trim()
+                    result.output shouldContain expected(project.name, v, dryRun)
+                    result.output shouldContain expected("foo", v, dryRun)
+                    result.output shouldContain expected("bar", v, dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
+                    if (!dryRun) {
+                        result.output shouldContain tagExists("foo", v, dryRun)
+                        result.output shouldContain tagExists("bar", v, dryRun)
+                        result.output shouldNotContain tagExists("core", v, dryRun)
+                        result.output shouldNotContain tagExists("baz", v, dryRun)
+                    }
                 }
 
-                it("should set next version via gradle property${dr(dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+                it("!should set next version via gradle property${testName(tagViaCommit, dryRun)}") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
-                        listOf("foo", "bar").forEach { module ->
-                            project.projectDir.resolve(module)
-                                .resolve("$module-text.txt")
-                                .createFile().writeText("Hello")
-                            it.add().addFilepattern(".").call()
-                        }
+                        listOf("foo", "bar").forEach { module -> commit(project, it)(module) }
                         it.commit().setMessage("New commit").call()
                     }
                     // Act
-                    val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                    else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                    val result = Builder.build(project = project, args = args)
+                    val result = tag(project)(Increment.MINOR, dryRun)
                     // Assert
+                    val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
-                    """.trimIndent().trim()
+                    result.output shouldContain expected(project.name, v, dryRun)
+                    result.output shouldContain expected("foo", v, dryRun)
+                    result.output shouldContain expected("bar", v, dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
+                    if (!dryRun) {
+                        result.output shouldContain tagExists("foo", v, dryRun)
+                        result.output shouldContain tagExists("bar", v, dryRun)
+                        result.output shouldNotContain tagExists("core", v, dryRun)
+                        result.output shouldNotContain tagExists("baz", v, dryRun)
+                    }
                 }
 
-                it("should always set version for root project via gradle property${dr(dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+                it("should set non-configured module version from root changes") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
-                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                        it.add().addFilepattern(".").call()
-                        it.commit().setMessage("New commit").call()
+                        commit(project, it)(null) // will trigger release of 'core'
+                        if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                        else it.commit().setMessage("New commit").call()
                     }
                     // Act
-                    val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                    else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                    val result = Builder.build(project = project, args = args)
+                    val result = tag(project)(if (!tagViaCommit) Increment.MINOR else null, dryRun)
                     // Assert
+                    val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Not doing anything
-                    
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Not doing anything
-                    """.trimIndent().trim()
+                    result.output shouldContain expected(project.name, v, dryRun)
+                    result.output shouldContain expected("core", v, dryRun)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("bar", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
+                    if (!dryRun) {
+                        if (!dryRun) result.output shouldContain tagExists("core", v, dryRun)
+                        result.output shouldNotContain tagExists("foo", v, dryRun)
+                        result.output shouldNotContain tagExists("bar", v, dryRun)
+                        result.output shouldNotContain tagExists("baz", v, dryRun)
+                    }
                 }
 
-                it("should always set version for non-configured submodule via gradle property${dr(dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+                it("should set non-configured module version from root changes with another configured module changes") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
-                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                        project.projectDir.resolve("baz").resolve("text.txt").createFile().writeText("Hello")
-                        it.add().addFilepattern(".").call()
-                        it.commit().setMessage("New commit").call()
+                        commit(project, it)(null) // will trigger release of 'core'
+                        commit(project, it)("baz")
+                        if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                        else it.commit().setMessage("New commit").call()
                     }
                     // Act
-                    val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                    else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                    val result = Builder.build(project = project, args = args)
+                    val result = tag(project)(if (!tagViaCommit) Increment.MINOR else null, dryRun)
                     // Assert
+                    val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Not doing anything
-                    
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Not doing anything
-                    """.trimIndent().trim()
+                    result.output shouldContain expected(project.name, v, dryRun)
+                    result.output shouldContain expected("core", v, dryRun)
+                    result.output shouldContain expected("baz", v, dryRun)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("bar", null, dryRun)
+                    if (!dryRun) {
+                        if (!dryRun) result.output shouldContain tagExists("core", v, dryRun)
+                        if (!dryRun) result.output shouldContain tagExists("baz", v, dryRun)
+                        result.output shouldNotContain tagExists("foo", v, dryRun)
+                        result.output shouldNotContain tagExists("bar", v, dryRun)
+                    }
                 }
 
-                it("should not set version for configured submodule with no changes via gradle property${dr(dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true)
+                it("should always set version for root project") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v0.1.0").call() // set initial version
+                        commit(project, it)("baz")
+                        if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                        else it.commit().setMessage("New commit").call()
+                    }
+                    // Act
+                    val result = tag(project)(if (!tagViaCommit) Increment.MINOR else null, dryRun)
+                    // Assert
+                    val v = Semver("0.2.0")
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    result.output shouldContain expected(project.name, v, dryRun)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("bar", null, dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expected("baz", v, dryRun)
+                    if (!dryRun) {
+                        result.output shouldNotContain tagExists("core", v, dryRun)
+                        result.output shouldNotContain tagExists("foo", v, dryRun)
+                        result.output shouldNotContain tagExists("bar", v, dryRun)
+                        if (!dryRun) result.output shouldContain tagExists("baz", v, dryRun)
+                    }
+                }
+
+                it("should NOT set non-configured module version") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v0.1.0").call() // set initial version
+                        commit(project, it)("baz")
+                        if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                        else it.commit().setMessage("New commit").call()
+                    }
+                    // Act
+                    val result = tag(project)(if (!tagViaCommit) Increment.MINOR else null, dryRun)
+                    // Assert
+                    val v = Semver("0.2.0")
+                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
+                    result.output shouldContain expected(project.name, v, dryRun)
+                    result.output shouldContain expected("baz", v, dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("bar", null, dryRun)
+                    if (!dryRun) {
+                        if (!dryRun) result.output shouldContain tagExists("baz", v, dryRun)
+                        result.output shouldNotContain tagExists("core", v, dryRun)
+                        result.output shouldNotContain tagExists("foo", v, dryRun)
+                        result.output shouldNotContain tagExists("bar", v, dryRun)
+                    }
+                }
+
+                it("!should not set version for configured submodule with no changes via gradle property${testName(tagViaCommit, dryRun)}") {
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
@@ -875,7 +902,7 @@ class SemverKtPluginFT : DescribeSpec({
 
                     > Task :bar:tag
                     Not doing anything
-                    
+
                     > Task :baz:tag
                     Calculated next version: 0.2.0
                     ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
@@ -884,100 +911,219 @@ class SemverKtPluginFT : DescribeSpec({
                     ${if (!dryRun) "Tag v0.2.0 already exists in project" else ""}
                     """.trimIndent().trim()
                 }
+
+                listOf(null, "core", "foo").forEach { commitIn ->
+                    it("should set ALL versions to next MAJOR when committing in $commitIn${testName(tagViaCommit, dryRun)}") {
+                        // Arrange
+                        val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
+                        Git.open(project.projectDir.toFile()).use {
+                            it.tag().setName("v0.1.0").call() // set initial version
+                            commit(project, it)(commitIn)
+                            if (tagViaCommit) it.commit().setMessage("New commit\n\n[major]").call()
+                            else it.commit().setMessage("New commit").call()
+                        }
+                        // Act
+                        // -> tag next version with MAJOR release
+                        val result = tag(project)(if (!tagViaCommit) Increment.MAJOR else null, dryRun)
+                        // Assert
+                        val initial = Semver("0.1.0")
+                        result.output shouldContain expected(project.name, initial.incrementMajor(), dryRun)
+                        modules.forEach { m ->
+                            result.output shouldContain expected(m, initial.incrementMajor(), dryRun)
+                            if (!dryRun) result.output shouldContain tagExists(m, initial.incrementMajor(), dryRun)
+                        }
+                    }
+                }
             }
 
-            context("f:monorepo project with multi-tagging${dr(dryRun)}") {
+            @Suppress("DestructuringWrongName")
+            context("monorepo versioning with multi-tagging${testName(tagViaCommit, dryRun)}") {
                 it("should set initial version") {
                     // arrange
-                    // -> clean (no tags) repo with commits in all modules
+                    val initial = Semver("0.1.0")
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    Git.open(project.projectDir.toFile()).use {
+                        // -> clean (no tags) repo with changes in 'root' and all modules (':core', ':foo', ':bar', ':baz')
+                        project.projectDir.resolve("text.txt").createFile().writeText(faker.lorem.words())
+                        it.add().addFilepattern(".").call()
+                        it.commit().setMessage("First commit").call()
+                        modules.forEach { m -> commit(project, it)(m) }
+                    }
                     // act
-                    // -> tag next version
+                    // -> tag next minor version
+                    val result = tag(project)(Increment.MINOR, dryRun)
                     // assert
-                    // -> 'root' and all submodules should have initial version
-                    //    (':core' submodule is NOT configured with custom tag prefix and should have 'root' tag)
-                    //    (':foo', ':bar', ':baz' submodules are configured with custom tag prefix and should have their own tags)
+                    // -> 'root' should have initial version
+                    result.output shouldContain expected(project.name, initial, dryRun)
+                    modules.forEach {
+                        // -> all submodules should have initial version
+                        result.output shouldContain expected(it, initial, dryRun)
+                        // -> ':core' submodule is NOT configured with custom tag prefix and should have 'root' tag)
+                        // -> ':foo', ':bar', ':baz' submodules are configured with custom tag prefix and should have their own tags)
+                        if (!dryRun && it != "core") result.output shouldNotContain tagExists(it, initial, dryRun)
+                    }
                 }
 
-                it("should ONLY set version for changes submodules${dr(dryRun)}") {
+                it("should ONLY set version for changed submodules") {
                     // arrange
-                    // -> repo with tags for each tag-prefix (v0.1.0, foo-v0.1.0, bar-v0.1.0, baz-v0.1.0)
-                    // -> commit file in 'root' project path
-                    // -> commit file in ':foo' submodule path
+                    // -> repo with initial version for each tag-prefix (v0.1.0, foo-v0.1.0, bar-v0.1.0, baz-v0.1.0)
+                    val initial = Semver("0.1.0")
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    val modulesVersions = modules.map { it to initial }
+                    Git.open(project.projectDir.toFile()).use {
+                        setupInitialVersions(project, it)(modulesVersions)
+                        // -> commit file in 'root' project path
+                        commit(project, it)(null)
+                        // -> commit file in ':foo' submodule path
+                        commit(project, it)("foo")
+                    }
                     // act
-                    // -> tag next MINOR version
+                    // -> tag next minor version
+                    val result = tag(project)(Increment.MINOR, dryRun)
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v0.2.0)
                     //    ('root' has changes and ':core' is not configured with custom tag prefix)
+                    result.output shouldContain expected(project.name, initial.incrementMinor(), dryRun)
+                    result.output shouldContain expected("core", initial.incrementMinor(), dryRun)
                     // -> ':foo' submodule should have next version tag (foo-v0.2.0)
-                    //    (configured with custom tag prefix has changes)
+                    //    (configured with custom tag prefix and has changes)
+                    result.output shouldContain expected("foo", initial.incrementMinor(), dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("foo", initial.incrementMinor(), dryRun)
                     // -> ':bar' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
+                    result.output shouldContain expected("bar", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
                 }
 
-                it("should set version for ROOT when non-custom-tagged submodule has changes${dr(dryRun)}") {
+                it("should set version for ROOT when non-configured submodule has changes") {
                     // arrange
                     // -> repo with tags for each tag-prefix (v0.2.0, foo-v0.2.0, bar-v0.1.0, baz-v0.1.0)
-                    // -> commit file in ':core' submodule path
-                    // -> commit file in ':bar' submodule path
+                    val (second, initial) = Semver("0.2.0") to Semver("0.1.0")
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    val modulesVersions = listOf("core" to second, "foo" to second, "bar" to initial, "baz" to initial)
+                    Git.open(project.projectDir.toFile()).use {
+                        setupInitialVersions(project, it)(modulesVersions)
+                        // -> commit file in ':core' submodule path
+                        commit(project, it)("core")
+                        // -> commit file in ':bar' submodule path
+                        commit(project, it)("bar")
+                    }
                     // act
                     // -> tag next MINOR version
+                    val result = tag(project)(Increment.MINOR, dryRun)
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v0.3.0)
                     //    (':core' is not configured with custom tag prefix and has changes)
+                    result.output shouldContain expected(project.name, second.incrementMinor(), dryRun)
+                    result.output shouldContain expected("core", second.incrementMinor(), dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.2.0)
                     //    (configured with custom tag prefix has changes)
+                    result.output shouldContain expected("bar", initial.incrementMinor(), dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("bar", initial.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
                 }
 
-                it("should NOT set version for ROOT${dr(dryRun)}") {
+                it("should NOT set version for ROOT w/o changes") {
                     // arrange
                     // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.2.0, baz-v0.1.0)
-                    // -> commit file in ':bar' submodule path
+                    val (third, second, initial) = Triple(Semver("0.3.0"), Semver("0.2.0"), Semver("0.1.0"))
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    val modulesVersions = listOf("core" to third, "foo" to second, "bar" to second, "baz" to initial)
+                    Git.open(project.projectDir.toFile()).use {
+                        setupInitialVersions(project, it)(modulesVersions)
+                        // -> commit file in ':bar' submodule path
+                        commit(project, it)("bar")
+                    }
                     // act
                     // -> tag next MINOR version
+                    val result = tag(project)(Increment.MINOR, dryRun)
                     // assert
                     // -> 'root' project and ':core' submodule should be unchanged
                     //    (we have custom tags for some submodules, and neither 'root' nor ':core' have changes)
+                    result.output shouldContain expected(project.name, Semver("0.0.0"), dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
+                    result.output shouldContain expected("bar", second.incrementMinor(), dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("bar", second.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
                 }
 
-                it("should set initial version for new submodule before first stable release${dr(dryRun)}") {
+                it("should set initial version for new submodule before first stable release") {
                     // arrange
                     // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.2.0, baz-v0.1.0)
-                    // -> commit file in ':bar' submodule path
-                    // -> add new ':zoo' submodule
+                    val (third, second, initial) = Triple(Semver("0.3.0"), Semver("0.2.0"), Semver("0.1.0"))
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    val modulesVersions = listOf("core" to third, "foo" to second, "bar" to second, "baz" to initial)
+                    Git.open(project.projectDir.toFile()).use {
+                        setupInitialVersions(project, it)(modulesVersions)
+                        // -> commit file in ':bar' submodule path
+                        commit(project, it)("bar")
+                        // -> add new ':zoo' submodule
+                        project.add(ModuleConfig("zoo", tag = object : GitTagConfig {
+                            override val prefix: TagPrefix = TagPrefix("zoo-v")
+                        }))
+                        commit(project, it)("zoo")
+                    }
                     // act
                     // -> tag next MINOR version
+                    val result = tag(project)(Increment.MINOR, dryRun)
                     // assert
-                    // -> 'root' project and ':core' submodule should be unchanged
-                    //    (we have custom tags for some submodules, and neither 'root' nor ':core' have changes)
+                    // -> 'root' project and ':core' submodule should have next version tag (v0.4.0)
+                    //    (we have modified root settings.gradle.kts by adding a new submodule)
+                    result.output shouldContain expected(project.name, third.incrementMinor(), dryRun)
+                    result.output shouldContain expected("core", third.incrementMinor(), dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
+                    result.output shouldContain expected("bar", second.incrementMinor(), dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("bar", second.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
+                    result.output shouldContain expected("foo", null, dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
                     // -> ':zoo' submodule should have initial version tag (bar-v0.1.0)
                     //    (configured with custom tag prefix and "default initial version in pre-stable" -> '${rootVersion.major}.1.0')
+                    result.output shouldContain expected("zoo", initial, dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("zoo", initial, dryRun)
                 }
 
-                it("should set ALL versions to next MAJOR${dr(dryRun)}") {
-                    // arrange
-                    // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.3.0, baz-v0.1.0)
-                    // -> add new ':zoo' submodule
-                    // -> add initial version tag for ':zoo' (zoo-v0.1.0)
-                    // -> commit file in ':core' submodule path
-                    // act
-                    // -> tag next version with MAJOR release
-                    // assert
-                    // -> 'root' and all submodules should have next MAJOR version (1.0.0)
-                    //    (':core' submodule is NOT configured with custom tag prefix and should have 'root' tag prefix)
-                    //    (':foo', ':bar', ':baz', ':zoo' submodules are configured with custom tag prefix and should have their own tags)
+                listOf(null, "core", "foo").forEach { commitIn ->
+                    it("should set ALL versions to next MAJOR when committing in $commitIn") {
+                        // arrange
+                        // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.3.0, baz-v0.1.0)
+                        val (third, second, initial) = Triple(Semver("0.3.0"), Semver("0.2.0"), Semver("0.1.0"))
+                        val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true).also {
+                            // -> add new ':zoo' submodule
+                            it.add(ModuleConfig("zoo", tag = object : GitTagConfig {
+                                override val prefix: TagPrefix = TagPrefix("zoo-v")
+                            }))
+                        }
+                        // -> add initial version tag for ':zoo' (zoo-v0.1.0)
+                        val modulesVersions = listOf("core" to third, "foo" to second, "bar" to second, "baz" to initial, "zoo" to initial)
+                        Git.open(project.projectDir.toFile()).use {
+                            setupInitialVersions(project, it)(modulesVersions)
+                            // -> commit file in ':core' submodule path
+                            commit(project, it)(commitIn)
+                        }
+                        // act
+                        // -> tag next version with MAJOR release
+                        val result = tag(project)(Increment.MAJOR, dryRun)
+                        // assert
+                        // -> 'root' and all submodules should have next MAJOR version (1.0.0)
+                        //    (':core' submodule is NOT configured with custom tag prefix and should have 'root' tag prefix)
+                        //    (':foo', ':bar', ':baz', ':zoo' submodules are configured with custom tag prefix and should have their own tags)
+                        result.output shouldContain expected(project.name, third.incrementMajor(), dryRun)
+                        modulesVersions.forEach { (m, v) -> result.output shouldContain expected(m, v.incrementMajor(), dryRun) }
+                    }
                 }
 
-                it("should set initial version for new submodule after first stable release${dr(dryRun)}") {
+                it("should set initial version for new submodule after first stable release") {
                     // arrange
                     // -> repo with tags for each tag-prefix (v1.0.0, foo-v1.0.0, bar-v1.0.0, baz-v1.0.0)
                     // -> commit file in ':core' submodule path
@@ -995,61 +1141,35 @@ class SemverKtPluginFT : DescribeSpec({
                     //    (configured with custom tag prefix and "default initial version" -> '${rootVersion.major}.0.0')
                 }
 
-                it("should set next version via commit${dr(dryRun)}") {
+                it("should set next version") {
                     val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
                         it.tag().setName("bar-v0.2.0").call() // set initial version for 'bar' module
-                        // bar is with custom tag prefix via SemverKtTestProject
-                        listOf("foo", "bar").forEach { module ->
-                            project.projectDir.resolve(module)
-                                .resolve("$module-text.txt")
-                                .createFile().writeText("Hello")
-                            it.add().addFilepattern(".").call()
-                        }
-                        it.commit().setMessage("New commit\n\n[minor]").call()
+                        listOf("foo", "bar").forEach { module -> commit(project, it)(module) }
+                        if (tagViaCommit) it.commit().setMessage("New commit\n\n[minor]").call()
+                        else it.commit().setMessage("New commit").call()
                     }
                     // Act
-                    val args = if (dryRun) arrayOf("tag", "-PdryRun") else arrayOf("tag")
-                    val result = Builder.build(project = project, args = args)
+                    val result = tag(project)(if (tagViaCommit) null else Increment.MINOR, dryRun)
                     // Assert
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Calculated next version: 0.3.0
-
-                    > Task :baz:tag
-                    Calculated next version: 0.1.0
-
-                    > Task :core:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.1.0
-                    """.trimIndent().trim()
+                    result.output shouldContain expected(project.name, Semver("0.0.0"), dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expected("foo", Semver("0.1.0"), dryRun)
+                    result.output shouldContain expected("bar", Semver("0.3.0"), dryRun)
+                    result.output shouldContain expected("baz", null, dryRun)
                 }
 
-                it("should set next version via gradle property${dr(dryRun)}") {
+                it("!should set next version via gradle property") {
                     val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
                         it.tag().setName("bar-v0.2.0").call() // set initial version for 'bar' module
-                        // bar is with custom tag prefix via SemverKtTestProject
-                        listOf("foo", "bar").forEach { module ->
-                            project.projectDir.resolve(module)
-                                .resolve("$module-text.txt")
-                                .createFile().writeText("Hello")
-                            it.add().addFilepattern(".").call()
-                        }
-                        it.commit().setMessage("New commit").call()
+                        // foo, bar and baz are with custom tag prefix via SemverKtTestProject
+                        listOf("foo", "bar").forEach { module -> commit(project, it)(module) }
                     }
                     // Act
                     val args = if (dryRun) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
@@ -1057,28 +1177,14 @@ class SemverKtPluginFT : DescribeSpec({
                     val result = Builder.build(project = project, args = args)
                     // Assert
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Calculated next version: 0.3.0
-
-                    > Task :baz:tag
-                    Calculated next version: 0.1.0
-
-                    > Task :core:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.1.0
-                    """.trimIndent().trim()
+                    result.output shouldContain expected(project.name, Semver("0.0.0"), dryRun)
+                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expected("foo", Semver("0.1.0"), dryRun)
+                    result.output shouldContain expected("bar", Semver("0.3.0"), dryRun)
+                    result.output shouldContain expected("baz", Semver("0.1.0"), dryRun)
                 }
             }
-        }
+        } }
     }
 
     describe("setting version manually") {
@@ -1244,8 +1350,8 @@ class SemverKtPluginFT : DescribeSpec({
                 PojoConfiguration(gitRepoConfig = repo)
             })
         }
-        listOf(true, false).forEach { dryRun ->
-            it("should return error when trying to release new version${dr(dryRun)} with any difference between working tree and HEAD") {
+        listOf(true, false).forEach { tagViaCommit -> listOf(true, false).forEach { dryRun ->
+            it("should return error when trying to release new version${testName(tagViaCommit, dryRun)} with any difference between working tree and HEAD") {
                 val project = p(CleanRule.ALL)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -1263,7 +1369,7 @@ class SemverKtPluginFT : DescribeSpec({
                 result.task(":tag")?.outcome shouldBe if (dryRun) TaskOutcome.SUCCESS else TaskOutcome.FAILED
                 if (!dryRun) result.output shouldContain "Release with non-clean repository is not allowed"
             }
-            it("should return error when trying to release new version${dr(dryRun)} with changes to tracked files") {
+            it("should return error when trying to release new version${testName(tagViaCommit, dryRun)} with changes to tracked files") {
                 val project = SemverKtTestProject()
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -1281,7 +1387,7 @@ class SemverKtPluginFT : DescribeSpec({
                 result.task(":tag")?.outcome shouldBe if (dryRun) TaskOutcome.SUCCESS else TaskOutcome.FAILED
                 if (!dryRun) result.output shouldContain "Release with uncommitted changes is not allowed"
             }
-            it("should allow releasing a new version${dr(dryRun)} with disabled clean rule") {
+            it("should allow releasing a new version${testName(tagViaCommit, dryRun)} with disabled clean rule") {
                 val project = p(CleanRule.NONE)
                 // Arrange
                 Git.open(project.projectDir.toFile()).use {
@@ -1299,6 +1405,90 @@ class SemverKtPluginFT : DescribeSpec({
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 result.output shouldNotContain "Release with uncommitted changes is not allowed"
             }
-        }
+        } }
     }
 })
+
+val faker = faker {  }
+
+// appends string to the test describe/context name
+val testName: (Boolean, Boolean) -> String = { tagViaCommit, dryRun ->
+    val s = StringBuilder()
+    if (tagViaCommit) s.append(" via commit") else s.append(" via gradle property")
+    if (dryRun) s.append(" and dryRun")
+    s.toString()
+}
+
+val tag: ((proj: AbstractProject) -> (inc: Increment?, dryRun: Boolean) -> BuildResult) = { project ->
+    { inc, dryRun ->
+        val args = mutableListOf("tag", "-Prelease")
+        inc?.let { args.add("-Pincrement=$it") }
+        if (dryRun) args.add("-PdryRun")
+        Builder.build(project = project, args = args.toTypedArray())
+    }
+}
+
+val tagExists: (name: String, ver: Semver?, dryRun: Boolean) -> String = { name, version, dryRun ->
+    """
+    > Task :$name:tag
+    ${version?.let { "Calculated next version: $it" } ?: "Not doing anything"}
+    ${version?.let { if (!dryRun) "Tag v$it already exists in project" else "" } ?: ""}
+    """.trimIndent().trim()
+}
+
+val expected: (name: String, ver: Semver?, dryRun: Boolean) -> String = { name, version, dryRun ->
+    val noop = "Not doing anything"
+    when (name) {
+        "test-project" -> """
+            > Configure project :
+            Project test-project version: $version
+
+            > Task :tag
+            ${version?.let { if (it == Semver("0.0.0")) noop else "Calculated next version: $it" } ?: noop}
+        """.trimIndent().trim()
+        "core" -> tagExists(name, version, dryRun)
+        else -> """
+            > Task :$name:tag
+            ${version?.let { "Calculated next version: $it" } ?: noop}
+        """.trimIndent().trim()
+    }
+}
+
+val setupInitialVersions: (proj: AbstractProject, git: Git) -> (modules: List<Pair<String, Semver>>) -> Unit = { proj, git ->
+    { modules ->
+        proj.projectDir.resolve("text.txt").createFile().writeText(faker.lorem.words())
+        git.add().addFilepattern(".").call()
+        git.commit().setMessage("First commit").call()
+
+        modules.shuffled().forEach { (m, v) ->
+            val tagName = if (m == "core") "v$v" else "$m-v$v"
+            // commit in 'root' together with 'core'
+            if (m == "core") commit(proj, git)(null)
+            commit(proj, git)(m)
+            git.tag().setName(tagName).call()
+        }
+    }
+}
+
+/**
+ * Commit to a given [module] (or in the root of the project if module is `null`) in a [project].
+ */
+val commit: (project: AbstractProject, git: Git) -> (module: String?) -> Unit = { proj, git ->
+    { m ->
+        if (m != null) {
+            proj.projectDir.resolve(m)
+                .resolve(if (m == "core") "src" else "${m}src").createDirectories()
+                .resolve("${faker.random.nextUUID()}.txt")
+                .createFile()
+                .writeText(faker.lorem.words())
+            git.add().addFilepattern(".").call()
+            git.commit().setMessage("Commit in $m").call()
+        } else {
+            proj.projectDir.resolve("${faker.random.nextUUID()}.txt")
+                .createFile()
+                .writeText(faker.lorem.words())
+            git.add().addFilepattern(".").call()
+            git.commit().setMessage("Commit in root").call()
+        }
+    }
+}
