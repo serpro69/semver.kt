@@ -10,6 +10,8 @@ import kotlin.io.path.writeText
 
 abstract class AbstractProject : AutoCloseable {
 
+    open val name = "test-project"
+
     val projectDir = Path("build/functionalTest/${slug()}").createDirectories().also {
         it.resolve("README.md").createFile().writeText("Hello, world")
         Git.init().setDirectory(it.toFile()).call()
