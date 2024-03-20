@@ -93,7 +93,8 @@ abstract class ConfigurationProvider : Configuration {
 
     final override val monorepo: MonorepoConfig by lazy {
         object : MonorepoConfig {
-            override val modules: List<ModuleConfig> = listOfModules("monorepo").ifEmpty { super.modules }
+            override val sources: Path = propertyOrNull("monorepo.sources") ?: super.sources
+            override val modules: List<ModuleConfig> = listOfModules("monorepo.modules").ifEmpty { super.modules }
         }
     }
 

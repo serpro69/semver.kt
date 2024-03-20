@@ -16,6 +16,7 @@ class DslConfigurationTest : DescribeSpec({
             val c = DslConfiguration {
                 git {
                     repo {
+                        directory = Path("foo/bar")
                     }
                     tag {
                         prefix = TagPrefix("p")
@@ -23,6 +24,7 @@ class DslConfigurationTest : DescribeSpec({
                     }
                 }
                 monorepo {
+                    sources = this@DslConfiguration.git.repo.directory
                     module("foo") {
                         sources = Path("src")
                         tag {
@@ -35,8 +37,10 @@ class DslConfigurationTest : DescribeSpec({
             }
 
             it("should return overridden property values") {
+                c.git.repo.directory shouldBe Path("foo/bar")
                 c.git.tag.prefix shouldBe TagPrefix("p")
                 c.git.tag.separator shouldBe "sep"
+                c.monorepo.sources shouldBe c.git.repo.directory
                 c.monorepo.modules shouldHaveSize 3
                 c.monorepo.modules.map { it.path } shouldContainExactly listOf("foo", "bar", "baz")
                 with(c.monorepo.modules.first { it.path == "foo" }) {
@@ -61,8 +65,8 @@ class DslConfigurationTest : DescribeSpec({
         context("'git' config is applied after 'monorepo'") {
             val c = DslConfiguration {
                 monorepo {
+                    sources = Path("src/main")
                     module("foo") {
-                        sources = Path("src")
                         tag {
                             prefix = TagPrefix("foo-v")
                         }
@@ -83,6 +87,7 @@ class DslConfigurationTest : DescribeSpec({
             it("should return overridden property values") {
                 c.git.tag.prefix shouldBe TagPrefix("p")
                 c.git.tag.separator shouldBe "sep"
+                c.monorepo.sources shouldBe Path("src/main")
                 c.monorepo.modules shouldHaveSize 3
                 c.monorepo.modules.map { it.path } shouldContainExactly listOf("foo", "bar", "baz")
                 with(c.monorepo.modules.first { it.path == "foo" }) {
