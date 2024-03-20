@@ -33,6 +33,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     defaultIncrement = Increment.NONE
                 }
                 monorepo {
+                    sources = Path("foo/bar/baz")
                     modules.add(ModuleConfig("foo"))
                     module("bar") {
                         sources = Path("src/main/kotlin")
@@ -51,6 +52,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
                     config.git.repo.remoteName shouldBe "not origin"
                     config.version.initialVersion shouldBe Semver("1.2.3")
                     config.version.defaultIncrement shouldBe Increment.NONE
+                    config.monorepo.sources shouldBe Path("foo/bar/baz")
                     config.monorepo.modules.size shouldBe 3
                     config.monorepo.modules.map { it.path } shouldBe listOf("foo", "bar", "baz")
                     val foo = config.monorepo.modules.first { it.path == "foo" }

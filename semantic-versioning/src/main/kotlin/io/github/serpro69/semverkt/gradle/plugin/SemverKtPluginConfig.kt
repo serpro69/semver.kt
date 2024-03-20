@@ -23,7 +23,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
 
     override val git = SemverKtPluginGitConfig(settings)
     override val version = SemverKtPluginVersionConfig()
-    override val monorepo = SemverKtPluginMonorepoConfig(git.tag)
+    override val monorepo = SemverKtPluginMonorepoConfig(settings, git.tag)
 
     constructor(config: Configuration, settings: Settings? = null) : this(settings) {
         git {
@@ -55,6 +55,7 @@ class SemverKtPluginConfig(settings: Settings?) : Configuration {
             useSnapshots = false
         }
         monorepo {
+            sources = settings?.settingsDir?.toPath() ?: config.git.repo.directory
             modules.addAll(config.monorepo.modules)
         }
     }
@@ -139,7 +140,8 @@ class SemverKtPluginGitMessageConfig internal constructor() : GitMessageConfig {
 }
 
 @PluginConfigDsl
-class SemverKtPluginMonorepoConfig internal constructor(private val tag: SemverKtPluginGitTagConfig) : MonorepoConfig {
+class SemverKtPluginMonorepoConfig internal constructor(settings: Settings?, private val tag: SemverKtPluginGitTagConfig) : MonorepoConfig {
+    override var sources: Path = settings?.settingsDir?.toPath() ?: super.sources
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
     fun module(name: String, block: SemverKtPluginModuleConfig.() -> Unit) {

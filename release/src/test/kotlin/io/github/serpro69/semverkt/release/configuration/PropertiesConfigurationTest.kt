@@ -18,6 +18,7 @@ class PropertiesConfigurationTest : DescribeSpec({
                 // test overriding one of each config property types
                 // Path
                 it["git.repo.directory"] = "/tmp/foobar"
+                it["monorepo.sources"] = "/tmp/foobar/baz"
                 // String
                 it["git.repo.remoteName"] = "remote"
                 // CleanRule
@@ -42,6 +43,7 @@ class PropertiesConfigurationTest : DescribeSpec({
             pc.version.initialVersion shouldBe Semver("1.2.3")
             pc.version.defaultIncrement shouldBe Increment.PATCH
             pc.version.initialPreRelease shouldBe 10
+            pc.monorepo.sources shouldBe Path("/tmp/foobar/baz")
         }
 
         it("should return default property values") {
@@ -68,6 +70,7 @@ class PropertiesConfigurationTest : DescribeSpec({
             pc.version.initialPreRelease shouldBe DefaultConfiguration.version.initialPreRelease
             pc.version.snapshotSuffix shouldBe DefaultConfiguration.version.snapshotSuffix
             // monorepo
+            pc.monorepo.sources shouldBe DefaultConfiguration.monorepo.sources
             pc.monorepo.modules shouldBe DefaultConfiguration.monorepo.modules
         }
 

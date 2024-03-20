@@ -34,6 +34,7 @@ class DefaultConfigurationTest : DescribeSpec({
             dc.version.initialPreRelease shouldBe provider.version.initialPreRelease
             dc.version.snapshotSuffix shouldBe provider.version.snapshotSuffix
             // monorepo
+            dc.monorepo.sources shouldBe provider.monorepo.sources
             dc.monorepo.modules shouldBe provider.monorepo.modules
         }
 

@@ -97,7 +97,7 @@ class JsonConfiguration : ConfigurationProvider {
     override fun tagPrefixOrNull(name: String): TagPrefix? = tagPrefixOrNull(json, name)
 
     override fun listOfModules(name: String): List<ModuleConfig> {
-        val array = getValueByPath(json, "monorepo") ?: return emptyList()
+        val array = getValueByPath(json, name) ?: return emptyList()
         if (array !is JSONArray) throw IllegalArgumentException("Object with '$name' name is not a json array")
         return array.map {
             val j = JSONObject(it.toString())

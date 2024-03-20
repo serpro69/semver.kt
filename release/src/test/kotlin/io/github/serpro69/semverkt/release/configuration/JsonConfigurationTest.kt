@@ -45,28 +45,31 @@ class JsonConfigurationTest : DescribeSpec({
                 "initialPreRelease": "10",
                 "snapshotSuffix": "OHH-SNAP"
               },
-              "monorepo": [
-                {
-                  "path": "foo",
-                  "sources": "src",
-                  "tag": {
-                    "prefix": "foo-v",
-                    "separator": "foo-sep"
+              "monorepo": {
+                "sources": "/tmp/foo/bar/baz",
+                "modules": [
+                  {
+                    "path": "foo",
+                    "sources": "src",
+                    "tag": {
+                      "prefix": "foo-v",
+                      "separator": "foo-sep"
+                    }
+                  },
+                  {
+                    "path": "bar",
+                    "sources": "./bar",
+                    "tag": {
+                      "separator": "bar-sep",
+                      "useBranches": true,
+                    }
+                  },
+                  {
+                    "path": "baz",
+                    "sources": "./baz"
                   }
-                },
-                {
-                  "path": "bar",
-                  "sources": "./bar",
-                  "tag": {
-                    "separator": "bar-sep",
-                    "useBranches": true,
-                  }
-                },
-                {
-                  "path": "baz",
-                  "sources": "./baz"
-                }
-              ]
+                ]
+              }
             }
             """.trimIndent()
             val jc = config(json)
@@ -139,12 +142,13 @@ class JsonConfigurationTest : DescribeSpec({
             jc.version.initialPreRelease shouldBe DefaultConfiguration.version.initialPreRelease
             jc.version.snapshotSuffix shouldBe DefaultConfiguration.version.snapshotSuffix
             // monorepo
+            jc.monorepo.sources shouldBe DefaultConfiguration.monorepo.sources
             jc.monorepo.modules shouldBe DefaultConfiguration.monorepo.modules
         }
 
         context("mandatory 'path' property for module configuration") {
             it("should throw an exception when 'path' is blank") {
-                val json = """{ "monorepo": [ { "path": "" } ] }"""
+                val json = """{ "monorepo": { "modules": [ { "path": "" } ] } }"""
                 shouldThrow<IllegalArgumentException> {
                     // access monorepo property since it's lazy
                     config(json).monorepo.modules
@@ -152,7 +156,7 @@ class JsonConfigurationTest : DescribeSpec({
             }
 
             it("should throw an exception when 'path' is null") {
-                val json = """{ "monorepo": [ { "path": null } ] }"""
+                val json = """{ "monorepo": { "modules": [ { "path": null } ] } }"""
                 shouldThrow<IllegalArgumentException> {
                     // access monorepo property since it's lazy
                     config(json).monorepo.modules
@@ -160,7 +164,7 @@ class JsonConfigurationTest : DescribeSpec({
             }
 
             it("should throw an exception when 'path' is absent") {
-                val json = """{ "monorepo": [ {  } ] }"""
+                val json = """{ "monorepo": { "modules": [ {  } ] } }"""
                 shouldThrow<IllegalArgumentException> {
                     // access monorepo property since it's lazy
                     config(json).monorepo.modules

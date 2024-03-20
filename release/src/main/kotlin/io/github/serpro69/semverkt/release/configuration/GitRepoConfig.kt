@@ -9,8 +9,8 @@ import kotlin.io.path.Path
 /**
  * Git repository configuration
  *
- * @property directory  local path of a git repository; defaults to `.`
- * @property remoteName name of the remote of this git repository; defaults to `origin`
+ * @property directory  local path of a git repository; defaults to current dir.
+ * @property remoteName name of the remote of this git repository; defaults to `origin`.
  * @property cleanRule  check for changes in the repository before creating a release;
  * defaults to [CleanRule.TRACKED], which means that only tracked files will be checked
  */

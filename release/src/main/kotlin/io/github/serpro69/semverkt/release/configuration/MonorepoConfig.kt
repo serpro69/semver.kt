@@ -6,14 +6,21 @@ import kotlin.io.path.Path
 /**
  * Monorepo module configuration enables individual versioning of multi-modules in a mono-repo.
  *
+ * @property sources path to track changes for the entire monorepo,
+ * relative to the repo [GitRepoConfig.directory]; defaults to current dir.
+ *
+ * All [modules] that don't set their own [ModuleConfig.sources] will use this property
+ * to track changes in the mono-repository.
+ *
  * @property modules mono-repo modules
  */
 interface MonorepoConfig {
+    val sources: Path get() = Path(".")
     val modules: List<ModuleConfig> get() = emptyList()
 
     fun jsonString(): String {
         return """
-            "monorepo": [ ${modules.joinToString(", ") { it.jsonString() }} ]
+            "monorepo": { "sources": "$sources", "modules": [ ${modules.joinToString(", ") { it.jsonString() }} ] }
         """.trimIndent()
     }
 }

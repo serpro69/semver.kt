@@ -7,7 +7,9 @@ import java.nio.file.Path
 /**
  * Provides access to default [Configuration] properties with optional overrides through DSL syntax
  *
- * If [git] is called before [monorepo] and the latter configures [PojoGitTagConfig] via `tag` function,
+ * NB! Keep in mind that the ordering of dsl functions calls matters.
+ *
+ * If [git] is called before [monorepo] and the latter configures [PojoGitConfig.tag] via `git { tag {} }` function,
  * all non-overwritten properties of [PojoGitTagConfig] will have the same values as [git] `tag` configuration.
  *
  * For example:
@@ -87,6 +89,7 @@ class DslConfiguration internal constructor() : Configuration {
 
 @PojoConfigDsl
 class PojoMonorepoConfig internal constructor(private val tag: PojoGitTagConfig) : MonorepoConfig {
+    override var sources: Path = super.sources
     override val modules: MutableList<ModuleConfig> = mutableListOf()
 
     fun module(path: String, block: DslModuleConfig.() -> Unit) {
@@ -190,6 +193,7 @@ class PojoGitMessageConfig internal constructor() : GitMessageConfig {
 @DslMarker
 annotation class PojoConfigDsl
 
+@PojoConfigDsl
 fun DslConfiguration(block: DslConfiguration.() -> Unit): DslConfiguration {
     return DslConfiguration().apply(block)
 }
