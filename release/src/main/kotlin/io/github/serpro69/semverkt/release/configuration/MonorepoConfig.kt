@@ -6,8 +6,9 @@ import kotlin.io.path.Path
 /**
  * Monorepo module configuration enables individual versioning of multi-modules in a mono-repo.
  *
- * @property sources path to track changes for the entire monorepo,
- * relative to the repo [GitRepoConfig.directory]; defaults to current dir.
+ * @property sources path to track changes for the monorepo submodules that are
+ * not part of the [modules] list, relative to the given submodule directory;
+ * defaults to current submodule dir.
  *
  * All [modules] that don't set their own [ModuleConfig.sources] will use this property
  * to track changes in the mono-repository.
@@ -32,7 +33,6 @@ interface MonorepoConfig {
  * For example, in case of gradle, it would mean a fully-qualified gradle module path.
  * So for `./core` module in the root of a gradle mono-repo, this would be `:core`,
  * and for `./foo/bar` module in a gradle mono-repo, this would be `:foo:bar`.
- *                      module directory name (e.g. `core` for `./core` submodule in the root of the mono-repo)
  * @property sources    path to track changes for the module, relative to the module [path].
  * Defaults to module directory.
  * @property tag        git tag configuration for the module.

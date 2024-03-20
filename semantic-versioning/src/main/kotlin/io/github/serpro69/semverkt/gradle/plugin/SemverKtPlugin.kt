@@ -10,6 +10,7 @@ import io.github.serpro69.semverkt.release.Increment.PATCH
 import io.github.serpro69.semverkt.release.Increment.PRE_RELEASE
 import io.github.serpro69.semverkt.release.SemverRelease
 import io.github.serpro69.semverkt.release.configuration.JsonConfiguration
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.PreRelease
 import io.github.serpro69.semverkt.spec.Semver
@@ -17,7 +18,10 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.initialization.Settings
 import org.gradle.api.logging.Logging
+import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.io.path.Path
+import kotlin.io.path.relativeTo
 
 @Suppress("unused")
 class SemverKtPlugin : Plugin<Settings> {
@@ -76,8 +80,8 @@ class SemverKtPlugin : Plugin<Settings> {
      * IF `currentVersion` exists, both `latestVersion` and `nextVersion` will always return as `null`
      */
     private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
-        logger.info("Set version for {}", project.name)
-        logger.debug("Using configuration: {}", config.jsonString())
+        logger.lifecycle("Set version for {}", project.name)
+        logger.lifecycle("Using configuration: {}", config.jsonString())
         val propRelease = project.hasProperty("release")
         val propPromoteRelease = project.hasProperty("promoteRelease")
         val propPreRelease = project.hasProperty("preRelease")
@@ -85,26 +89,67 @@ class SemverKtPlugin : Plugin<Settings> {
             ?.let { Increment.getByName(it.toString()) }
             ?: NONE
 
+        val srcPath: (ModuleConfig?) -> Path = { m ->
+            project.rootDir.toPath()
+                .resolve(normalize(m?.path ?: project.path))
+                .resolve(m?.sources ?: config.monorepo.sources)
+                .relativeTo(project.rootDir.toPath())
+                .normalize()
+                .also { p -> logger.lifecycle("Module path: {}", p) }
+        }
+
+        val isRoot = project == project.rootProject
         val isMonorepo = config.monorepo.modules.isNotEmpty()
         val module = config.monorepo.modules.firstOrNull { it.path == project.path }
         logger.debug("Module '{}' config: {}", module?.path, module?.jsonString())
         val hasChanges by lazy {
-            if (project == project.rootProject) true // always apply version to root project
-            else if (isMonorepo && module != null) GitRepository(config).use { repo ->
-                val prefix = module.tag?.prefix ?: config.git.tag.prefix
-                val s = repo.head().name
-                val e = repo.headVersionTag(prefix)?.name
-                    ?: repo.latestVersionTag(prefix)?.name
-                    ?: repo.log(tagPrefix = prefix).last().objectId.name
-                repo.diff(s, e).any {
-                    logger.debug("{} diff: {}", project.name, it)
-                    val srcPath = Path(project.projectDir.relativeTo(project.rootDir).path)
-                        .resolve(module.sources).normalize()
-                    logger.debug("Module path: {}", srcPath)
-                    Path(it.oldPath).startsWith(srcPath) || Path(it.newPath).startsWith(srcPath)
+            when {
+                // always apply version to root project in non-monorepo
+                !isMonorepo && isRoot -> true
+                isMonorepo -> GitRepository(config).use { repo ->
+                    val prefix = module?.tag?.prefix ?: config.git.tag.prefix
+                    val s = repo.head().name
+                    val e = repo.headVersionTag(prefix)?.name
+                        ?: repo.latestVersionTag(prefix)?.name
+                        ?: repo.log(tagPrefix = prefix).last().objectId.name
+                    repo.diff(s, e).any {
+                        logger.lifecycle("{} diff: {}", project.name, it)
+                        when {
+                            // root and non-configured modules in monorepo are tracked together via 'monorepo.sources' config prop
+                            // so for root we check that the diff does not match any of the configured modules' sources
+                            isRoot -> config.monorepo.modules.none { m ->
+                                val moduleSrc = srcPath(m)
+                                Paths.get(it.oldPath).startsWith(moduleSrc)
+                                    || Paths.get(it.newPath).startsWith(moduleSrc)
+                            }
+                            // for non-configured module we check that the diff matches own submodule sources
+                            // or does not match any of the configured modules' sources
+                            module == null -> {
+                                val none by lazy {
+                                    config.monorepo.modules.none { m ->
+                                        val moduleSrc = srcPath(m)
+                                        Paths.get(it.oldPath).startsWith(moduleSrc)
+                                            || Paths.get(it.newPath).startsWith(moduleSrc)
+                                    }
+                                }
+                                val own by lazy {
+                                    val moduleSrc = srcPath(module)
+                                    Paths.get(it.oldPath).startsWith(moduleSrc)
+                                        || Paths.get(it.newPath).startsWith(moduleSrc)
+                                }
+                                own || none
+                            }
+                            // for configured modules we check that the diff matches the given module's sources
+                            else -> with(srcPath(module)) {
+                                Paths.get(it.oldPath).startsWith(this)
+                                    || Paths.get(it.newPath).startsWith(this)
+                            }
+                        }
+                    }
                 }
+                // not a monorepo
+                else -> true
             }
-            else true // module not versioned separately
         }
         logger.debug("Module has changes: {}", hasChanges)
 
@@ -220,3 +265,13 @@ class SemverKtPlugin : Plugin<Settings> {
         }
     }
 }
+
+/**
+ * Takes a gradle project fully-qualified [path] and returns as [Path].
+ * (Drop first ':' and replace the rest with '/' of the gradle project fully-qualified path)
+ *
+ * Examples
+ * - `normalizePath(":core") == Path("core")`
+ * - `normalizePath(":foo:bar") == Path("foo/bar")`
+ */
+private fun normalize(path: String): Path = Path(path.drop(1).replace(":", "/"))

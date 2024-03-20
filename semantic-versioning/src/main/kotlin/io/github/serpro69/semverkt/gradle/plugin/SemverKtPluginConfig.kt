@@ -152,6 +152,11 @@ class SemverKtPluginMonorepoConfig internal constructor(settings: Settings?, pri
     }
 }
 
+/**
+ * @property path a fully-qualified gradle module path.
+ * For example, for `./core` module in the root of a gradle mono-repo, this would be `:core`,
+ * and for `./foo/bar` module in a gradle mono-repo, this would be `:foo:bar`.
+ */
 @PluginConfigDsl
 class SemverKtPluginModuleConfig internal constructor(
     override val path: String,
