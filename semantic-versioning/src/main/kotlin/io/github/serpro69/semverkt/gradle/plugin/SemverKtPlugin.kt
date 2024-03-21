@@ -80,8 +80,8 @@ class SemverKtPlugin : Plugin<Settings> {
      * IF `currentVersion` exists, both `latestVersion` and `nextVersion` will always return as `null`
      */
     private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
-        logger.lifecycle("Set version for {}", project.name)
-        logger.lifecycle("Using configuration: {}", config.jsonString())
+        logger.info("Set version for {}", project.name)
+        logger.debug("Using configuration: {}", config.jsonString())
         val propRelease = project.hasProperty("release")
         val propPromoteRelease = project.hasProperty("promoteRelease")
         val propPreRelease = project.hasProperty("preRelease")
@@ -89,63 +89,18 @@ class SemverKtPlugin : Plugin<Settings> {
             ?.let { Increment.getByName(it.toString()) }
             ?: NONE
 
-        val srcPath: (ModuleConfig?) -> Path = { m ->
-            project.rootDir.toPath()
-                .resolve(normalize(m?.path ?: project.path))
-                .resolve(m?.sources ?: config.monorepo.sources)
-                .relativeTo(project.rootDir.toPath())
-                .normalize()
-                .also { p -> logger.lifecycle("Module path: {}", p) }
-        }
-
-        val isRoot = project == project.rootProject
         val isMonorepo = config.monorepo.modules.isNotEmpty()
+        val isMultiTag = config.monorepo.modules.any { mc ->
+            mc.tag?.prefix?.let { p -> p != config.git.tag.prefix } ?: false
+        }
         val module = config.monorepo.modules.firstOrNull { it.path == project.path }
         logger.debug("Module '{}' config: {}", module?.path, module?.jsonString())
         val hasChanges by lazy {
             when {
-                // always apply version to root project in non-monorepo
-                !isMonorepo && isRoot -> true
-                isMonorepo -> GitRepository(config).use { repo ->
-                    val prefix = module?.tag?.prefix ?: config.git.tag.prefix
-                    val s = repo.head().name
-                    val e = repo.headVersionTag(prefix)?.name
-                        ?: repo.latestVersionTag(prefix)?.name
-                        ?: repo.log(tagPrefix = prefix).last().objectId.name
-                    repo.diff(s, e).any {
-                        logger.lifecycle("{} diff: {}", project.name, it)
-                        when {
-                            // root and non-configured modules in monorepo are tracked together via 'monorepo.sources' config prop
-                            // so for root we check that the diff does not match any of the configured modules' sources
-                            isRoot -> config.monorepo.modules.none { m ->
-                                val moduleSrc = srcPath(m)
-                                Paths.get(it.oldPath).startsWith(moduleSrc)
-                                    || Paths.get(it.newPath).startsWith(moduleSrc)
-                            }
-                            // for non-configured module we check that the diff matches own submodule sources
-                            // or does not match any of the configured modules' sources
-                            module == null -> {
-                                val none by lazy {
-                                    config.monorepo.modules.none { m ->
-                                        val moduleSrc = srcPath(m)
-                                        Paths.get(it.oldPath).startsWith(moduleSrc)
-                                            || Paths.get(it.newPath).startsWith(moduleSrc)
-                                    }
-                                }
-                                val own by lazy {
-                                    val moduleSrc = srcPath(module)
-                                    Paths.get(it.oldPath).startsWith(moduleSrc)
-                                        || Paths.get(it.newPath).startsWith(moduleSrc)
-                                }
-                                own || none
-                            }
-                            // for configured modules we check that the diff matches the given module's sources
-                            else -> with(srcPath(module)) {
-                                Paths.get(it.oldPath).startsWith(this)
-                                    || Paths.get(it.newPath).startsWith(this)
-                            }
-                        }
-                    }
+                // always apply version to root project in non-multitag-monorepo
+                !isMultiTag && (project == project.rootProject) -> true
+                isMonorepo || isMultiTag -> GitRepository(config).use { repo ->
+                    repo.hasChanges(project, module)
                 }
                 // not a monorepo
                 else -> true
@@ -175,7 +130,7 @@ class SemverKtPlugin : Plugin<Settings> {
             logger.info("Latest version: {}", latestVersion)
             val (isMonoMajor, nextInc) = run {
                 val nextInc = svr.nextIncrement(module?.path)
-                (isMonorepo && (propIncrement == MAJOR || nextInc == MAJOR)) to nextInc
+                ((isMonorepo || isMultiTag) && (propIncrement == MAJOR || nextInc == MAJOR)) to nextInc
             }
             val increaseVersion = if (propPromoteRelease || (!hasChanges && !isMonoMajor)) NONE else with(nextInc) {
                 logger.debug("Next increment from property: {}", propIncrement)
@@ -273,6 +228,57 @@ class SemverKtPlugin : Plugin<Settings> {
             } else logger.debug("Not doing anything...")
             logger.info("Done...")
             Triple(null, latestVersion, nextVersion)
+        }
+    }
+
+    private fun GitRepository.hasChanges(project: Project, module: ModuleConfig?): Boolean {
+        val srcPath: (ModuleConfig?) -> Path = { m ->
+            project.rootDir.toPath()
+                .resolve(normalize(m?.path ?: project.path))
+                .resolve(m?.sources ?: config.monorepo.sources)
+                .relativeTo(project.rootDir.toPath())
+                .normalize()
+                .also { p -> logger.debug("Module path: {}", p) }
+        }
+
+        val isRoot = project == project.rootProject
+        val prefix = module?.tag?.prefix ?: config.git.tag.prefix
+        val s = head().name
+        val e = headVersionTag(prefix)?.name
+            ?: latestVersionTag(prefix)?.name
+            ?: log(tagPrefix = prefix).last().objectId.name
+        return diff(s, e).any {
+            logger.debug("{} diff: {}", project.name, it)
+            when {
+                // root and non-configured modules in monorepo are tracked together via 'monorepo.sources' config prop
+                // so for root we check that the diff does not match any of the configured modules' sources
+                isRoot -> config.monorepo.modules.none { m ->
+                    val moduleSrc = srcPath(m)
+                    Paths.get(it.oldPath).startsWith(moduleSrc)
+                        || Paths.get(it.newPath).startsWith(moduleSrc)
+                }
+                // for non-configured module we check that the diff matches own submodule sources
+                // or does not match any of the configured modules' sources
+                module == null -> {
+                    val none by lazy {
+                        config.monorepo.modules.none { m ->
+                            val moduleSrc = srcPath(m)
+                            Paths.get(it.oldPath).startsWith(moduleSrc)
+                                || Paths.get(it.newPath).startsWith(moduleSrc)
+                        }
+                    }
+                    val own by lazy {
+                        val moduleSrc = srcPath(module)
+                        Paths.get(it.oldPath).startsWith(moduleSrc)
+                            || Paths.get(it.newPath).startsWith(moduleSrc)
+                    }
+                    own || none
+                }
+                // for configured modules we check that the diff matches the given module's sources
+                else -> with(srcPath(module)) {
+                    Paths.get(it.oldPath).startsWith(this) || Paths.get(it.newPath).startsWith(this)
+                }
+            }
         }
     }
 }
