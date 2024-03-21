@@ -173,28 +173,37 @@ class SemverKtPlugin : Plugin<Settings> {
             // ELSE figure out next version
             val latestVersion = svr.latestVersion(module)
             logger.info("Latest version: {}", latestVersion)
-            val increaseVersion = if (propPromoteRelease || !hasChanges) NONE else with(svr.nextIncrement(module?.path)) {
+            val (isMonoMajor, nextInc) = run {
+                val nextInc = svr.nextIncrement(module?.path)
+                (isMonorepo && (propIncrement == MAJOR || nextInc == MAJOR)) to nextInc
+            }
+            val increaseVersion = if (propPromoteRelease || (!hasChanges && !isMonoMajor)) NONE else with(nextInc) {
                 logger.debug("Next increment from property: {}", propIncrement)
                 logger.debug("Next increment from git commit: {}", this)
                 when (propIncrement) {
-                    // 1. check allowed values for gradle-property based increment
-                    //    - DEFAULT is not used with 'increment' property
-                    //    - NONE means 'increment' property is not set or has invalid value
-                    // IF nextIncrement is NONE
-                    //    - we don't want to override it because contains some logic
-                    //      for checking existing versions and HEAD version
-                    // OR release property is not set
-                    //    - releasing from command line requires a 'release' property to be used
-                    // THEN return nextIncrement
-                    // ELSE return increment from property
-                    // 2. just return the result of nextIncrement
+                    /*
+                     * 1. check allowed values for gradle-property based increment
+                     *    - DEFAULT is not used with 'increment' property
+                     *    - NONE means 'increment' property is not set or has invalid value
+                     * IF nextIncrement is NONE
+                     *    - we don't want to override it because contains some logic
+                     *      for checking existing versions and HEAD version
+                     * OR release property is not set
+                     *    - releasing from command line requires a 'release' property to be used
+                     * THEN return nextIncrement
+                     * ELSE return increment from property
+                     * 2. just return the result of nextIncrement
+                     */
                     !in listOf(DEFAULT, NONE) -> if (this == NONE || !propRelease) this else propIncrement
                     else -> this
                 }
             }
             logger.info("Calculated version increment: {}", increaseVersion)
-            val nextVersion = if (!hasChanges) null else if (propPromoteRelease) {
-                with(svr.promoteToRelease(module?.path)) {
+            val nextVersion = when {
+                // major is always bumped for all submodules in a monorepo,
+                // irrespective of found changes in a given module's sources
+                !hasChanges && !isMonoMajor -> null
+                propPromoteRelease -> with(svr.promoteToRelease(module?.path)) {
                     logger.info("Promote {} to {}", latestVersion, this)
                     when {
                         propRelease -> this
@@ -205,43 +214,45 @@ class SemverKtPlugin : Plugin<Settings> {
                         else -> null
                     }
                 }
-            } else if (propPreRelease) {
-                val inc = if (increaseVersion in listOf(DEFAULT, NONE)) DEFAULT else increaseVersion
-                with(svr.createPreRelease(inc, module?.path)) {
-                    logger.info("Create pre-release {} from {}", this, latestVersion)
-                    when {
-                        propRelease -> this
+                propPreRelease -> {
+                    val inc = if (increaseVersion in listOf(DEFAULT, NONE)) DEFAULT else increaseVersion
+                    with(svr.createPreRelease(inc, module?.path)) {
+                        logger.info("Create pre-release {} from {}", this, latestVersion)
+                        when {
+                            propRelease -> this
+                            else -> null
+                        }
+                    }
+                }
+                else -> when (increaseVersion) {
+                    MAJOR, MINOR, PATCH -> {
+                        logger.info("Create release...")
+                        svr.release(increaseVersion, module?.path)
+                    }
+                    PRE_RELEASE -> {
+                        latestVersion?.preRelease?.let {
+                            logger.info("Next pre-release...")
+                            svr.release(increaseVersion, module?.path)
+                        } ?: run {
+                            logger.info("Create default pre-release...")
+                            svr.createPreRelease(DEFAULT, module?.path)
+                        }
+                    }
+                    DEFAULT, NONE -> when {
+                        // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
+                        propRelease -> svr.release(config.version.defaultIncrement, module?.path)
+                        // if -Prelease is NOT set then create snapshot version if snapshots are enabled in configuration
+                        config.version.useSnapshots -> {
+                            val inc = when (propIncrement) {
+                                // DEFAULT is not used with 'increment' property
+                                // NONE means 'increment' property is not set or has invalid value
+                                !in listOf(DEFAULT, NONE) -> propIncrement
+                                else -> config.version.defaultIncrement
+                            }
+                            svr.snapshot(inc, module?.path)
+                        }
                         else -> null
                     }
-                }
-            } else when (increaseVersion) {
-                MAJOR, MINOR, PATCH -> {
-                    logger.info("Create release...")
-                    svr.release(increaseVersion, module?.path)
-                }
-                PRE_RELEASE -> {
-                    latestVersion?.preRelease?.let {
-                        logger.info("Next pre-release...")
-                        svr.release(increaseVersion, module?.path)
-                    } ?: run {
-                        logger.info("Create default pre-release...")
-                        svr.createPreRelease(DEFAULT, module?.path)
-                    }
-                }
-                DEFAULT, NONE -> when {
-                    // if -Prelease is set but no -Pincrement or keyword found, then release with default increment
-                    propRelease -> svr.release(config.version.defaultIncrement, module?.path)
-                    // if -Prelease is NOT set then create snapshot version if snapshots are enabled in configuration
-                    config.version.useSnapshots -> {
-                        val inc = when (propIncrement) {
-                            // DEFAULT is not used with 'increment' property
-                            // NONE means 'increment' property is not set or has invalid value
-                            !in listOf(DEFAULT, NONE) -> propIncrement
-                            else -> config.version.defaultIncrement
-                        }
-                        svr.snapshot(inc, module?.path)
-                    }
-                    else -> null
                 }
             }
             logger.info("Next version: {}", nextVersion)
