@@ -483,27 +483,6 @@ class SemverKtPluginFT : DescribeSpec({
                 result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
                 result.output shouldNotContain "Calculated next version"
             }
-
-            it("!should set version to current version with increment${testName(release, dryRun)}") {
-                val project = SemverKtTestProject()
-                // Arrange
-                Git.open(project.projectDir.toFile()).use {
-                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                    it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit").call()
-                    it.tag().setName("v0.1.0").call() // add a tag manually on latest commit
-                }
-                // Act
-                val args = if (dryRun.value) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                val result = Builder.build(project = project, args = args)
-                // Assert
-                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                // initial version should be calculated from config, so the keyword value doesn't really matter so long as it's valid
-                result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
-                result.output shouldContain "> Task :tag\nCurrent version: 0.1.0"
-                result.output shouldNotContain "Calculated next version"
-            }
         } }
     }
 
@@ -522,31 +501,6 @@ class SemverKtPluginFT : DescribeSpec({
                 // Act
                 // re-run :tag task after releasing a version
                 val result = release.tag(project)(minor)(dryRun)
-                // Assert
-                result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
-                result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
-                result.output shouldContain "> Task :tag UP-TO-DATE"
-                result.output shouldNotContain "Calculated next version"
-            }
-
-            it("!should return UP_TO_DATE with increment from gradle properties${testName(release, dryRun)}") {
-                val project = SemverKtTestProject()
-                // Arrange
-                Git.open(project.projectDir.toFile()).use {
-                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                    it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit").call()
-                }
-                // release a version
-                Builder.build(project = project, args = arrayOf("tag", "-Prelease", "-Pincrement=minor"))
-                // Act
-                val args = if (dryRun.value) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                else arrayOf(
-                    "tag",
-                    "-Prelease",
-                    "-Pincrement=minor"
-                )
-                val result = Builder.build(project = project, args = args)
                 // Assert
                 result.task(":tag")?.outcome shouldBe TaskOutcome.UP_TO_DATE
                 result.output shouldContain "> Configure project :\nProject test-project version: 0.1.0"
@@ -679,40 +633,6 @@ class SemverKtPluginFT : DescribeSpec({
                 }
             }
 
-            it("!should set next version via gradle property${testName(release, dryRun)}") {
-                val project = SemverKtTestProject(multiModule = true, monorepo = false)
-                // Arrange
-                Git.open(project.projectDir.toFile()).use {
-                    it.tag().setName("v0.1.0").call() // set initial version
-                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                    it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit").call()
-                }
-                // Act
-                val args = if (dryRun.value) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                val result = Builder.build(project = project, args = args)
-                // Assert
-                result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun.value) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun.value) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun.value) "Tag v0.2.0 already exists in project" else ""}
-                """.trimIndent().trim()
-            }
-
             context("monorepo versioning${testName(release, dryRun)}") {
                 it("should set next version") {
                     val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
@@ -733,32 +653,6 @@ class SemverKtPluginFT : DescribeSpec({
                     result.output shouldContain expected("core", null, dryRun)
                     result.output shouldContain expected("baz", null, dryRun)
                     if (!dryRun) {
-                        result.output shouldContain tagExists("foo", v, dryRun)
-                        result.output shouldContain tagExists("bar", v, dryRun)
-                        result.output shouldNotContain tagExists("core", v, dryRun)
-                        result.output shouldNotContain tagExists("baz", v, dryRun)
-                    }
-                }
-
-                it("!should set next version via gradle property${testName(release, dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
-                    // Arrange
-                    Git.open(project.projectDir.toFile()).use {
-                        it.tag().setName("v0.1.0").call() // set initial version
-                        listOf("foo", "bar").forEach { module -> commit(project, it)(module) }
-                        it.commit().setMessage("New commit").call()
-                    }
-                    // Act
-                    val result = release.tag(project)(minor)(dryRun)
-                    // Assert
-                    val v = Semver("0.2.0")
-                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, v, dryRun)
-                    result.output shouldContain expected("foo", v, dryRun)
-                    result.output shouldContain expected("bar", v, dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
-                    if (!dryRun.value) {
                         result.output shouldContain tagExists("foo", v, dryRun)
                         result.output shouldContain tagExists("bar", v, dryRun)
                         result.output shouldNotContain tagExists("core", v, dryRun)
@@ -869,40 +763,6 @@ class SemverKtPluginFT : DescribeSpec({
                         result.output shouldNotContain tagExists("foo", v, dryRun)
                         result.output shouldNotContain tagExists("bar", v, dryRun)
                     }
-                }
-
-                it("!should not set version for configured submodule with no changes via gradle property${testName(release, dryRun)}") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = false)
-                    // Arrange
-                    Git.open(project.projectDir.toFile()).use {
-                        it.tag().setName("v0.1.0").call() // set initial version
-                        project.projectDir.resolve("foo").resolve("text.txt").createFile().writeText("Hello")
-                        it.add().addFilepattern(".").call()
-                        it.commit().setMessage("New commit").call()
-                    }
-                    // Act
-                    val args = if (dryRun.value) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                    else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                    val result = Builder.build(project = project, args = args)
-                    // Assert
-                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain """
-                    > Configure project :
-                    Project test-project version: 0.2.0
-
-                    > Task :tag
-                    Calculated next version: 0.2.0
-
-                    > Task :bar:tag
-                    Not doing anything
-
-                    > Task :baz:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun.value) "Tag v0.2.0 already exists in project\n" else ""}
-                    > Task :foo:tag
-                    Calculated next version: 0.2.0
-                    ${if (!dryRun.value) "Tag v0.2.0 already exists in project" else ""}
-                    """.trimIndent().trim()
                 }
 
                 listOf(null, "core", "foo").forEach { commitIn ->
@@ -1175,28 +1035,6 @@ class SemverKtPluginFT : DescribeSpec({
                     result.output shouldContain expected("foo", Semver("0.1.0"), dryRun)
                     result.output shouldContain expected("bar", Semver("0.3.0"), dryRun)
                     result.output shouldContain expected("baz", null, dryRun)
-                }
-
-                it("!should set next version via gradle property") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
-                    // Arrange
-                    Git.open(project.projectDir.toFile()).use {
-                        it.tag().setName("v0.1.0").call() // set initial version
-                        it.tag().setName("bar-v0.2.0").call() // set initial version for 'bar' module
-                        // foo, bar and baz are with custom tag prefix via SemverKtTestProject
-                        listOf("foo", "bar").forEach { module -> commit(project, it)(module) }
-                    }
-                    // Act
-                    val args = if (dryRun.value) arrayOf("tag", "-PdryRun", "-Prelease", "-Pincrement=minor")
-                    else arrayOf("tag", "-Prelease", "-Pincrement=minor")
-                    val result = Builder.build(project = project, args = args)
-                    // Assert
-                    result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, Semver("0.0.0"), dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
-                    result.output shouldContain expected("foo", Semver("0.1.0"), dryRun)
-                    result.output shouldContain expected("bar", Semver("0.3.0"), dryRun)
-                    result.output shouldContain expected("baz", Semver("0.1.0"), dryRun)
                 }
             }
         } }
