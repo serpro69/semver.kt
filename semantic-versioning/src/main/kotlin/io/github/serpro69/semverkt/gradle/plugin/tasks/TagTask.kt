@@ -1,5 +1,6 @@
 package io.github.serpro69.semverkt.gradle.plugin.tasks
 
+import io.github.serpro69.semverkt.gradle.plugin.NextVersion
 import io.github.serpro69.semverkt.gradle.plugin.SemverKtPluginConfig
 import io.github.serpro69.semverkt.release.configuration.CleanRule
 import io.github.serpro69.semverkt.release.configuration.ModuleConfig
@@ -29,14 +30,14 @@ abstract class TagTask : SemverReleaseTask() {
         // check if tag already set, if so tell plugin it's UP-TO-DATE
         // NB! it won't handle multi-module projects because currentVersion will be set to all projects
         // before the task itself is even evaluated and executed
-        outputs.upToDateWhen { currentVersion.orNull != null }
+        outputs.upToDateWhen { semanticProject.get().headVersion != null }
         //this@TagTask.onlyIf { currentVersion.orNull == null || nextVersion.orNull != null }
     }
 
     @TaskAction
     fun tag() {
         // check if tag already set, if so tell plugin it's UP-TO-DATE
-        val (current, latest, next) = Triple(currentVersion.orNull, latestVersion.orNull, nextVersion.orNull)
+        val (current, latest, next) = semanticProject.get()
         logger.debug("latestVersion: {}", latest)
         logger.debug("nextVersion: {}", next)
         when {
@@ -59,7 +60,7 @@ abstract class TagTask : SemverReleaseTask() {
         }
     }
 
-    private fun setTag(nextVer: Semver, config: SemverKtPluginConfig, moduleConfig: ModuleConfig?) {
+    private fun setTag(nextVer: NextVersion, config: SemverKtPluginConfig, moduleConfig: ModuleConfig?) {
         val prefix = moduleConfig?.tag?.prefix ?: config.git.tag.prefix
         logger.debug("Next version '{}' with prefix '{}'", nextVer, prefix)
         if (nextVer.toString().endsWith(config.version.snapshotSuffix)) {
@@ -76,7 +77,7 @@ abstract class TagTask : SemverReleaseTask() {
                 }
                 repo.tags()
                     .filter { it.name.startsWith("refs/tags/$prefix") }
-                    .any { Semver(it.name.replace(Regex("""^refs/tags/$prefix"""), "")) == nextVer }
+                    .any { Semver(it.name.replace(Regex("""^refs/tags/$prefix"""), "")) == nextVer.value }
             }
             if (!tagExists) {
                 logger.debug("Open repo at: {}", this)
