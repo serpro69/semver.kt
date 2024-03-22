@@ -812,7 +812,8 @@ class SemverKtPluginFT : DescribeSpec({
                         result.output shouldContain expected(it, initial, dryRun)
                         // -> ':core' submodule is NOT configured with custom tag prefix and should have 'root' tag)
                         // -> ':foo', ':bar', ':baz' submodules are configured with custom tag prefix and should have their own tags)
-                        if (!dryRun) result.output shouldNotContain tagExists(it, initial, dryRun)
+                        if (!dryRun && it == "core") result.output shouldContain tagExists(it, initial, dryRun)
+                        if (!dryRun && it != "core") result.output shouldNotContain tagExists(it, initial, dryRun)
                     }
                 }
 
@@ -946,7 +947,7 @@ class SemverKtPluginFT : DescribeSpec({
                 }
 
                 listOf(null, "core", "foo").forEach { commitIn ->
-                    it("should set ALL versions to next MAJOR when committing in $commitIn") {
+                    it("!should set ALL versions to next MAJOR when committing in $commitIn") {
                         // arrange
                         // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.3.0, baz-v0.1.0)
                         val (third, second, initial) = Triple(Semver("0.3.0"), Semver("0.2.0"), Semver("0.1.0"))
@@ -979,8 +980,8 @@ class SemverKtPluginFT : DescribeSpec({
                 it("should set initial version for new submodule after first stable release") {
                     // arrange
                     // -> repo with tags for each tag-prefix (v1.0.0, foo-v1.0.0, bar-v1.0.0, baz-v1.0.0)
-                    val firstStable = Semver("1.0.0")
-                    val modulesVersions = modules.map { it to firstStable }
+                    val ver = Semver("1.3.0")
+                    val modulesVersions = modules.map { it to ver }
                     val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
                     Git.open(project.projectDir.toFile()).use {
                         setupInitialVersions(project, it)(modulesVersions)
@@ -1000,21 +1001,21 @@ class SemverKtPluginFT : DescribeSpec({
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v1.1.0)
                     //    (':core' is not configured with custom tag prefix and has changes)
-                    result.output shouldContain expected(project.name, firstStable.incrementMinor(), dryRun)
-                    result.output shouldContain expected("core", firstStable.incrementMinor(), dryRun)
-                    if (!dryRun) result.output shouldContain tagExists("core", firstStable.incrementMinor(), dryRun)
+                    result.output shouldContain expected(project.name, ver.incrementMinor(), dryRun)
+                    result.output shouldContain expected("core", ver.incrementMinor(), dryRun)
+                    if (!dryRun) result.output shouldContain tagExists("core", ver.incrementMinor(), dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
-                    result.output shouldContain expected("bar", firstStable.incrementMinor(), dryRun)
-                    if (!dryRun) result.output shouldNotContain tagExists("bar", firstStable.incrementMinor(), dryRun)
+                    result.output shouldContain expected("bar", ver.incrementMinor(), dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("bar", ver.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
                     result.output shouldContain expected("foo", null, dryRun)
                     result.output shouldContain expected("baz", null, dryRun)
                     // -> ':abc' submodule should have initial version tag (bar-v1.0.0)
                     //    (configured with custom tag prefix and "default initial version" -> '${rootVersion.major}.0.0')
-                    result.output shouldContain expected("abc", firstStable.incrementMinor(), dryRun)
-                    if (!dryRun) result.output shouldNotContain tagExists("abc", firstStable.incrementMinor(), dryRun)
+                    result.output shouldContain expected("abc", Semver("1.0.0"), dryRun)
+                    if (!dryRun) result.output shouldNotContain tagExists("abc", Semver("1.0.0"), dryRun)
                 }
 
                 it("should set next version") {

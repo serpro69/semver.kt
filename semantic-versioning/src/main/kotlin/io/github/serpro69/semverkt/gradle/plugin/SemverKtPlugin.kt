@@ -51,35 +51,35 @@ class SemverKtPlugin : Plugin<Settings> {
     private fun configureProject(project: Project, config: SemverKtPluginConfig) {
         logger.info("Configure {}", project.name)
         logger.debug("Using configuration: {}", config.jsonString())
-        val (currentVersion, latestVersion, nextVersion) = setVersion(project, config)
-        val moduleConfig = when (project.path) {
-            project.rootProject.path -> null
-            else -> config.monorepo.modules.firstOrNull { m -> m.path == project.path }
-        }
-        logger.debug("{} project module config: {}", project.name,  moduleConfig?.jsonString())
+        // NB! always set gradle project.version before registering tasks
+        val sp = setVersion(project, config)
         project.tasks.register("tag", TagTask::class.java) {
+            val moduleConfig = when (project.path) {
+                project.rootProject.path -> null
+                else -> config.monorepo.modules.firstOrNull { m -> m.path == project.path }
+            }
+            logger.debug("{} project module config: {}", project.name,  moduleConfig?.jsonString())
+
             it.description = "Create a tag for the next version"
             it.config.set(config)
             it.moduleConfig.set(moduleConfig)
             it.dryRun.set(project.hasProperty("dryRun"))
-            // set versions
-            it.currentVersion.set(currentVersion)
-            it.latestVersion.set(latestVersion)
-            it.nextVersion.set(nextVersion)
+            // use versions via semantic-project instance
+            it.semanticProject.set(sp)
         }
     }
 
     /**
      * Calculates and sets next version for the [project] using the given [config],
-     * and returns a [Triple] of versions, where
-     * - `first` is currentVersion if it exists, or `null` otherwise
-     * - `second` is latestVersion if it exists, or `null` otherwise
-     * - `third` is the calculated nextVersion if it exists (given the current inputs and configuration),
-     *    or `null` otherwise
+     * and returns as [SemanticProject] versions, where
+     * - `first` is [SemanticProject.headVersion] if it exists, or `null` otherwise
+     * - `second` is [SemanticProject.latestVersion] if it exists, or `null` otherwise
+     * - `third` is calculated [SemanticProject.nextVersion],
+     * if it exists (given the current inputs and configuration), or `null` otherwise
      *
      * IF `currentVersion` exists, both `latestVersion` and `nextVersion` will always return as `null`
      */
-    private fun setVersion(project: Project, config: SemverKtPluginConfig): Triple<Semver?, Semver?, Semver?> {
+    private fun setVersion(project: Project, config: SemverKtPluginConfig): SemanticProject {
         logger.info("Set version for {}", project.name)
         logger.debug("Using configuration: {}", config.jsonString())
         val propRelease = project.hasProperty("release")
@@ -89,6 +89,7 @@ class SemverKtPlugin : Plugin<Settings> {
             ?.let { Increment.getByName(it.toString()) }
             ?: NONE
 
+        val isRoot = project == project.rootProject
         val isMonorepo = config.monorepo.modules.isNotEmpty()
         val isMultiTag = config.monorepo.modules.any { mc ->
             mc.tag?.prefix?.let { p -> p != config.git.tag.prefix } ?: false
@@ -98,7 +99,7 @@ class SemverKtPlugin : Plugin<Settings> {
         val hasChanges by lazy {
             when {
                 // always apply version to root project in non-multitag-monorepo
-                !isMultiTag && (project == project.rootProject) -> true
+                !isMultiTag && (isRoot) -> true
                 isMonorepo || isMultiTag -> GitRepository(config).use { repo ->
                     repo.hasChanges(project, module)
                 }
@@ -112,7 +113,8 @@ class SemverKtPlugin : Plugin<Settings> {
             // IF git HEAD points at a version, set and return it and don't do anything else
             svr.currentVersion(module)?.let {
                 project.version = it
-                return@use Triple(it, null, null)
+                logger.debug("'{}' project current version: {}", project, project.version)
+                return@use SemanticProject(it.toVersion(), null, null)
             }
             // ELSE IF version is specified via gradle property, use that as nextVersion
             // NB! this explicitly applies to all monorepo modules regardless of whether a module had changes or not
@@ -123,7 +125,8 @@ class SemverKtPlugin : Plugin<Settings> {
                 && Semver.isValid(v)
             ) {
                 project.version = Semver(v)
-                return@use Triple(null, null, Semver(v))
+                logger.debug("'{}' project version via property: {}", project, project.version)
+                return@use SemanticProject(null, Semver(v).toVersion())
             }
             // ELSE figure out next version
             val latestVersion = svr.latestVersion(module)
@@ -222,12 +225,23 @@ class SemverKtPlugin : Plugin<Settings> {
             val setNext by lazy { (nextVersion != null && latestVersion != null) && (nextVersion >= latestVersion) }
             // set initial version
             val setInitial by lazy { latestVersion == null }
-            if (nextVersion != null && (setSnapshot || setNext || setInitial)) {
-                project.version = nextVersion
-                logger.debug("Set project.version: {}", project.version)
-            } else logger.debug("Not doing anything...")
+            val next = if (nextVersion != null && (setSnapshot || setNext || setInitial)) {
+                // initial major for new module
+                val major = if (isMonorepo && setInitial && !isRoot) Semver(project.rootProject.version.toString()).major else null
+                val nextVer = when(major) {
+                    null -> nextVersion
+                    0 -> config.version.initialVersion
+                    else -> Semver(major = major, minor = 0, patch = 0)
+                }
+                project.version = nextVer
+                logger.debug("{} project version: {}", project, project.version)
+                nextVer
+            } else {
+                logger.debug("Not doing anything...")
+                null
+            }
             logger.info("Done...")
-            Triple(null, latestVersion, nextVersion)
+            SemanticProject(latestVersion?.toVersion(), next?.toVersion() ?: nextVersion?.toVersion())
         }
     }
 
