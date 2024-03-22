@@ -240,6 +240,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 .normalize()
                 .also { p -> logger.debug("Module path: {}", p) }
         }
+        val ownSrc by lazy { srcPath(module) }
 
         val isRoot = project == project.rootProject
         val prefix = module?.tag?.prefix ?: config.git.tag.prefix
@@ -268,16 +269,14 @@ class SemverKtPlugin : Plugin<Settings> {
                         }
                     }
                     val own by lazy {
-                        val moduleSrc = srcPath(module)
-                        Paths.get(it.oldPath).startsWith(moduleSrc)
-                            || Paths.get(it.newPath).startsWith(moduleSrc)
+                        Paths.get(it.oldPath).startsWith(ownSrc)
+                            || Paths.get(it.newPath).startsWith(ownSrc)
                     }
                     own || none
                 }
                 // for configured modules we check that the diff matches the given module's sources
-                else -> with(srcPath(module)) {
-                    Paths.get(it.oldPath).startsWith(this) || Paths.get(it.newPath).startsWith(this)
-                }
+                else -> Paths.get(it.oldPath).startsWith(ownSrc)
+                    || Paths.get(it.newPath).startsWith(ownSrc)
             }
         }
     }
