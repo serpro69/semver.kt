@@ -36,13 +36,17 @@ plugins {
 }
 ```
 
-Additionally, you may want to add `semantic-versioning.json` configuration file in the corresponding project-directory of each project in the build that should be handled by this plugin. The file _must_ be in the same directory as `settings.gradle` file. This file allows you to set options to configure the plugin's behavior (see [Json Configuration](#json-configuration)). In most cases you don't want to version your subprojects separately from the main (root) project, and instead want to keep their versions in sync. For this you can simply set the version of each subproject to the version of the root project in the root project's `build.gradle.kts`:
+Additionally, you may want to add `semantic-versioning.json` configuration file in the corresponding project-directory of each project in the build that should be handled by this plugin. The file _must_ be in the same directory as `settings.gradle` file. This file allows you to set options to configure the plugin's behavior (see [Json Configuration](#json-configuration)).
+
+In most cases you don't want to version your subprojects separately from the main (root) project, and instead want to keep their versions in sync. For this you can simply set the version of each subproject to the version of the root project in the root project's `build.gradle.kts`:
 
 ```kotlin
 subprojects {
     version = rootProject.version
 }
 ```
+
+The plugin will still evaluate each project in a gradle build and will set the versions for each of the projects found at build configuration time.
 
 This is usually enough to start using the plugin. Assuming that you already have tags that are (or contain) semantic versions, the plugin will search for all nearest ancestor-tags, select the latest<sup>1</sup> of them as the base version, and increment the component with the least precedence. The nearest ancestor-tags are those tags with a path between them and the `HEAD` commit, without any intervening tags. This is the default behavior of the plugin.
 
@@ -54,6 +58,7 @@ If you need the `TagTask` class in your Gradle build script, for example, for a 
 
 Incrementing new version can be done in one of the following ways, in ascending precedence order:
 
+- default increment
 - commit-based increment
 - gradle property-based increment
 - manually setting the version via `-Pversion`
@@ -70,7 +75,10 @@ By default, releasing with uncommitted changes is not allowed and will fail the 
 
 #### Releasing via gradle properties
 
-TODO
+Instead of having the plugin look up keywords in commits, one can use `-Pincrement` property instead with the `:tag` task.
+See [Gradle Properties](#gradle-properties) for more details on available values.
+
+As mentioned above, using the gradle property takes precedence over commit-based release via keywords.
 
 ## Configuration
 
@@ -107,16 +115,24 @@ The full config file looks like this:
     "initialPreRelease": "1",
     "snapshotSuffix": "SNAPSHOT"
   },
-  "monorepo": [
-    {
-      "name": "foo",
-      "sources": "src/main"
-    },
-    {
-      "name": "bar",
-      "sources": "."
-    }
-  ]
+  "monorepo": {
+    "sources": ".",
+    "modules": [
+      {
+        "name": ":foo",
+        "sources": "src/main",
+        "tag": {
+          "prefix": "foo-v",
+          "separator": "",
+          "useBranches": "false"
+        }
+      },
+      {
+        "name": ":bar",
+        "sources": "."
+      }
+    ]
+  }
 }
 ```
 
@@ -126,12 +142,15 @@ Refer to [Configuration](../release/src/main/kotlin/io/github/serpro69/semverkt/
 
 ### `semantic-versioning` Extension
 
-The plugin provides a settings-extension called `semantic-versioning`, which, if used, takes precedence over the json-based configuration.
+The plugin provides a settings-extension called `semantic-versioning`, which, if used, takes precedence over the json-based configuration for any declared properties.
 
 In the `settings.gradle.kts`, the extension can be configured as follows:
 
 ```kotlin
 import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+import io.github.serpro69.semverkt.release.configuration.ModuleConfig
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
+import kotlin.io.path.Path
 
 settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
     git {
@@ -147,8 +166,17 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
         preReleaseId = "rc"
     }
     monorepo {
-        module("foo") {}
-        module("bar") {}
+        sources = Path("src")
+        module(":foo") {
+            sources = "src/main"
+            tag  {
+                prefix = TagPrefix("foo-v")
+                separator = ""
+                useBranches = false
+            }
+        }
+        module(":bar") {}
+        modules.add(ModuleConfig(":baz"))
     }
 }
 ```
@@ -167,7 +195,9 @@ The plugin makes use of the following properties:
     - `patch`
     - `pre_release`
 
-### Monorepo project support
+### Monorepo Support
+
+#### Single-Tag Monorepo
 
 The plugin supports individual versioning of submodules (subprojects) of monorepo projects.
 To configure a monorepo project, add the following configuration (also supported via json configuration):
@@ -178,10 +208,15 @@ import kotlin.io.path.Path
 
 settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
   monorepo {
-    module("foo") {}
-    module("bar") {
+    // path to track changes for the monorepo submodules that are not configured in this block
+    // in this case it will be used for :baz project
+    sources = Path(".")
+    module(":foo") {}
+    module(":bar") {
+        // customize given module sources to track changes
         sources = Path("src/main")
     }
+    module(":foo:bar")
   }
 }
 
@@ -190,7 +225,10 @@ include("bar")
 include("baz")
 ```
 
-Where `foo` and `bar` are directories of two submodules in a monorepo project.
+> [!NOTE]
+> The module `path` should be a fully-qualified gradle project path.
+> So for `./bar` module in the root of a gradle mono-repo, this would be `:bar`,
+> and for `./foo/bar` module in a gradle mono-repo, this would be `:foo:bar`.
 
 By default, the entire submodule directory is used to lookup changes. This can be customized via `sources` config property for a given submodule. In the above example, for `bar` module only changes to `bar/src/main` would be considered when making a new release. If no changes are detected between current git HEAD and last version in the repo, then the `version` property will not be applied to the submodule.
 
@@ -223,6 +261,40 @@ This comes with some downsides which are good to be aware of when considering to
   - there will be "version jumps" for individual submodules, e.g. last version of `bar` was `0.6.0` and next is `0.8.0`
 
 It can still be useful though, especially when each submodule has its own publishable artifacts. In such cases, more often than not one might not want to publish next version of an artifact that is exactly the same as the previous version.
+
+#### Multi-Tag Monorepo
+
+Since `v0.10.0`, the plugin also supports multi-tagging - each individual submodule *can* have a separate tag; it is also possible to mix and match, where one or more submodules follow the "root tag", and others have individual tags.
+
+This can be useful to avoid some limitations of the single-tag monorepos, e.g. "version jumps".
+
+Multi-Tag support is enabled when one or more modules declares a custom tag prefix via configuration, e.g. with settings extension:
+
+```kotlin
+settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
+  monorepo {
+    // path to track changes for the monorepo submodules that are not configured in this block
+    // in this case it will be used for :baz project
+    sources = Path(".")
+    module(":foo") {}
+    module(":bar") {
+      // customize given module sources to track changes
+      sources = Path("src/main")
+      // modify tag configuration for the module
+      tag {
+        prefix = TagPrefix("bar-v")
+      }
+    }
+    module(":foo:bar") {}
+  }
+}
+```
+
+#### Monorepo Versioning Workflow
+
+For example monorepo versioning workflow diagrams refer to [single-tag_monorepo_workflow.png](../docs/images/single-tag_monorepo_workflow.png) and [multi-tag_monorepo_workflow.png](../docs/images/multi-tag_monorepo_workflow.png)
+
+These diagrams were made with [obsidian](https://obsidian.md). The original canvas file can be found in [docs/assets/monorepo_workflow.canvas](../docs/assets/monorepo_workflow.canvas)
 
 ## Development
 
