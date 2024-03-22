@@ -10,7 +10,7 @@
 [![Awesome Kotlin](https://img.shields.io/badge/awesome-kotlin-orange?logo=Awesome-Lists&style=for-the-badge)](https://github.com/KotlinBy/awesome-kotlin)
 [![Licence](https://img.shields.io/github/license/serpro69/semver.kt.svg?style=for-the-badge)](LICENSE.adoc)
 
-***NB! This is still in pretty-much early development, thus breaking changes are to be expected until first stable release.***
+***NB! This is still in pre-release, thus breaking changes are to be expected until first stable release.***
 
 ## About
 
