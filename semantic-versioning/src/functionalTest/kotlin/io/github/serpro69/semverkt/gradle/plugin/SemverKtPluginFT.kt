@@ -947,7 +947,7 @@ class SemverKtPluginFT : DescribeSpec({
                 }
 
                 listOf(null, "core", "foo").forEach { commitIn ->
-                    it("!should set ALL versions to next MAJOR when committing in $commitIn") {
+                    it("should set ALL versions to next MAJOR when committing in $commitIn") {
                         // arrange
                         // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.3.0, baz-v0.1.0)
                         val (third, second, initial) = Triple(Semver("0.3.0"), Semver("0.2.0"), Semver("0.1.0"))
