@@ -25,7 +25,7 @@ endif
 
 .PHONY: test
 test: ## Runs tests for the project
-	./gradlew clean test functionalTest
+	./gradlew test functionalTest
 
 .PHONY: local
 local: _check_java ## Publishes artifacts to local repos
@@ -35,7 +35,7 @@ local: _check_java ## Publishes artifacts to local repos
 .PHONY: release
 release: _check_java test ## Publishes the next release
 	# publish to sonatype and gradle-plugin-portal and close staging repo
-	./gradlew tag publishToSonatype closeSonatypeStagingRepository publishPlugins --info
+	./gradlew tag publishToSonatype closeSonatypeStagingRepository publishPlugins -Prelease --info
 	# push git tag
 	git push origin --tags
 
