@@ -1,4 +1,5 @@
 import io.github.serpro69.semverkt.gradle.plugin.SemverPluginExtension
+import io.github.serpro69.semverkt.release.configuration.TagPrefix
 
 pluginManagement {
     repositories {
@@ -8,7 +9,7 @@ pluginManagement {
 }
 
 plugins {
-    id("io.github.serpro69.semantic-versioning") version "0.9.0"
+    id("io.github.serpro69.semantic-versioning") version "0.10.0"
 }
 
 rootProject.name = "semver.kt"
@@ -27,8 +28,20 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
         }
     }
     monorepo {
-        module("release") {}
-        module("semantic-versioning") {}
-        module("spec") {}
+        module(":release") {
+            tag {
+                prefix = TagPrefix("release-v")
+            }
+        }
+        module(":semantic-versioning") {
+            tag {
+                prefix = TagPrefix("gradle-v")
+            }
+        }
+        module(":spec") {
+            tag {
+                prefix = TagPrefix("spec-v")
+            }
+        }
     }
 }
