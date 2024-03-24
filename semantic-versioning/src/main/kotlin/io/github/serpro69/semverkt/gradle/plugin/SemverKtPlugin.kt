@@ -220,15 +220,16 @@ class SemverKtPlugin : Plugin<Settings> {
             //  - and identifiers with letters or hyphens are compared lexically in ASCII sort order
             //    (see also https://semver.org/#spec-item-11 -> 4)
             //  e.g. 1.0.0-SNAPSHOT < 1.0.0-rc.1
-            val setSnapshot by lazy { nextVersion.toString().endsWith(config.version.snapshotSuffix) }
+            val setSnapshot by lazy { nextVersion != null && with(svr) { nextVersion.isSnapshot() } }
             // only set next version if nextVersion >= latestVersion
             val setNext by lazy { (nextVersion != null && latestVersion != null) && (nextVersion >= latestVersion) }
             // set initial version
-            val setInitial by lazy { latestVersion == null }
+            val setInitial by lazy { nextVersion != null && latestVersion == null }
             val next = if (nextVersion != null && (setSnapshot || setNext || setInitial)) {
                 // initial major for new module
-                val major = if (isMonorepo && setInitial && !isRoot) Semver(project.rootProject.version.toString()).major else null
-                val nextVer = when(major) {
+                val major =
+                    if (isMonorepo && setInitial && !isRoot) Semver(project.rootProject.version.toString()).major else null
+                val nextVer = when (major) {
                     null -> nextVersion
                     0 -> config.version.initialVersion
                     else -> Semver(major = major, minor = 0, patch = 0)
@@ -236,6 +237,11 @@ class SemverKtPlugin : Plugin<Settings> {
                 project.version = nextVer
                 logger.debug("{} project version: {}", project, project.version)
                 nextVer
+            } else if (isMonorepo && isMultiTag && latestVersion != null) {
+                // set latest in a multi-tag monorepo
+                project.version = latestVersion
+                logger.debug("{} project latest version: {}", project, project.version)
+                null
             } else {
                 logger.debug("Not doing anything...")
                 null

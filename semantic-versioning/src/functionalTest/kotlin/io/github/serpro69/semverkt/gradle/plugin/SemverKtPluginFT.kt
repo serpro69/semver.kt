@@ -883,7 +883,7 @@ class SemverKtPluginFT : DescribeSpec({
                     // arrange
                     // -> repo with tags for each tag-prefix (v0.3.0, foo-v0.2.0, bar-v0.2.0, baz-v0.1.0)
                     val (third, second, initial) = Triple(Semver("0.3.0"), Semver("0.2.0"), Semver("0.1.0"))
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true, printModuleVersion = true)
                     val modulesVersions = listOf("core" to third, "foo" to second, "bar" to second, "baz" to initial)
                     Git.open(project.projectDir.toFile()).use {
                         setupInitialVersions(project, it)(modulesVersions)
@@ -896,7 +896,10 @@ class SemverKtPluginFT : DescribeSpec({
                     // assert
                     // -> 'root' project and ':core' submodule should be unchanged
                     //    (we have custom tags for some submodules, and neither 'root' nor ':core' have changes)
-                    result.output shouldContain expected(project.name, Semver("0.0.0"), dryRun)
+                    val expectedVersions = modulesVersions.map {
+                        if (it.first == "bar") it.first to it.second.incrementMinor() else it
+                    }
+                    result.output shouldContain expectedConfigureWithModules(third, null, expectedVersions, dryRun)
                     result.output shouldContain expected("core", null, dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
@@ -1019,7 +1022,7 @@ class SemverKtPluginFT : DescribeSpec({
                 }
 
                 it("should set next version") {
-                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true)
+                    val project = SemverKtTestProject(multiModule = true, monorepo = true, multiTag = true, printModuleVersion = true)
                     // Arrange
                     Git.open(project.projectDir.toFile()).use {
                         it.tag().setName("v0.1.0").call() // set initial version
@@ -1030,8 +1033,10 @@ class SemverKtPluginFT : DescribeSpec({
                     // Act
                     val result = release.tag(project)(minor)(dryRun)
                     // Assert
+                    val expectedVersions = listOf("core" to Semver("0.1.0"), "foo" to Semver("0.1.0"), "bar" to Semver("0.3.0"), "baz" to Semver("0.0.0"))
+                        .sortedBy { (m, _) -> m }
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, Semver("0.0.0"), dryRun)
+                    result.output shouldContain expectedConfigureWithModules(Semver("0.1.0"), null, expectedVersions, dryRun)
                     result.output shouldContain expected("core", null, dryRun)
                     result.output shouldContain expected("foo", Semver("0.1.0"), dryRun)
                     result.output shouldContain expected("bar", Semver("0.3.0"), dryRun)
@@ -1311,6 +1316,22 @@ val expected: (name: String, ver: Semver?, dryRun: DryRun) -> String = { name, v
             ${version?.let { "Calculated next version: $it" } ?: noop}
         """.trimIndent().trim()
     }
+}
+
+val expectedConfigureWithModules: (ver: Semver, tag: Semver?, modulesVersions: List<Pair<String, Semver>>, dryRun: DryRun) -> String = { version, tag, modules, dryRun ->
+    val noop = "Not doing anything"
+    val sb = StringBuilder()
+    sb.appendLine("> Configure project :")
+    sb.appendLine("Project test-project version: $version")
+    modules.sortedBy { (m, _) -> m }.forEach { (m, v) ->
+        sb.appendLine()
+        sb.appendLine("> Configure project :$m")
+        sb.appendLine("Module $m version: $v")
+    }
+    sb.appendLine()
+    sb.appendLine("> Task :tag")
+    if (tag != null) sb.appendLine("Calculated next version: $tag") else sb.appendLine(noop)
+    sb.toString()
 }
 
 val setupInitialVersions: (proj: AbstractProject, git: Git) -> (modules: List<Pair<String, Semver>>) -> Unit = { proj, git ->
