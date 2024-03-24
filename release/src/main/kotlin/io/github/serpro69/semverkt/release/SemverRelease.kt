@@ -209,9 +209,7 @@ class SemverRelease : AutoCloseable {
         }
     }
 
-    private fun Semver.isSnapshot(): Boolean {
-        return toString().endsWith("-${config.version.snapshotSuffix}")
-    }
+    fun Semver.isSnapshot(): Boolean = toString().endsWith("-${config.version.snapshotSuffix}")
 
     /**
      * Promotes a pre-release version to a release version.
@@ -291,7 +289,7 @@ class SemverRelease : AutoCloseable {
     private fun Semver.withSnapshot(): Semver {
         val pr = preRelease?.toString()?.let {
             when {
-                it.endsWith(config.version.snapshotSuffix) -> it
+                isSnapshot() -> it
                 else -> "${it}-${config.version.snapshotSuffix}"
             }
         } ?: config.version.snapshotSuffix
