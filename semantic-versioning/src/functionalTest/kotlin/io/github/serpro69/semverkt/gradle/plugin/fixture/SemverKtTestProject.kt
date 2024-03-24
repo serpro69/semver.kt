@@ -18,6 +18,7 @@ class SemverKtTestProject(
     private val monorepo: Boolean = multiModule,
     private val multiTag: Boolean = false,
     private val useSnapshots: Boolean = false,
+    private val printModuleVersion: Boolean = false,
 ) : AbstractProject() {
 
     private val gradlePropertiesFile = projectDir.resolve("gradle.properties")
@@ -31,13 +32,15 @@ class SemverKtTestProject(
         monorepo: Boolean = multiModule,
         multiTag: Boolean = multiModule,
         useSnapshots: Boolean = false,
+        printModuleVersion: Boolean = false,
         configure: (dir: Path) -> Configuration,
     ) : this(
         defaultSettings = defaultSettings,
         multiModule = multiModule,
         monorepo = monorepo,
         multiTag = multiTag,
-        useSnapshots = useSnapshots
+        useSnapshots = useSnapshots,
+        printModuleVersion = printModuleVersion,
     ) {
         configFile.writeText(configure(projectDir).jsonString())
     }
@@ -69,10 +72,14 @@ class SemverKtTestProject(
 
         if (multiModule) listOf("core", "foo", "bar", "baz").forEach { subModule ->
             projectDir.resolve(subModule).createDirectories().also {
-                it.resolve("build.gradle.kts").writeText("""
-                plugins {
+                val sb = StringBuilder()
+                sb.appendLine("plugins {")
+                    .appendLine("}")
+                if (printModuleVersion) {
+                    sb.appendLine()
+                    sb.appendLine("""println("Module ${'$'}{project.name} version: ${'$'}{project.version}")""")
                 }
-                """.trimIndent())
+                it.resolve("build.gradle.kts").writeText(sb.toString())
             }
         }
 
@@ -157,10 +164,15 @@ class SemverKtTestProject(
             projectDir.resolve(module.path)
                 .createDirectories()
                 .also {
-                    it.resolve("build.gradle.kts").writeText("""
-                        plugins {
-                        }
-                    """.trimIndent())
+                    val sb = StringBuilder()
+                    sb.appendLine("plugins {")
+                        .appendLine("}")
+                    it.resolve("build.gradle.kts").writeText(sb.toString())
+                    if (printModuleVersion) {
+                        sb.appendLine()
+                        sb.appendLine("""println("Module ${'$'}{project.name} version: ${'$'}{project.version}")""")
+                    }
+                    it.resolve("build.gradle.kts").writeText(sb.toString())
                 }
         }
     }

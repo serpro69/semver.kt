@@ -294,7 +294,14 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
 
 For example monorepo versioning workflow diagrams refer to [single-tag_monorepo_workflow.png](../docs/images/single-tag_monorepo_workflow.png) and [multi-tag_monorepo_workflow.png](../docs/images/multi-tag_monorepo_workflow.png)
 
-These diagrams were made with [obsidian](https://obsidian.md). The original canvas file can be found in [docs/assets/monorepo_workflow.canvas](../docs/assets/monorepo_workflow.canvas)
+> [!IMPORTANT]
+> In monorepo multi-tag projects, unlike single-tag monorepo and non-monorepo projects, each module will have a version applied to it. 
+> For modules that don't have any changes between the latest version and the next release, the "latest version" will be set.
+> 
+> Single-tag monorepo project type does not support this as it would be impossible to determine "latest version" of a given module from a single git tag. 
+
+> [!NOTE]
+> These diagrams were made with [obsidian](https://obsidian.md). The original canvas file can be found in [docs/assets/monorepo_workflow.canvas](../docs/assets/monorepo_workflow.canvas)
 
 ## Development
 
