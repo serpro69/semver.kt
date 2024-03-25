@@ -35,7 +35,7 @@ local: _check_java ## Publishes artifacts to local repos
 .PHONY: release
 release: _check_java test ## Publishes the next release
 	# publish to sonatype and gradle-plugin-portal and close staging repo
-	./gradlew tag publishToSonatype closeSonatypeStagingRepository publishPlugins -Prelease --info
+	./gradlew publishToSonatype closeSonatypeStagingRepository publishPlugins tag -Prelease --info
 	# push git tag
 	git push origin --tags
 
