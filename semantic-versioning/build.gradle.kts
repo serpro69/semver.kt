@@ -39,7 +39,7 @@ configurations.configureEach {
     }
 }
 
-val release = project.rootProject.subprojects.first { it.name == "release" }
+val release = rootProject.subprojects.first { it.path == ":release" }
     ?: throw GradleException("release project not found")
 
 dependencies {
@@ -49,12 +49,12 @@ dependencies {
     /* :release and :semantic-versioning are versioned separately
      * during development versions will always equal (both are set to a version placeholder via gradle.properties),
      * but during publishing they might not (depending on changes to a given module)
-     * hence we check the versions equality and either set a dependency on a published :spec artifact
+     * hence we check the versions equality and either set a dependency on a published :release artifact with latest version
+     * (latest is handled by plugin for multi-tag monorepos),
      * or a project-type dependency on the submodule
      */
     if (Semver(project.version.toString()) != (Semver(release.version.toString()))) {
-        // use latest version before next major
-        api("io.github.serpro69:semver.kt-release:[0.9.0,1.0.0)")
+        api("io.github.serpro69:semver.kt-release:${release.version}")
     } else {
         api(project(":release"))
     }
