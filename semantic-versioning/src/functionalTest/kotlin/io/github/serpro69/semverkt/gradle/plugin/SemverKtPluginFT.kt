@@ -620,11 +620,11 @@ class SemverKtPluginFT : DescribeSpec({
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
                 val v = Semver("0.2.0")
                 result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                result.output shouldContain expected(project.name, v, dryRun)
-                result.output shouldContain expected("core", v, dryRun)
-                result.output shouldContain expected("foo", v, dryRun)
-                result.output shouldContain expected("bar", v, dryRun)
-                result.output shouldContain expected("baz", v, dryRun)
+                result.output shouldContain expectedTag(project.name, v, dryRun)
+                result.output shouldContain expectedTag("core", v, dryRun)
+                result.output shouldContain expectedTag("foo", v, dryRun)
+                result.output shouldContain expectedTag("bar", v, dryRun)
+                result.output shouldContain expectedTag("baz", v, dryRun)
                 if (!dryRun) {
                     result.output shouldContain tagExists("core", v, dryRun)
                     result.output shouldContain tagExists("foo", v, dryRun)
@@ -647,11 +647,11 @@ class SemverKtPluginFT : DescribeSpec({
                     // Assert
                     val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, v, dryRun)
-                    result.output shouldContain expected("foo", v, dryRun)
-                    result.output shouldContain expected("bar", v, dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag(project.name, v, dryRun)
+                    result.output shouldContain expectedTag("foo", v, dryRun)
+                    result.output shouldContain expectedTag("bar", v, dryRun)
+                    result.output shouldContain expectedTag("core", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                     if (!dryRun) {
                         result.output shouldContain tagExists("foo", v, dryRun)
                         result.output shouldContain tagExists("bar", v, dryRun)
@@ -673,11 +673,11 @@ class SemverKtPluginFT : DescribeSpec({
                     // Assert
                     val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, v, dryRun)
-                    result.output shouldContain expected("core", v, dryRun)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("bar", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag(project.name, v, dryRun)
+                    result.output shouldContain expectedTag("core", v, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("bar", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                     if (!dryRun) {
                         if (!dryRun) result.output shouldContain tagExists("core", v, dryRun)
                         result.output shouldNotContain tagExists("foo", v, dryRun)
@@ -700,11 +700,11 @@ class SemverKtPluginFT : DescribeSpec({
                     // Assert
                     val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, v, dryRun)
-                    result.output shouldContain expected("core", v, dryRun)
-                    result.output shouldContain expected("baz", v, dryRun)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("bar", null, dryRun)
+                    result.output shouldContain expectedTag(project.name, v, dryRun)
+                    result.output shouldContain expectedTag("core", v, dryRun)
+                    result.output shouldContain expectedTag("baz", v, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("bar", null, dryRun)
                     if (!dryRun) {
                         if (!dryRun) result.output shouldContain tagExists("core", v, dryRun)
                         if (!dryRun) result.output shouldContain tagExists("baz", v, dryRun)
@@ -726,11 +726,11 @@ class SemverKtPluginFT : DescribeSpec({
                     // Assert
                     val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, v, dryRun)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("bar", null, dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
-                    result.output shouldContain expected("baz", v, dryRun)
+                    result.output shouldContain expectedTag(project.name, v, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("bar", null, dryRun)
+                    result.output shouldContain expectedTag("core", null, dryRun)
+                    result.output shouldContain expectedTag("baz", v, dryRun)
                     if (!dryRun) {
                         result.output shouldNotContain tagExists("core", v, dryRun)
                         result.output shouldNotContain tagExists("foo", v, dryRun)
@@ -752,11 +752,11 @@ class SemverKtPluginFT : DescribeSpec({
                     // Assert
                     val v = Semver("0.2.0")
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expected(project.name, v, dryRun)
-                    result.output shouldContain expected("baz", v, dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("bar", null, dryRun)
+                    result.output shouldContain expectedTag(project.name, v, dryRun)
+                    result.output shouldContain expectedTag("baz", v, dryRun)
+                    result.output shouldContain expectedTag("core", null, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("bar", null, dryRun)
                     if (!dryRun) {
                         if (!dryRun) result.output shouldContain tagExists("baz", v, dryRun)
                         result.output shouldNotContain tagExists("core", v, dryRun)
@@ -779,9 +779,9 @@ class SemverKtPluginFT : DescribeSpec({
                         val result = release.tag(project)(major)(dryRun)
                         // Assert
                         val initial = Semver("0.1.0")
-                        result.output shouldContain expected(project.name, initial.incrementMajor(), dryRun)
+                        result.output shouldContain expectedTag(project.name, initial.incrementMajor(), dryRun)
                         modules.forEach { m ->
-                            result.output shouldContain expected(m, initial.incrementMajor(), dryRun)
+                            result.output shouldContain expectedTag(m, initial.incrementMajor(), dryRun)
                             if (!dryRun) result.output shouldContain tagExists(m, initial.incrementMajor(), dryRun)
                         }
                     }
@@ -806,10 +806,10 @@ class SemverKtPluginFT : DescribeSpec({
                     val result = release.tag(project)(minor)(dryRun)
                     // assert
                     // -> 'root' should have initial version
-                    result.output shouldContain expected(project.name, initial, dryRun)
+                    result.output shouldContain expectedTag(project.name, initial, dryRun)
                     modules.forEach {
                         // -> all submodules should have initial version
-                        result.output shouldContain expected(it, initial, dryRun)
+                        result.output shouldContain expectedTag(it, initial, dryRun)
                         // -> ':core' submodule is NOT configured with custom tag prefix and should have 'root' tag)
                         // -> ':foo', ':bar', ':baz' submodules are configured with custom tag prefix and should have their own tags)
                         if (!dryRun && it == "core") result.output shouldContain tagExists(it, initial, dryRun)
@@ -836,16 +836,16 @@ class SemverKtPluginFT : DescribeSpec({
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v0.2.0)
                     //    ('root' has changes and ':core' is not configured with custom tag prefix)
-                    result.output shouldContain expected(project.name, initial.incrementMinor(), dryRun)
-                    result.output shouldContain expected("core", initial.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag(project.name, initial.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("core", initial.incrementMinor(), dryRun)
                     // -> ':foo' submodule should have next version tag (foo-v0.2.0)
                     //    (configured with custom tag prefix and has changes)
-                    result.output shouldContain expected("foo", initial.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("foo", initial.incrementMinor(), dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("foo", initial.incrementMinor(), dryRun)
                     // -> ':bar' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
-                    result.output shouldContain expected("bar", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag("bar", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                 }
 
                 it("should set version for ROOT when non-configured submodule has changes") {
@@ -867,16 +867,16 @@ class SemverKtPluginFT : DescribeSpec({
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v0.3.0)
                     //    (':core' is not configured with custom tag prefix and has changes)
-                    result.output shouldContain expected(project.name, second.incrementMinor(), dryRun)
-                    result.output shouldContain expected("core", second.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag(project.name, second.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("core", second.incrementMinor(), dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.2.0)
                     //    (configured with custom tag prefix has changes)
-                    result.output shouldContain expected("bar", initial.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("bar", initial.incrementMinor(), dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("bar", initial.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                 }
 
                 it("should NOT set version for ROOT w/o changes") {
@@ -899,16 +899,16 @@ class SemverKtPluginFT : DescribeSpec({
                     val expectedVersions = modulesVersions.map {
                         if (it.first == "bar") it.first to it.second.incrementMinor() else it
                     }
-                    result.output shouldContain expectedConfigureWithModules(third, null, expectedVersions, dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
+                    result.output shouldContain expectedConfigure(third, null, expectedVersions)
+                    result.output shouldContain expectedTag("core", null, dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
-                    result.output shouldContain expected("bar", second.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("bar", second.incrementMinor(), dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("bar", second.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                 }
 
                 it("should set initial version for new submodule before first stable release") {
@@ -933,19 +933,19 @@ class SemverKtPluginFT : DescribeSpec({
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v0.4.0)
                     //    (we have modified root settings.gradle.kts by adding a new submodule)
-                    result.output shouldContain expected(project.name, third.incrementMinor(), dryRun)
-                    result.output shouldContain expected("core", third.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag(project.name, third.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("core", third.incrementMinor(), dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
-                    result.output shouldContain expected("bar", second.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("bar", second.incrementMinor(), dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("bar", second.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                     // -> ':zoo' submodule should have initial version tag (bar-v0.1.0)
                     //    (configured with custom tag prefix and "default initial version in pre-stable" -> '${rootVersion.major}.1.0')
-                    result.output shouldContain expected("zoo", initial, dryRun)
+                    result.output shouldContain expectedTag("zoo", initial, dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("zoo", initial, dryRun)
                 }
 
@@ -975,8 +975,8 @@ class SemverKtPluginFT : DescribeSpec({
                         // -> 'root' and all submodules should have next MAJOR version (1.0.0)
                         //    (':core' submodule is NOT configured with custom tag prefix and should have 'root' tag prefix)
                         //    (':foo', ':bar', ':baz', ':zoo' submodules are configured with custom tag prefix and should have their own tags)
-                        result.output shouldContain expected(project.name, third.incrementMajor(), dryRun)
-                        modulesVersions.forEach { (m, v) -> result.output shouldContain expected(m, v.incrementMajor(), dryRun) }
+                        result.output shouldContain expectedTag(project.name, third.incrementMajor(), dryRun)
+                        modulesVersions.forEach { (m, v) -> result.output shouldContain expectedTag(m, v.incrementMajor(), dryRun) }
                     }
                 }
 
@@ -1004,20 +1004,20 @@ class SemverKtPluginFT : DescribeSpec({
                     // assert
                     // -> 'root' project and ':core' submodule should have next version tag (v1.1.0)
                     //    (':core' is not configured with custom tag prefix and has changes)
-                    result.output shouldContain expected(project.name, ver.incrementMinor(), dryRun)
-                    result.output shouldContain expected("core", ver.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag(project.name, ver.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("core", ver.incrementMinor(), dryRun)
                     if (!dryRun) result.output shouldContain tagExists("core", ver.incrementMinor(), dryRun)
                     // -> ':bar' submodule should have next version tag (bar-v0.3.0)
                     //    (configured with custom tag prefix has changes)
-                    result.output shouldContain expected("bar", ver.incrementMinor(), dryRun)
+                    result.output shouldContain expectedTag("bar", ver.incrementMinor(), dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("bar", ver.incrementMinor(), dryRun)
                     // -> ':foo' and ':baz' submodules should be unchanged
                     //    (both are configured with custom tag prefix, and they don't have changes)
-                    result.output shouldContain expected("foo", null, dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedTag("foo", null, dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                     // -> ':abc' submodule should have initial version tag (bar-v1.0.0)
                     //    (configured with custom tag prefix and "default initial version" -> '${rootVersion.major}.0.0')
-                    result.output shouldContain expected("abc", Semver("1.0.0"), dryRun)
+                    result.output shouldContain expectedTag("abc", Semver("1.0.0"), dryRun)
                     if (!dryRun) result.output shouldNotContain tagExists("abc", Semver("1.0.0"), dryRun)
                 }
 
@@ -1036,11 +1036,11 @@ class SemverKtPluginFT : DescribeSpec({
                     val expectedVersions = listOf("core" to Semver("0.1.0"), "foo" to Semver("0.1.0"), "bar" to Semver("0.3.0"), "baz" to Semver("0.0.0"))
                         .sortedBy { (m, _) -> m }
                     result.task(":tag")?.outcome shouldBe TaskOutcome.SUCCESS
-                    result.output shouldContain expectedConfigureWithModules(Semver("0.1.0"), null, expectedVersions, dryRun)
-                    result.output shouldContain expected("core", null, dryRun)
-                    result.output shouldContain expected("foo", Semver("0.1.0"), dryRun)
-                    result.output shouldContain expected("bar", Semver("0.3.0"), dryRun)
-                    result.output shouldContain expected("baz", null, dryRun)
+                    result.output shouldContain expectedConfigure(Semver("0.1.0"), null, expectedVersions)
+                    result.output shouldContain expectedTag("core", null, dryRun)
+                    result.output shouldContain expectedTag("foo", Semver("0.1.0"), dryRun)
+                    result.output shouldContain expectedTag("bar", Semver("0.3.0"), dryRun)
+                    result.output shouldContain expectedTag("baz", null, dryRun)
                 }
             }
         } }
@@ -1292,6 +1292,9 @@ val Git.commitMajor: (release: Release) -> Unit get() = {
     else commit().setMessage("New commit").call()
 }
 
+/**
+ * Expected :tag task output for already existing tag for a module with [name]
+ */
 val tagExists: (name: String, ver: Semver?, dryRun: DryRun) -> String = { name, version, dryRun ->
     """
     > Task :$name:tag
@@ -1300,25 +1303,33 @@ val tagExists: (name: String, ver: Semver?, dryRun: DryRun) -> String = { name, 
     """.trimIndent().trim()
 }
 
-val expected: (name: String, ver: Semver?, dryRun: DryRun) -> String = { name, version, dryRun ->
+/**
+ * Expected :tag task output for a project/module with [name]
+ */
+val expectedTag: (name: String, ver: Semver?, dryRun: DryRun) -> String = { name, version, dryRun ->
     val noop = "Not doing anything"
+    val sb = StringBuilder()
     when (name) {
-        "test-project" -> """
-            > Configure project :
-            Project test-project version: $version
-
-            > Task :tag
-            ${version?.let { if (it == Semver("0.0.0")) noop else "Calculated next version: $it" } ?: noop}
-        """.trimIndent().trim()
-        "core" -> tagExists(name, version, dryRun)
-        else -> """
-            > Task :$name:tag
-            ${version?.let { "Calculated next version: $it" } ?: noop}
-        """.trimIndent().trim()
+        "test-project" -> {
+            sb.appendLine("> Configure project :")
+            sb.appendLine("Project test-project version: $version")
+            sb.appendLine()
+            sb.appendLine("> Task :tag")
+            sb.appendLine(version?.let { if (it == Semver("0.0.0")) noop else "Calculated next version: $it" } ?: noop)
+        }
+        "core" -> sb.appendLine(tagExists(name, version, dryRun))
+        else -> {
+            sb.appendLine("> Task :$name:tag")
+            sb.appendLine(version?.let { "Calculated next version: $it" } ?: noop)
+        }
     }
+    sb.toString()
 }
 
-val expectedConfigureWithModules: (ver: Semver, tag: Semver?, modulesVersions: List<Pair<String, Semver>>, dryRun: DryRun) -> String = { version, tag, modules, dryRun ->
+/**
+ * Expected configure project output for a project [ver] with an optional [tag] and a list of [moduleVersions]
+ */
+val expectedConfigure: (ver: Semver, tag: Semver?, modulesVersions: List<Pair<String, Semver>>) -> String = { version, tag, modules ->
     val noop = "Not doing anything"
     val sb = StringBuilder()
     sb.appendLine("> Configure project :")
