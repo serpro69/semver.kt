@@ -36,6 +36,7 @@ abstract class TagTask : SemverReleaseTask() {
 
     @TaskAction
     fun tag() {
+        didWork = false // set to true only after we create a git tag with this task
         // check if tag already set, if so tell plugin it's UP-TO-DATE
         val (current, latest, next) = semanticProject.get()
         logger.debug("latestVersion: {}", latest)
@@ -88,6 +89,7 @@ abstract class TagTask : SemverReleaseTask() {
                     .use {
                         logger.debug("Set tag to: {}{}", prefix, nextVer)
                         Git(it).use { git -> git.setTag("${prefix}$nextVer") }
+                        didWork = true
                     }
             } else logger.lifecycle("Tag {}{} already exists in project", prefix, nextVer)
         }
