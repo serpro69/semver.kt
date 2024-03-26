@@ -19,28 +19,52 @@ value class DryRun(val value: Boolean) {
     operator fun not(): Boolean = !value
 }
 
+val fromCommit = ReleaseFromCommit(true)
+val fromProperty = ReleaseFromCommit(false)
+
 @JvmInline
-value class Release(val fromCommit: Boolean) {
+value class ReleaseFromCommit(val value: Boolean) {
 
     companion object {
-        val ALL = listOf(Release(true), Release(false))
+        val ALL = listOf(ReleaseFromCommit(true), ReleaseFromCommit(false))
 
-        inline fun forEach(action: (Release) -> Unit) = ALL.forEach(action)
+        val preRelease: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.PRE_RELEASE }
+        val patch: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.PATCH }
+        val minor: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.MINOR }
+        val major: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.MAJOR }
+
+        inline fun forEach(action: (ReleaseFromCommit) -> Unit) = ALL.forEach(action)
     }
 
-    val tag: ((proj: AbstractProject) -> (inc: (release: Release) -> Increment?) -> (dryRun: DryRun) -> BuildResult)
+    val tag: ((proj: AbstractProject) -> (inc: (release: ReleaseFromCommit) -> Increment?) -> (dryRun: DryRun) -> BuildResult)
         get() = { project ->
             { inc ->
                 { dryRun ->
-                    val args = mutableListOf("tag", "-Prelease")
-                    inc(this)?.let { args.add("-Pincrement=$it") }
+                    val args = mutableListOf("tag")
+                    inc(this)?.let {
+                        args.add("-Pincrement=$it")
+                        args.add("-Prelease")
+                    }
                     if (dryRun.value) args.add("-PdryRun")
                     Builder.build(project = project, args = args.toTypedArray())
                 }
             }
         }
 
-    override fun toString(): String = fromCommit.toString()
+    override fun toString(): String = value.toString()
 
-    operator fun not(): Boolean = !fromCommit
+    operator fun not(): Boolean = !value
+}
+
+@JvmInline
+value class UpToDate(val value: Boolean) {
+
+    companion object {
+        val TRUE = UpToDate(true)
+        val FALSE = UpToDate(false)
+    }
+
+    override fun toString(): String = value.toString()
+
+    operator fun not(): Boolean = !value
 }
