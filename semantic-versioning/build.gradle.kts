@@ -1,5 +1,7 @@
 import com.gradle.publish.PublishTask
+import io.github.serpro69.semverkt.gradle.plugin.tasks.TagTask
 import io.github.serpro69.semverkt.spec.Semver
+import org.jetbrains.kotlin.gradle.utils.`is`
 
 plugins {
     `java-gradle-plugin`
@@ -82,7 +84,7 @@ gradlePlugin {
             id = "${project.group}.${name}"
             displayName = "Automated semantic versioning of gradle projects through git tags"
             description = "This plugin helps you to automatically version your gradle project according to semver rules"
-            tags = listOf("semver", "release", "semantic", "versioning", "semantic-release", "semver-release")
+            tags = listOf("semantic-release", "semantic-versioning", "semver-release", "semver", "release", "semantic", "versioning")
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
     }
@@ -106,9 +108,23 @@ publishing {
     }
 }
 
+val isSnapshot by lazy {
+    provider {
+        version.toString().startsWith("0.0.0")
+            || version.toString().endsWith("SNAPSHOT")
+    }
+}
+val newTag by lazy { provider { tasks.getByName("tag").didWork } }
+
+tasks.withType<TagTask>().configureEach {
+    onlyIf("Not snapshot") { !isSnapshot.get() }
+}
+
 tasks.withType<PublishTask>().configureEach {
+    dependsOn(tasks.getByName("tag"))
     val predicate = provider {
-        !version.toString().startsWith("0.0.0")
+        !isSnapshot.get()
+            && newTag.get()
             && group == "Plugin Portal"
     }
     onlyIf("New release") { predicate.get() }
@@ -117,13 +133,11 @@ tasks.withType<PublishTask>().configureEach {
 // workaround for https://github.com/gradle-nexus/publish-plugin/issues/84
 tasks.withType<PublishToMavenRepository>().configureEach {
     val predicate = provider {
-        version.toString().startsWith("0.0.0")
-            && repository.name == "localPluginRepo"
+        isSnapshot.get() && repository.name == "localPluginRepo"
     }
     onlyIf("In development") { predicate.get() }
 }
 
 tasks.withType<PublishToMavenLocal>().configureEach {
-    val predicate = provider { version.toString().startsWith("0.0.0") }
-    onlyIf("In development") { predicate.get() }
+    onlyIf("In development") { isSnapshot.get() }
 }
