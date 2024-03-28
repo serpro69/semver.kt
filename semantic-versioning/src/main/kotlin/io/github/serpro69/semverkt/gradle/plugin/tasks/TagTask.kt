@@ -9,9 +9,11 @@ import io.github.serpro69.semverkt.spec.Semver
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.gradle.api.GradleException
+import org.gradle.api.internal.provider.DefaultProperty
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class TagTask : SemverReleaseTask() {
@@ -26,6 +28,14 @@ abstract class TagTask : SemverReleaseTask() {
     @get:Internal
     internal abstract val moduleConfig: Property<ModuleConfig>
 
+    /**
+     * Returns `true` if the tag that this task tried to create already exists in the repository,
+     * or `false` otherwise
+     */
+    @get:Internal
+    var tagExists: Boolean = false
+        private set
+
     init {
         // check if tag already set, if so tell plugin it's UP-TO-DATE
         // NB! it won't handle multi-module projects because currentVersion will be set to all projects
@@ -36,6 +46,7 @@ abstract class TagTask : SemverReleaseTask() {
 
     @TaskAction
     fun tag() {
+        tagExists = false
         didWork = false // set to true only after we create a git tag with this task
         // check if tag already set, if so tell plugin it's UP-TO-DATE
         val (current, latest, next) = semanticProject.get()
@@ -68,7 +79,7 @@ abstract class TagTask : SemverReleaseTask() {
             logger.lifecycle("Can't create a tag for a snapshot version")
         } else if (!dryRun.get()) run {
             // check if tag exists, don't try to create a duplicate
-            val tagExists = GitRepository(config).use { repo ->
+            tagExists = GitRepository(config).use { repo ->
                 // check if repo is clean
                 when (config.git.repo.cleanRule) {
                     CleanRule.ALL -> if (!repo.isClean()) throw GradleException("Release with non-clean repository is not allowed")

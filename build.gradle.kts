@@ -1,3 +1,4 @@
+import io.github.serpro69.semverkt.gradle.plugin.tasks.TagTask
 import org.gradle.api.tasks.testing.TestResult.ResultType
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
@@ -42,8 +43,8 @@ subprojects {
 
     val isSnapshot by lazy {
         provider {
-            version.toString().startsWith("0.0.0")
-                || version.toString().endsWith("SNAPSHOT")
+            subProject.version.toString().startsWith("0.0.0")
+                || subProject.version.toString().endsWith("SNAPSHOT")
         }
     }
     val newTag by lazy { provider { subProject.tasks.getByName("tag").didWork } }
@@ -257,16 +258,20 @@ subprojects {
         tasks.withType<PublishToMavenLocal>().configureEach {
             onlyIf("In development") { isSnapshot.get() }
         }
+
+        tasks.withType<Sign>().configureEach {
+            dependsOn(subProject.tasks.getByName("tag"))
+            onlyIf("Not snapshot") { !isSnapshot.get() }
+            onlyIf("New tag") { newTag.get() }
+        }
+    }
+
+    tasks.withType<TagTask>().configureEach {
+        onlyIf("Not snapshot") { !isSnapshot.get() }
     }
 
     tasks.withType<DokkaTask>().configureEach {
         onlyIf("Not snapshot") { !isSnapshot.get() }
-    }
-
-    tasks.withType<Sign>().configureEach {
-        dependsOn(subProject.tasks.getByName("tag"))
-        onlyIf("Not snapshot") { !isSnapshot.get() }
-        onlyIf("New tag") { newTag.get() }
     }
 
     tasks {
@@ -274,6 +279,14 @@ subprojects {
             dependsOn(jar)
         }
     }
+}
+
+tasks.withType<TagTask>().configureEach {
+    val isSnapshot = provider {
+        version.toString().startsWith("0.0.0")
+            || version.toString().endsWith("SNAPSHOT")
+    }
+    onlyIf("Not snapshot") { !isSnapshot.get() }
 }
 
 val jar by tasks.getting(Jar::class) {
