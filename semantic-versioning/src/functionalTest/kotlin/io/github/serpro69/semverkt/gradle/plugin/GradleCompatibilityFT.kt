@@ -18,7 +18,7 @@ class GradleCompatibilityFT : DescribeSpec({
     assertSoftly = true
     duplicateTestNameMode = DuplicateTestNameMode.Silent
 
-    xdescribe("compatible gradle version") {
+    describe("compatible gradle version") {
         context("gradle 7.5") {
             it("should be compatible") {
                 val project = SemverKtTestProject()
