@@ -14,6 +14,7 @@ plugins {
     `maven-publish`
     signing
     id("io.github.gradle-nexus.publish-plugin") version "2.0.0-rc-1"
+    id("io.github.serpro69.semantic-versioning") apply false
 }
 
 repositories {
@@ -38,6 +39,14 @@ subprojects {
     val subProject = this@subprojects
     val projectArtifactId = "${rootProject.name}-${subProject.name}"
     val isGradlePlugin = subProject.name == "semantic-versioning"
+
+    val isSnapshot by lazy {
+        provider {
+            version.toString().startsWith("0.0.0")
+                || version.toString().endsWith("SNAPSHOT")
+        }
+    }
+    val newTag by lazy { provider { subProject.tasks.getByName("tag").didWork } }
 
     repositories {
         mavenCentral()
@@ -235,39 +244,29 @@ subprojects {
         }
 
         signing {
-            if (!version.toString().endsWith("SNAPSHOT") && !version.toString().startsWith("0.0.0")) {
-                sign(publishing.publications[publicationName])
-            }
+            sign(publishing.publications[publicationName])
         }
 
         tasks.withType<PublishToMavenRepository>().configureEach {
-            val predicate = provider {
-                !version.toString().endsWith("SNAPSHOT")
-                    && !version.toString().startsWith("0.0.0")
-            }
-            onlyIf("New release") { predicate.get() }
+            dependsOn(subProject.tasks.getByName("tag"))
+            dependsOn(subProject.tasks.withType(Sign::class.java))
+            onlyIf("Not snapshot") { !isSnapshot.get() }
+            onlyIf("New tag") { newTag.get() }
         }
 
         tasks.withType<PublishToMavenLocal>().configureEach {
-            val predicate = provider { version.toString().startsWith("0.0.0") }
-            onlyIf("In development") { predicate.get() }
+            onlyIf("In development") { isSnapshot.get() }
         }
     }
 
     tasks.withType<DokkaTask>().configureEach {
-        val predicate = provider {
-            !version.toString().endsWith("SNAPSHOT")
-                && !version.toString().startsWith("0.0.0")
-        }
-        onlyIf("New release") { predicate.get() }
+        onlyIf("Not snapshot") { !isSnapshot.get() }
     }
 
     tasks.withType<Sign>().configureEach {
-        val predicate = provider {
-            !version.toString().endsWith("SNAPSHOT")
-                && !version.toString().startsWith("0.0.0")
-        }
-        onlyIf("New release") { predicate.get() }
+        dependsOn(subProject.tasks.getByName("tag"))
+        onlyIf("Not snapshot") { !isSnapshot.get() }
+        onlyIf("New tag") { newTag.get() }
     }
 
     tasks {
