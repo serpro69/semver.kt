@@ -10,7 +10,8 @@
 [![Awesome Kotlin](https://img.shields.io/badge/awesome-kotlin-orange?logo=Awesome-Lists&style=for-the-badge)](https://github.com/KotlinBy/awesome-kotlin)
 [![Licence](https://img.shields.io/github/license/serpro69/semver.kt.svg?style=for-the-badge)](LICENSE.adoc)
 
-***NB! This is still in pre-release, thus breaking changes are to be expected until first stable release.***
+***NB! This is still in pre-release, thus breaking changes between minor versions are to be expected until first stable release.***
+***At the same time, the functionality is covered extensively with tests, and I'm also using the gradle plugin in my other projects (see e.g. [kotlin-faker/settings.gradle.kts](https://github.com/serpro69/kotlin-faker/blob/master/settings.gradle.kts)), so it's possible to use both the libraries and the gradle plugin already.***
 
 ## About
 
