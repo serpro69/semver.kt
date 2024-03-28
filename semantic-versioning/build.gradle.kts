@@ -89,6 +89,12 @@ gradlePlugin {
     testSourceSets(sourceSets["functionalTest"])
 }
 
+kotlin {
+    compilerOptions {
+        optIn.set(listOf("kotlin.RequiresOptIn"))
+    }
+}
+
 tasks["functionalTest"].dependsOn("pluginUnderTestMetadata")
 
 publishing {

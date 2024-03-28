@@ -5,13 +5,22 @@ import io.github.serpro69.semverkt.gradle.plugin.gradle.Builder
 import io.github.serpro69.semverkt.release.Increment
 import org.gradle.testkit.runner.BuildResult
 
+sealed interface TestFixture
+
+sealed interface TestFixtureCompanion<T : TestFixture> {
+    val all: List<T>
+
+    fun forEach(action: (T) -> Unit)
+}
+
+typealias DryRunAction = (DryRun) -> Unit
+
 @JvmInline
-value class DryRun(val value: Boolean) {
+value class DryRun(val value: Boolean) : TestFixture {
 
-    companion object {
-        val ALL = listOf(DryRun(true), DryRun(false))
-
-        inline fun forEach(action: (DryRun) -> Unit) = ALL.forEach(action)
+    companion object : TestFixtureCompanion<DryRun> {
+        override val all = listOf(DryRun(true), DryRun(false))
+        override fun forEach(action: DryRunAction) = all.forEach(action)
     }
 
     override fun toString(): String = value.toString()
@@ -22,18 +31,20 @@ value class DryRun(val value: Boolean) {
 val fromCommit = ReleaseFromCommit(true)
 val fromProperty = ReleaseFromCommit(false)
 
-@JvmInline
-value class ReleaseFromCommit(val value: Boolean) {
+typealias ReleaseFromCommitAction = (ReleaseFromCommit) -> Unit
 
-    companion object {
-        val ALL = listOf(ReleaseFromCommit(true), ReleaseFromCommit(false))
+@JvmInline
+value class ReleaseFromCommit(val value: Boolean) : TestFixture {
+
+    companion object : TestFixtureCompanion<ReleaseFromCommit> {
+        override val all = listOf(ReleaseFromCommit(true), ReleaseFromCommit(false))
 
         val preRelease: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.PRE_RELEASE }
         val patch: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.PATCH }
         val minor: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.MINOR }
         val major: (ReleaseFromCommit) -> Increment? = { if (it.value) null else Increment.MAJOR }
 
-        inline fun forEach(action: (ReleaseFromCommit) -> Unit) = ALL.forEach(action)
+        override fun forEach(action: ReleaseFromCommitAction) = all.forEach(action)
     }
 
     val tag: ((proj: AbstractProject) -> (inc: (release: ReleaseFromCommit) -> Increment?) -> (dryRun: DryRun) -> BuildResult)
