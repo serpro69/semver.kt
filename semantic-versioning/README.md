@@ -300,6 +300,16 @@ For example monorepo versioning workflow diagrams refer to [single-tag_monorepo_
 > 
 > Single-tag monorepo project type does not support this as it would be impossible to determine "latest version" of a given module from a single git tag. 
 
+#### Pre-release versions with monorepo multi-tag versioning
+
+There is currently no support for handling "pre-release versions" with "release versions" at the same time, because bumping the next version requires a different set of inputs. I.e. to bump a next `rc` version one would use `-Prelease -Pincrement=pre_release`; to create a pre-release version we would need `-Prelease -PpreRelease` (with an optional increment of `major`, `minor`, or `patch`) parameters.
+
+This is important to keep in mind when a new submodule with a custom tag prefix is added to a project that is currently in "pre-release state". The new submodule would not be able to find the "last rc version" for self, and hence bumping to next pre-release version would not work as expected (because the "next pre-release version" expects that a "previous pre-release version" exists) and would produce the next "release version" instead.
+
+To work around this limitation, one could manually create a git tag for the new submodule pointing to an earlier commit, then creating the next pre-release by running `gradle tag -Prelease -Pincrement=pre_release`, and then cleaning up the manually created git tag.
+
+For example, if a `foo` module is added to the project with a custom git-tag prefix configuration, and current project version is `2.0.0-rc.3` (which is root project version; we disregard any other modules' versions because they don't matter in this scenario), one could, for example, create a tag named `foo-v2.0.0-rc.0` and then run `gradle tag -Prelease -Pincrement=pre_release`, which would create `v2.0.0-rc.4` tag for the root project, and a `foo-v2.0.0-rc.1` tag for the `foo` module, along with any other tags for modules that define custom tag prefix (if applicable).
+
 > [!NOTE]
 > These diagrams were made with [obsidian](https://obsidian.md). The original canvas file can be found in [docs/assets/monorepo_workflow.canvas](../docs/assets/monorepo_workflow.canvas)
 
