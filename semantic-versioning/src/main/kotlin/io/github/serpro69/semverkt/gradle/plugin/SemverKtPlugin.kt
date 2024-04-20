@@ -58,7 +58,7 @@ class SemverKtPlugin : Plugin<Settings> {
                 project.rootProject.path -> null
                 else -> config.monorepo.modules.firstOrNull { m -> m.path == project.path }
             }
-            logger.debug("{} project module config: {}", project.name,  moduleConfig?.jsonString())
+            logger.debug("{} project module config: {}", project.name, moduleConfig?.jsonString())
 
             it.description = "Create a tag for the next version"
             it.config.set(config)
@@ -226,13 +226,14 @@ class SemverKtPlugin : Plugin<Settings> {
             // set initial version
             val setInitial by lazy { nextVersion != null && latestVersion == null }
             val next = if (nextVersion != null && (setSnapshot || setNext || setInitial)) {
-                // initial major for new module
-                val major =
-                    if (isMonorepo && setInitial && !isRoot) Semver(project.rootProject.version.toString()).major else null
+                // initial major and (possible) rc for new module
+                val (major, rc) = if (isMonorepo && setInitial && !isRoot) {
+                    Semver(project.rootProject.version.toString()).let { it.major to it.preRelease }
+                } else null to null
                 val nextVer = when (major) {
                     null -> nextVersion
-                    0 -> config.version.initialVersion
-                    else -> Semver(major = major, minor = 0, patch = 0)
+                    0 -> config.version.initialVersion.copy(preRelease = rc)
+                    else -> Semver(major = major, minor = 0, patch = 0).copy(preRelease = rc)
                 }
                 project.version = nextVer
                 logger.debug("{} project version: {}", project, project.version)
