@@ -197,6 +197,15 @@ The plugin makes use of the following properties:
 
 ### Monorepo Support
 
+This plugin supports the following types of projects:
+
+- non-monorepo - a project that does not configure `monorepo` modules; it uses the same tag prefix for all (if any) modules and is effectively tagged with a single git tag
+- [single-tag monorepo](#single-tag-monorepo) - a project with `monorepo` configuration containing one or more modules; all modules use the same (default) tag prefix and are effectively tagged with a single git tag
+- [multi-tag monorepo](#multi-tag-monorepo) - a project with `monorepo` configuration containing one or more modules; some (or all) modules declare their own `tag.prefix`, and hence have their own git tags
+
+> [!INFO]
+> The main difference between the first two is that in "single-tag monorepo" projects, the project version is applied to each (configured) submodule individually, based on discovered changes in the configured `sources`, and some modules may be "kept back" on the previous version if no `sources` changes are discovered for that given module.
+
 #### Single-Tag Monorepo
 
 The plugin supports individual versioning of submodules (subprojects) of monorepo projects.
@@ -294,24 +303,43 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
 
 For example monorepo versioning workflow diagrams refer to [single-tag_monorepo_workflow.png](../docs/images/single-tag_monorepo_workflow.png) and [multi-tag_monorepo_workflow.png](../docs/images/multi-tag_monorepo_workflow.png)
 
+> [!NOTE]
+> These diagrams were made with [obsidian](https://obsidian.md). The original canvas file can be found in [docs/assets/monorepo_workflow.canvas](../docs/assets/monorepo_workflow.canvas)
+
 > [!IMPORTANT]
-> In monorepo multi-tag projects, unlike single-tag monorepo and non-monorepo projects, each module will have a version applied to it. 
+> In monorepo multi-tag projects, unlike single-tag monorepo and non-monorepo projects, each (configured) module will have a version applied to it. 
 > For modules that don't have any changes between the latest version and the next release, the "latest version" will be set.
 > 
 > Single-tag monorepo project type does not support this as it would be impossible to determine "latest version" of a given module from a single git tag. 
 
-#### Pre-release versions with monorepo multi-tag versioning
+#### Release-candidate versions in multi-tag monorepo projects
 
-There is currently no support for handling "pre-release versions" with "release versions" at the same time, because bumping the next version requires a different set of inputs. I.e. to bump a next `rc` version one would use `-Prelease -Pincrement=pre_release`; to create a pre-release version we would need `-Prelease -PpreRelease` (with an optional increment of `major`, `minor`, or `patch`) parameters.
+When a new submodule with a custom tag prefix is added to a [multi-tag monorepo](#multi-tag-monorepo) project that is currently in "pre-release state", the new submodule would use the *last rc version identifier* of the `root` project when creating the tag for self.
 
-This is important to keep in mind when a new submodule with a custom tag prefix is added to a project that is currently in "pre-release state". The new submodule would not be able to find the "last rc version" for self, and hence bumping to next pre-release version would not work as expected (because the "next pre-release version" expects that a "previous pre-release version" exists) and would produce the next "release version" instead.
+Consider the following scenario:
 
-To work around this limitation, one could manually create a git tag for the new submodule pointing to an earlier commit, then creating the next pre-release by running `gradle tag -Prelease -Pincrement=pre_release`, and then cleaning up the manually created git tag.
-
-For example, if a `foo` module is added to the project with a custom git-tag prefix configuration, and current project version is `2.0.0-rc.3` (which is root project version; we disregard any other modules' versions because they don't matter in this scenario), one could, for example, create a tag named `foo-v2.0.0-rc.0` and then run `gradle tag -Prelease -Pincrement=pre_release`, which would create `v2.0.0-rc.4` tag for the root project, and a `foo-v2.0.0-rc.1` tag for the `foo` module, along with any other tags for modules that define custom tag prefix (if applicable).
+- We have a multi-tag monorepo project with `foo` and `bar` modules that are versioned separately, and have versions `2.0.0-rc.1` and `2.0.0-rc.2` respectively
+- Current root project version is `2.0.0-rc.4`
+- We add a new `baz` module that also has a custom tag prefix
+- Assuming that all modules had some changes between last version and `HEAD`
+  - IF we create a new version with `pre_release` increment, the tags created would be as follows:
+    - `foo` would be `foo-v2.0.0-rc.2`
+    - `bar` would be `bar-v2.0.0-rc.3`
+    - `root` would be `v2.0.0-rc.5`
+    - `baz` would be `baz-v2.0.0-rc.5`
+      Here baz did not have a "previous version", hence will use the `major` and (optional) `rc` identifiers from `root`
+  - IF we create a new version using `promoteRelease` property, all the modules would be promoted from RC version to release version and would be tagged with `2.0.0` version with their own prefixes
+    - `baz` will also be released with version `2.0.0`. It did not have a "previous version", hence it will "inherit" `major` and (optional) `rc` identifiers from `root`. And because new `root` version does not have any RC identifiers, it's not applied to `baz` either.
+  - IF we create a new version using `minor` increment, the tags created would be as follows:
+    - `foo` would be `foo-v2.1.0`
+    - `bar` would be `bar-v2.1.0`
+    - `root` would be `v2.1.0`
+    - `baz` would be `baz-v2.0.0`
+      Again, since baz did not have a "previous version", it will "inherit" `major` and (optional) `rc` identifiers from `root`. Since new `root` version does not have any RC identifiers, it's not applied to `baz` either.
+      NB! `baz`, being a newly added module, would always set `minor` and `patch` version identifier to `0` for the "initial version"
 
 > [!NOTE]
-> These diagrams were made with [obsidian](https://obsidian.md). The original canvas file can be found in [docs/assets/monorepo_workflow.canvas](../docs/assets/monorepo_workflow.canvas)
+> There is currently no support for handling "pre-release versions" with "release versions" at the same time, because bumping the next version requires a different set of inputs. I.e. to bump a next `rc` version one would use `-Prelease -Pincrement=pre_release`; to create a pre-release version we would need `-Prelease -PpreRelease` (with an optional increment of `major`, `minor`, or `patch`) parameters.
 
 ## Development
 
