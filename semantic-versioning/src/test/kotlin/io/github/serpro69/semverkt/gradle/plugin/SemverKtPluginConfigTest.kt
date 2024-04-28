@@ -66,6 +66,7 @@ class SemverKtPluginConfigTest : DescribeSpec({
             it("should have default configuration intact") {
                 config.git.tag.separator shouldBe ""
                 config.git.message.major shouldBe "[major]"
+                config.git.message.skip shouldBe "[skip]"
                 config.git.repo.directory shouldBe Path(".")
                 config.git.repo.cleanRule shouldBe CleanRule.TRACKED
                 config.version.preReleaseId shouldBe "rc"

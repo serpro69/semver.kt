@@ -79,6 +79,44 @@ class SemverKtPluginFT : AbstractFT({ t ->
                     false
                 )
             }
+
+            it("should update to next PATCH when [skip] follows [$keyword] keyword") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[$keyword]").call()
+                    it.commit().setMessage("[skip] release").call()
+                    it.commit().setMessage("Release \n\n[patch]").call()
+                }
+                // Act
+                val result = fromCommit.tag(project)(r)(dryRun)
+                // Assert
+                result.task(":tag")?.outcome shouldBe t.expectedOutcome(dryRun, UpToDate.FALSE)
+                result.output shouldContain t.expectedConfigure(Semver("0.1.1"), emptyList())
+                result.output shouldContain t.expectedTag(project.name, Semver("0.1.1"), dryRun, UpToDate.FALSE, false)
+            }
+
+            it("should not create a new tag when [skip] is the last keyword") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("New commit\n\n[$keyword]").call()
+                    it.commit().setMessage("[skip] release").call()
+                    it.commit().setMessage("New commit w/o releases").call()
+                }
+                // Act
+                val result = fromCommit.tag(project)(r)(dryRun)
+                // Assert
+                result.task(":tag")?.outcome shouldBe t.expectedOutcome(dryRun, UpToDate.TRUE)
+                result.output shouldContain t.expectedConfigure(Semver("0.0.0"), emptyList())
+                result.output shouldContain t.expectedTag(project.name, null, dryRun, UpToDate.TRUE, false)
+            }
         }
     }
 
@@ -102,35 +140,31 @@ class SemverKtPluginFT : AbstractFT({ t ->
                 )
             }
 
-            it("should take precedence with -Prelease -Pincrement=$inc over commit message with [major] keyword") {
-                val project = SemverKtTestProject()
-                // Arrange
-                Git.open(project.projectDir.toFile()).use {
-                    it.tag().setName("v0.1.0").call() // set initial version
-                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
-                    it.add().addFilepattern("text.txt").call()
-                    it.commit().setMessage("New commit\n\n[major]")
-                        .call() // set to major to check if lower precedence values will override
+            listOf("major", "skip").forEach { kw ->
+                it("should take precedence with -Prelease -Pincrement=$inc over commit message with [$kw] keyword") {
+                    val project = SemverKtTestProject()
+                    // Arrange
+                    Git.open(project.projectDir.toFile()).use {
+                        it.tag().setName("v0.1.0").call() // set initial version
+                        project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                        it.add().addFilepattern("text.txt").call()
+                        // set to MAJOR or SKIP to check if lower precedence values will override
+                        it.commit().setMessage("New commit\n\n[$kw]").call()
+                    }
+                    // Act
+                    val result = fromProperty.tag(project)(r)(dryRun)
+                    // Assert
+                    result.task(":tag")?.outcome shouldBe t.expectedOutcome(dryRun, UpToDate.FALSE)
+                    val nextVer = when (inc) {
+                        "major" -> "1.0.0"
+                        "minor" -> "0.2.0"
+                        "patch" -> "0.1.1"
+                        "pre_release" -> "0.2.0-rc.1"
+                        else -> "42" // shouldn't really get here
+                    }
+                    result.output shouldContain t.expectedConfigure(Semver(nextVer), emptyList())
+                    result.output shouldContain t.expectedTag(project.name, Semver(nextVer), dryRun, UpToDate.FALSE, false)
                 }
-                // Act
-                val result = fromProperty.tag(project)(r)(dryRun)
-                // Assert
-                result.task(":tag")?.outcome shouldBe t.expectedOutcome(dryRun, UpToDate.FALSE)
-                val nextVer = when (inc) {
-                    "major" -> "1.0.0"
-                    "minor" -> "0.2.0"
-                    "patch" -> "0.1.1"
-                    "pre_release" -> "0.2.0-rc.1"
-                    else -> "42" // shouldn't really get here
-                }
-                result.output shouldContain t.expectedConfigure(Semver(nextVer), emptyList())
-                result.output shouldContain t.expectedTag(
-                    project.name,
-                    Semver(nextVer),
-                    dryRun,
-                    UpToDate.FALSE,
-                    false
-                )
             }
 
             it("should take precedence with commit message keyword over -Pincrement=$inc when -Prelease is NOT set") {
@@ -161,6 +195,28 @@ class SemverKtPluginFT : AbstractFT({ t ->
                     UpToDate.FALSE,
                     false
                 )
+            }
+
+            it("should not create a new tag when [skip] is the last keyword with -Pincrement=$inc when -Prelease is NOT set") {
+                val project = SemverKtTestProject()
+                // Arrange
+                Git.open(project.projectDir.toFile()).use {
+                    it.tag().setName("v0.1.0").call() // set initial version
+                    project.projectDir.resolve("text.txt").createFile().writeText("Hello")
+                    it.add().addFilepattern("text.txt").call()
+                    it.commit().setMessage("[skip] release").call()
+                }
+                // Act
+                val args = if (!dryRun) arrayOf("tag", "-Pincrement=$inc") else arrayOf(
+                    "tag",
+                    "-PdryRun",
+                    "-Pincrement=$inc"
+                )
+                val result = Builder.build(project = project, args = args)
+                // Assert
+                result.task(":tag")?.outcome shouldBe t.expectedOutcome(dryRun, UpToDate.TRUE)
+                result.output shouldContain t.expectedConfigure(Semver("0.0.0"), emptyList())
+                result.output shouldContain t.expectedTag(project.name, null, dryRun, UpToDate.TRUE, false)
             }
         }
 

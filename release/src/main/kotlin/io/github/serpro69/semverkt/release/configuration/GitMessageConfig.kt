@@ -14,6 +14,7 @@ interface GitMessageConfig {
     val minor: String get() = "[minor]"
     val patch: String get() = "[patch]"
     val preRelease: String get() = "[pre release]"
+    val skip: String get() = "[skip]"
     val ignoreCase: Boolean get() = false
 
     /**

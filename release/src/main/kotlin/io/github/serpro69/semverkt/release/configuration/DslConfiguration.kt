@@ -187,6 +187,7 @@ class PojoGitMessageConfig internal constructor() : GitMessageConfig {
     override var minor: String = super.minor
     override var patch: String = super.patch
     override var preRelease: String = super.preRelease
+    override var skip: String = super.skip
     override var ignoreCase: Boolean = super.ignoreCase
 }
 

@@ -61,6 +61,7 @@ class PropertiesConfigurationTest : DescribeSpec({
             pc.git.message.minor shouldBe DefaultConfiguration.git.message.minor
             pc.git.message.patch shouldBe DefaultConfiguration.git.message.patch
             pc.git.message.preRelease shouldBe DefaultConfiguration.git.message.preRelease
+            pc.git.message.skip shouldBe DefaultConfiguration.git.message.skip
             pc.git.message.ignoreCase  shouldBe DefaultConfiguration.git.message.ignoreCase
             // version
             pc.version.initialVersion shouldBe DefaultConfiguration.version.initialVersion

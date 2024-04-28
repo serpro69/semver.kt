@@ -3,11 +3,10 @@ package io.github.serpro69.semverkt.release
 import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.Semver
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import org.eclipse.jgit.api.Git
 import java.nio.file.Files
-import java.util.*
+import java.util.Properties
 
 class SemverReleaseTest : TestFixtures({ test ->
 
@@ -469,6 +468,36 @@ class SemverReleaseTest : TestFixtures({ test ->
                 test.semverRelease(repo).use {
                     it.release(Semver("0.3.0")) shouldBe null
                     it.release(Semver("0.2.0"), submodule) shouldBe null
+                }
+            }
+        }
+
+        describe(testName("nextIncrement when skipping a release")) {
+            it("should return PATCH when [skip] follows a higher-precedence keyword") {
+                git().use {
+                    it.addCommit("Release [major]")
+                    it.addCommit("Release [pre release]")
+                    it.addCommit("Release [minor]")
+                    it.addCommit("[skip] release")
+                    it.addCommit("Release [patch]")
+                }
+                test.semverRelease(repo).use {
+                    it.nextIncrement() shouldBe Increment.PATCH
+                    it.nextIncrement(submodule) shouldBe Increment.PATCH
+                }
+            }
+            it("should return DEFAULT when [skip] is last keyword") {
+                git().use {
+                    it.addCommit("Release [major]")
+                    it.addCommit("Release [pre release]")
+                    it.addCommit("Release [minor]")
+                    it.addCommit("Release [patch]")
+                    it.addCommit("[skip] release")
+                    it.addCommit("No release here")
+                }
+                test.semverRelease(repo).use {
+                    it.nextIncrement() shouldBe Increment.DEFAULT
+                    it.nextIncrement(submodule) shouldBe Increment.DEFAULT
                 }
             }
         }
