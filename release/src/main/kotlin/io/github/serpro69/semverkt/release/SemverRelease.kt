@@ -241,6 +241,10 @@ class SemverRelease : AutoCloseable {
      * THEN that increment will be returned based on the precedence rules,
      * ELSE [Increment.NONE] is returned.
      *
+     * IF any of the commits contain a keyword for skipping a release, as configured by [GitMessageConfig.skip],
+     * only a subset of the commits (from `HEAD` until the first commit containing "skip" keyword)
+     * will be used to calculate the next increment.
+     *
      * IF the repository `HEAD` points to the [Repository.latestVersionTag],
      * OR the repository `HEAD` points to any other existing release tag, as configured by [GitTagConfig.prefix],
      * THEN [Increment.NONE] is returned.
@@ -263,7 +267,10 @@ class SemverRelease : AutoCloseable {
         val isHeadOnTag by lazy { repo.tags(prefix).any { head == it.peeledObjectId || head == it.objectId } }
         return when {
             head == tagObjectId || isHeadOnTag -> Increment.NONE
-            else -> repo.log(untilTag = latestTag, tagPrefix = prefix).nextIncrement()
+            else -> repo.log(untilTag = latestTag, tagPrefix = prefix)
+                // take commits until [skip] keyword is encountered, drop the rest
+                .takeWhile { !it.message.full().contains(config.git.message.skip) }
+                .nextIncrement()
         }
     }
 

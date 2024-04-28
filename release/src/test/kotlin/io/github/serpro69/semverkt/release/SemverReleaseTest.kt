@@ -471,5 +471,35 @@ class SemverReleaseTest : TestFixtures({ test ->
                 }
             }
         }
+
+        describe(testName("nextIncrement when skipping a release")) {
+            it("should return PATCH when [skip] follows a higher-precedence keyword") {
+                git().use {
+                    it.addCommit("Release [major]")
+                    it.addCommit("Release [pre release]")
+                    it.addCommit("Release [minor]")
+                    it.addCommit("[skip] release")
+                    it.addCommit("Release [patch]")
+                }
+                test.semverRelease(repo).use {
+                    it.nextIncrement() shouldBe Increment.PATCH
+                    it.nextIncrement(submodule) shouldBe Increment.PATCH
+                }
+            }
+            it("should return DEFAULT when [skip] is last keyword") {
+                git().use {
+                    it.addCommit("Release [major]")
+                    it.addCommit("Release [pre release]")
+                    it.addCommit("Release [minor]")
+                    it.addCommit("Release [patch]")
+                    it.addCommit("[skip] release")
+                    it.addCommit("No release here")
+                }
+                test.semverRelease(repo).use {
+                    it.nextIncrement() shouldBe Increment.DEFAULT
+                    it.nextIncrement(submodule) shouldBe Increment.DEFAULT
+                }
+            }
+        }
     }
 })

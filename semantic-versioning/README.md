@@ -73,6 +73,15 @@ Version precedence follows semver rules (`[major]` -> `[minor]` -> `[patch]` -> 
 
 By default, releasing with uncommitted changes is not allowed and will fail the `:tag` task. This can be overridden by setting `git.repo.cleanRule` configuration property to `none`. The default rule will only consider tracked changes, and will allow releases with untracked files in the repository. To override this and only allow releases of "clean" repository, set the `cleanRule` property to `all` (See [Configuration](#configuration) section for more details.)
 
+#### Skipping a release commit
+
+There could be situations where a "release keyword" was added to a commit unintentionally, or a release with a given past commit is otherwise unwanted anymore. In this case the plugin supports "skipping" the past commits from the next release calculation via `"[skip]"` keyword in the commit message (Can be configured via `git.message.skip` configuration property.)
+
+If a commit with the "skip" keyword is found between `HEAD` and the latest version when calculating the next release, only commits until the "skip commit" will be used to determine the next version.
+
+> [!NOTE]
+> This only applies when releasing the next version from a commit message. Using `-Pincrement` gradle property will override this behavior as it takes precedence over commit messages.
+
 #### Releasing via gradle properties
 
 Instead of having the plugin look up keywords in commits, one can use `-Pincrement` property instead with the `:tag` task.

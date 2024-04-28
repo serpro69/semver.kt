@@ -10,10 +10,8 @@ import io.github.serpro69.semverkt.gradle.plugin.util.UpToDate
 import io.github.serpro69.semverkt.release.Increment
 import io.github.serpro69.semverkt.spec.Semver
 import io.kotest.common.ExperimentalKotest
-import io.kotest.core.names.TestName
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.core.spec.style.scopes.DescribeSpecContainerScope
-import io.kotest.core.spec.style.scopes.addContainer
 import org.eclipse.jgit.api.Git
 import org.gradle.testkit.runner.TaskOutcome
 import kotlin.io.path.createDirectories
