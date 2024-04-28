@@ -19,7 +19,6 @@ import io.github.serpro69.semverkt.release.configuration.ModuleConfig
 import io.github.serpro69.semverkt.release.configuration.PojoConfiguration
 import io.github.serpro69.semverkt.release.configuration.TagPrefix
 import io.github.serpro69.semverkt.spec.Semver
-import io.kotest.core.names.DuplicateTestNameMode
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
@@ -988,6 +987,57 @@ class SemverKtPluginFT : AbstractFT({ t ->
                 result.output shouldContain t.expectedTag("foo", Semver("0.1.0"), dryRun, UpToDate.FALSE, false)
                 result.output shouldContain t.expectedTag("bar", Semver("0.3.0"), dryRun, UpToDate.FALSE, false)
                 result.output shouldContain t.expectedTag("baz", null, dryRun, UpToDate.TRUE, false)
+            }
+
+            listOf(
+                Triple(Semver("1.3.0-rc.3"), Semver("1.3.0-rc.1"), Semver("1.0.0-rc.4")),
+                Triple(Semver("2.0.0-rc.3"), Semver("2.0.0-rc.1"), Semver("2.0.0-rc.4"))
+            ).forEach { (ver, moduleVer, expectedVer) ->
+                it("should set initial RC version for new submodule after first stable release") {
+                    // arrange
+                    val modulesVersions = modules.map { it to if (it == "core") ver else moduleVer }
+                    val project = SemverKtTestProject(
+                        multiModule = true,
+                        monorepo = true,
+                        multiTag = true,
+                        printModuleVersion = true
+                    )
+                    Git.open(project.projectDir.toFile()).use {
+                        t.setupInitialVersions(project, it)(modulesVersions)
+                        // -> commit file in ':core' submodule path
+                        t.commit(project, it, if (!rfc) null else Increment.PRE_RELEASE)("core")
+                        // -> commit file in ':bar' submodule path
+                        t.commit(project, it, if (!rfc) null else Increment.PRE_RELEASE)("bar")
+                        // -> add new ':abc' submodule
+                        project.add(ModuleConfig("abc", tag = object : GitTagConfig {
+                            override val prefix: TagPrefix = TagPrefix("abc-v")
+                        }))
+                        t.commit(project, it, if (!rfc) null else Increment.PRE_RELEASE)("abc")
+                    }
+                    // act
+                    // -> tag next MINOR version
+                    val result = rfc.tag(project)(preRelease)(dryRun)
+                    // assert
+                    val ml = modulesVersions.plus("abc" to expectedVer).map { (m, v) ->
+                        if (m == "core" || m == "bar") m to v.incrementPreRelease() else m to v
+                    }
+                    result.task(":tag")?.outcome shouldBe t.expectedOutcome(dryRun, UpToDate.FALSE)
+                    result.output shouldContain t.expectedConfigure(ver.incrementPreRelease(), ml)
+                    // -> 'root' project and ':core' submodule should have next RC version tag (v2.0.0-rc.4)
+                    //    (':core' is not configured with custom tag prefix and has changes)
+                    result.output shouldContain t.expectedTag(project.name, ver.incrementPreRelease(), dryRun, UpToDate.FALSE, false)
+                    result.output shouldContain t.expectedTag("core", ver.incrementPreRelease(), dryRun, UpToDate.TRUE, true)
+                    // -> ':bar' submodule should have next RC version tag (bar-v2.0.0-rc.2)
+                    //    (configured with custom tag prefix has changes)
+                    result.output shouldContain t.expectedTag("bar", moduleVer.incrementPreRelease(), dryRun, UpToDate.FALSE, false)
+                    // -> ':foo' and ':baz' submodules should be unchanged
+                    //    (both are configured with custom tag prefix, and they don't have changes)
+                    result.output shouldContain t.expectedTag("foo", null, dryRun, UpToDate.TRUE, false)
+                    result.output shouldContain t.expectedTag("baz", null, dryRun, UpToDate.TRUE, false)
+                    // -> ':abc' submodule should have initial RC version tag (abc-v.2.0.0-rc.4)
+                    //    (configured with custom tag prefix and "default initial RC version" -> '${rootVersion.major}.0.0${rootVersion.preRelease}')
+                    result.output shouldContain t.expectedTag("abc", expectedVer, dryRun, UpToDate.FALSE, false)
+                }
             }
         }
     }
