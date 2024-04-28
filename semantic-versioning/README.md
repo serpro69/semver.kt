@@ -84,10 +84,12 @@ If a commit with the "skip" keyword is found between `HEAD` and the latest versi
 
 #### Releasing via gradle properties
 
-Instead of having the plugin look up keywords in commits, one can use `-Pincrement` property instead with the `:tag` task.
-See [Gradle Properties](#gradle-properties) for more details on available values.
+Instead of having the plugin look up keywords in commits, one can trigger the release with `-Prelease` property and set the next increment via `-Pincrement` instead.
 
-As mentioned above, using the gradle property takes precedence over commit-based release via keywords.
+See [Gradle Properties](#gradle-properties) for more details on available `increment` values and properties usage information.
+
+> [!NOTE]
+> As mentioned above, releasing via gradle property (i.e. adding `-Prelease` to the gradle command) takes precedence over commit-based releases via keywords.
 
 ## Configuration
 
@@ -109,10 +111,11 @@ The full config file looks like this:
       "useBranches": "false"
     },
     "message": {
-      "major": "major",
-      "minor": "minor",
-      "patch": "patch",
-      "preRelease": "pre release",
+      "major": "[major]",
+      "minor": "[minor]",
+      "patch": "[patch]",
+      "preRelease": "[pre release]",
+      "skip": "[skip]",
       "ignoreCase": "true"
     }
   },
@@ -194,15 +197,25 @@ settings.extensions.configure<SemverPluginExtension>("semantic-versioning") {
 
 The plugin makes use of the following properties:
 
-- `promoteRelease` - boolean type property, promotes current pre-release to a release version
-- `preRelease` - boolean type property, creates a new pre-release version from the current release
-- `increment` - string type property, sets increment for the next version
-  - setting increment via gradle property take precedence over commit-based increments which can be configured via json and plugin-extension configurations
-  - accepted values are (case-insensitive):
-    - `major`
-    - `minor`
-    - `patch`
-    - `pre_release`
+| name             | type    | description                                                |
+|------------------|---------|------------------------------------------------------------|
+| `release`        | boolean | creates a new release via gradle properties                |
+| `preRelease`     | boolean | creates a new pre-release version from the current release |
+| `promoteRelease` | boolean | promotes current pre-release to a release version          |
+| `increment`      | string  | sets increment for the next version                        |
+
+> [!NOTE]
+> Setting increment via gradle property (when using `-Prelease` property) takes precedence over commit-based keyword increments that are be configured via json and plugin-extension configurations.
+
+> [!IMPORTANT]
+> Using "secondary properties" (`preRelease`, `promoteRelease`, `increment`) requires setting `release` property, otherwise the properties will have no effect.
+
+Accepted values for the `increment` property are (case-insensitive):
+
+- `major`
+- `minor`
+- `patch`
+- `pre_release`
 
 ### Monorepo Support
 
@@ -212,7 +225,7 @@ This plugin supports the following types of projects:
 - [single-tag monorepo](#single-tag-monorepo) - a project with `monorepo` configuration containing one or more modules; all modules use the same (default) tag prefix and are effectively tagged with a single git tag
 - [multi-tag monorepo](#multi-tag-monorepo) - a project with `monorepo` configuration containing one or more modules; some (or all) modules declare their own `tag.prefix`, and hence have their own git tags
 
-> [!INFO]
+> [!NOTE]
 > The main difference between the first two is that in "single-tag monorepo" projects, the project version is applied to each (configured) submodule individually, based on discovered changes in the configured `sources`, and some modules may be "kept back" on the previous version if no `sources` changes are discovered for that given module.
 
 #### Single-Tag Monorepo
