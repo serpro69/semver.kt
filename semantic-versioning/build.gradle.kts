@@ -1,7 +1,5 @@
 import com.gradle.publish.PublishTask
 import io.github.serpro69.semverkt.gradle.plugin.tasks.TagTask
-import io.github.serpro69.semverkt.spec.Semver
-import org.jetbrains.kotlin.gradle.utils.`is`
 
 plugins {
     `java-gradle-plugin`
@@ -41,25 +39,12 @@ configurations.configureEach {
     }
 }
 
-val release = rootProject.subprojects.first { it.path == ":release" }
-    ?: throw GradleException("release project not found")
-
 dependencies {
     val integrationTestImplementation by configurations
     val functionalTestImplementation by configurations
     compileOnly(gradleApi())
-    /* :release and :semantic-versioning are versioned separately
-     * during development versions will always equal (both are set to a version placeholder via gradle.properties),
-     * but during publishing they might not (depending on changes to a given module)
-     * hence we check the versions equality and either set a dependency on a published :release artifact with latest version
-     * (latest is handled by plugin for multi-tag monorepos),
-     * or a project-type dependency on the submodule
-     */
-    if (Semver(project.version.toString()) != (Semver(release.version.toString()))) {
-        api("io.github.serpro69:semver.kt-release:${release.version}")
-    } else {
-        api(project(":release"))
-    }
+    /* :release module version will be set to latest or next, since it's a multi-tag monorepo */
+    api(project(":release"))
     testCompileOnly(gradleTestKit())
     integrationTestImplementation(project)
     functionalTestImplementation(project)
@@ -84,7 +69,15 @@ gradlePlugin {
             id = "${project.group}.${name}"
             displayName = "Automated semantic versioning of gradle projects through git tags"
             description = "This plugin helps you to automatically version your gradle project according to semver rules"
-            tags = listOf("semantic-release", "semantic-versioning", "semver-release", "semver", "release", "semantic", "versioning")
+            tags = listOf(
+                "semantic-release",
+                "semantic-versioning",
+                "semver-release",
+                "semver",
+                "release",
+                "semantic",
+                "versioning"
+            )
             implementationClass = "io.github.serpro69.semverkt.gradle.plugin.SemverKtPlugin"
         }
     }
