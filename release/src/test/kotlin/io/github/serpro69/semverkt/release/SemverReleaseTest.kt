@@ -3,11 +3,10 @@ package io.github.serpro69.semverkt.release
 import io.github.serpro69.semverkt.release.configuration.PropertiesConfiguration
 import io.github.serpro69.semverkt.release.repo.GitRepository
 import io.github.serpro69.semverkt.spec.Semver
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import org.eclipse.jgit.api.Git
 import java.nio.file.Files
-import java.util.*
+import java.util.Properties
 
 class SemverReleaseTest : TestFixtures({ test ->
 

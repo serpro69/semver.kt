@@ -25,6 +25,7 @@ class DefaultConfigurationTest : DescribeSpec({
             dc.git.message.minor shouldBe provider.git.message.minor
             dc.git.message.patch shouldBe provider.git.message.patch
             dc.git.message.preRelease shouldBe provider.git.message.preRelease
+            dc.git.message.skip shouldBe provider.git.message.skip
             dc.git.message.ignoreCase shouldBe provider.git.message.ignoreCase
             // version
             dc.version.initialVersion shouldBe provider.version.initialVersion

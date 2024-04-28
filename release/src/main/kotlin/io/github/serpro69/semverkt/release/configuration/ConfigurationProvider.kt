@@ -65,6 +65,7 @@ abstract class ConfigurationProvider : Configuration {
             override val minor: String = propertyOrNull("git.message.minor") ?: super.minor
             override val patch: String = propertyOrNull("git.message.patch") ?: super.patch
             override val preRelease: String = propertyOrNull("git.message.preRelease") ?: super.preRelease
+            override val skip: String = propertyOrNull("git.message.skip") ?: super.skip
             override val ignoreCase: Boolean = propertyOrNull("git.message.ignoreCase") ?: super.ignoreCase
         }
     }

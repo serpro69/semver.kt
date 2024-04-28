@@ -263,6 +263,10 @@ version=0.0.0
 
 Any module that does not have changes will not get the new version applied to it, and hence will stay on version `0.0.0` throughout the build process runtime (barring some external modifications to the `version` property), and hence this can be used in conditional checks to skip certain tasks for a given module.
 
+> [!NOTE]
+> Using the aforementioned "version placeholder" concept is mostly useful in the context of [single-tag monorepo](#single-tag-monorepo) project, because we can't determine the latest version of a given module from a single git tag.
+> With the [multi-tag monorepo](#multi-tag-monorepo) project, each configured submodule will have a real version assigned to it based on its own git tag.
+
 This comes with some downsides which are good to be aware of when considering to version each submodule separately:
 
 - the whole project is still versioned in git via tags and according to semver rules, however (configured) submodules are versioned individually

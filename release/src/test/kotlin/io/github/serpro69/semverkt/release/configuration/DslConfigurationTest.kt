@@ -59,6 +59,7 @@ class DslConfigurationTest : DescribeSpec({
                 c.git.repo.remoteName shouldBe "origin"
                 c.git.repo.cleanRule shouldBe CleanRule.TRACKED
                 c.git.tag.useBranches shouldBe false
+                c.git.message.skip shouldBe "[skip]"
             }
         }
 

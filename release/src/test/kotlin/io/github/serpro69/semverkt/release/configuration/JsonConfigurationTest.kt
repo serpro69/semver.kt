@@ -34,6 +34,7 @@ class JsonConfigurationTest : DescribeSpec({
                   "minor": "[min]",
                   "patch": "[pat]",
                   "preRelease": "[pre]",
+                  "skip": "[sk]",
                   "ignoreCase": true
                 }
               },
@@ -88,6 +89,7 @@ class JsonConfigurationTest : DescribeSpec({
             jc.git.message.minor shouldBe "[min]"
             jc.git.message.patch shouldBe "[pat]"
             jc.git.message.preRelease shouldBe "[pre]"
+            jc.git.message.skip shouldBe "[sk]"
             jc.git.message.ignoreCase shouldBe true
 
             // version properties
@@ -133,6 +135,7 @@ class JsonConfigurationTest : DescribeSpec({
             jc.git.message.minor shouldBe DefaultConfiguration.git.message.minor
             jc.git.message.patch shouldBe DefaultConfiguration.git.message.patch
             jc.git.message.preRelease shouldBe DefaultConfiguration.git.message.preRelease
+            jc.git.message.skip shouldBe DefaultConfiguration.git.message.skip
             jc.git.message.ignoreCase shouldBe DefaultConfiguration.git.message.ignoreCase
             // version
             jc.version.initialVersion shouldBe DefaultConfiguration.version.initialVersion
